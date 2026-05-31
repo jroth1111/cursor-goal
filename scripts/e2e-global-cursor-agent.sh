@@ -3,7 +3,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 GLOBAL_HOOKS="${HOME}/.cursor/hooks"
 ENV_FILE="${HOME}/.cursor/cursor-goal.env"
 RUNTIME="${HOME}/.cursor/cursor-goal-runtime"
@@ -342,7 +342,7 @@ EOF
 
   # T16: install skip local hooks + double install-global stays flat
   init_git_repo "$REPO_MAIN"
-  bash "$REPO_ROOT/cursor-goal/core/install.sh" "$REPO_MAIN" >"$REPORT_DIR/T16.log" 2>&1
+  bash "$REPO_ROOT/core/install.sh" "$REPO_MAIN" >"$REPORT_DIR/T16.log" 2>&1
   local t16_ok=0
   [[ ! -f "$REPO_MAIN/.cursor/hooks/goal-stop.sh" ]] && \
     [[ -f "$REPO_MAIN/.cursor/goal/templates/GOAL.md" ]] && t16_ok=1

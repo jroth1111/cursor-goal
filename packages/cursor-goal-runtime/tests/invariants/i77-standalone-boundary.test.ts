@@ -117,4 +117,14 @@ describe("I77 standalone cursor-goal package boundary", () => {
       );
     }
   });
+
+  it("keeps repo-local scripts anchored at the cursor-goal root", async () => {
+    const e2e = await readFile(
+      path.join(cursorGoalRoot, "scripts/e2e-global-cursor-agent.sh"),
+      "utf8",
+    );
+    expect(e2e).toContain('REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"');
+    expect(e2e).not.toContain('REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"');
+    expect(e2e).not.toContain('"$REPO_ROOT/cursor-goal/');
+  });
 });
