@@ -82,3 +82,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I153 | Read-only operator commands reject duplicate conversation selectors |
 | I154 | Prompt triage honors explicit read-only opt-outs over delivery words |
 | I155 | Global uninstall flattens legacy nested hooks before removing goal entries |
+| I157 | Dry-run stop pipeline simulates auto-advance without mutating trajectory |

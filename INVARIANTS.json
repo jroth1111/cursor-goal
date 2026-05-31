@@ -1022,6 +1022,13 @@
       "layers": ["supervisor"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i156-supervisor-mode-conflicts.test.ts"
+    },
+    {
+      "id": "I157",
+      "description": "Dry-run stop pipeline simulates auto-advance without mutating trajectory",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i157-dry-run-auto-advance.test.ts"
     }
   ]
 }

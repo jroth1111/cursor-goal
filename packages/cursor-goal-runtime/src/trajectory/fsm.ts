@@ -123,13 +123,14 @@ export function phaseIndex(p: Phase): number {
   return ORDER.indexOf(p);
 }
 
-export async function maybeAutoAdvanceToVerify(root?: string): Promise<Phase | null> {
+export async function maybeAutoAdvanceToVerify(root?: string, opts?: { dryRun?: boolean }): Promise<Phase | null> {
   const traj = await readTrajectory(root);
   if (traj.phase !== "IMPLEMENT") return null;
   const { readWorkUnits, allUnitsDone } = await import("../lib/work-units.js");
   const wu = await readWorkUnits(root);
   if (!wu?.units?.length) return null;
   if (!allUnitsDone(wu.units)) return null;
+  if (opts?.dryRun) return "VERIFY";
   const r = await advancePhase("VERIFY", root);
   if (!r.ok) return null;
   return "VERIFY";
