@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { readLoopLimit } from "../../src/lib/loop-limit.js";
-import { execCoreHookBare } from "../hooks/exec-hook.js";
+import { execCoreHookBare, execMinimalStop } from "../hooks/exec-hook.js";
 
 describe("I172 nested hooks loop limit", () => {
   let cleanup: (() => Promise<void>) | undefined;
@@ -57,5 +57,16 @@ describe("I172 nested hooks loop limit", () => {
       await readFile(path.join(dir, ".cursor/goal/manifest.json"), "utf8"),
     ) as { loop_limit?: number };
     expect(manifest.loop_limit).toBe(7);
+  });
+
+  it("minimal stop reads legacy nested hooks.hooks stop entries when manifest is absent", async () => {
+    const dir = await seedNestedHooks(7);
+    await writeFile(path.join(dir, "GOAL.md"), "## Goal\nx\n## Checks\n- `false`\n", "utf8");
+
+    const r = execMinimalStop(dir, { status: "completed", loop_count: 5 });
+
+    expect(r.exitCode, r.raw).toBe(0);
+    expect(String(r.stdout.followup_message ?? "")).toMatch(/Disposition/);
+    expect(String(r.stdout.followup_message ?? "")).toMatch(/5\/7/);
   });
 });

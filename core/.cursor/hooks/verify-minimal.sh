@@ -57,7 +57,11 @@ fi
 
 LOOP_LIMIT=40
 if [[ -f "$ROOT/.cursor/hooks.json" ]]; then
-  HL="$(jq -r '.hooks.stop[]? | select(.loop_limit != null) | .loop_limit' "$ROOT/.cursor/hooks.json" 2>/dev/null | head -1)"
+  HL="$(jq -r '
+    def flatten_hooks:
+      if (.hooks.hooks? | type) == "object" then .hooks | flatten_hooks else . end;
+    flatten_hooks | .hooks.stop[]? | select(.loop_limit != null) | .loop_limit
+  ' "$ROOT/.cursor/hooks.json" 2>/dev/null | head -1)"
   [[ -n "$HL" && "$HL" != "null" ]] && LOOP_LIMIT="$HL"
 fi
 if [[ -f "$GOAL_DIR/manifest.json" ]]; then
