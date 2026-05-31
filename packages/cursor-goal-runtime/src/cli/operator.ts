@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { writeFile, unlink } from "node:fs/promises";
+import { mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { runStopVerifier } from "../lib/verify.js";
 import { goalDir, projectRoot } from "../lib/paths.js";
@@ -141,6 +141,7 @@ export async function handleDoctor(rest: string[]): Promise<void> {
 }
 
 export async function handlePause(): Promise<void> {
+  await mkdir(goalDir(), { recursive: true });
   await writeFile(path.join(goalDir(), "PAUSED"), "", "utf8");
   console.log("Paused");
 }

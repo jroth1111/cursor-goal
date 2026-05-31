@@ -637,6 +637,13 @@
       "layers": ["core"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i101-uninstall-global-flags.test.ts"
+    },
+    {
+      "id": "I102",
+      "description": "cursor-goal pause creates goal directory in fresh repositories",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i102-pause-fresh-repo.test.ts"
     }
   ]
 }
