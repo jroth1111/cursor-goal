@@ -9,6 +9,7 @@ const forbiddenScope = `@${"pioff"}`;
 const forbiddenEnv = `CURSOR_GOAL_PI_${"INTENT"}`;
 const forbiddenPeerScript = `with-pi-${"intent"}`;
 const forbiddenNestedRuntime = `cursor-goal/${"packages"}/cursor-goal-runtime`;
+const forbiddenNestedSupervisor = `${"cursor-goal"}/supervisor/run-goal.mjs`;
 
 async function readJson(file: string): Promise<Record<string, unknown>> {
   return JSON.parse(await readFile(file, "utf8")) as Record<string, unknown>;
@@ -126,5 +127,21 @@ describe("I77 standalone cursor-goal package boundary", () => {
     expect(e2e).toContain('REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"');
     expect(e2e).not.toContain('REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"');
     expect(e2e).not.toContain('"$REPO_ROOT/cursor-goal/');
+  });
+
+  it("does not document nested supervisor paths from the old monorepo layout", async () => {
+    const files = [
+      path.join(cursorGoalRoot, "README.md"),
+      path.join(cursorGoalRoot, "RUNBOOK.md"),
+      path.join(cursorGoalRoot, "CAPABILITY.md"),
+      path.join(cursorGoalRoot, "docs/ARCHITECTURE.md"),
+      path.join(cursorGoalRoot, "docs/CONTRIBUTING.md"),
+      path.join(cursorGoalRoot, "supervisor/README.md"),
+    ];
+    for (const file of files) {
+      const contents = await readFile(file, "utf8");
+      expect(contents).not.toContain(forbiddenNestedSupervisor);
+      expect(contents).not.toContain(`node ${forbiddenNestedSupervisor}`);
+    }
   });
 });

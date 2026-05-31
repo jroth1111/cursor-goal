@@ -154,7 +154,7 @@ Agent id: sanitized `conversation_id` from hook stdin, else `CURSOR_CONVERSATION
 1. `bash core/install.sh` and `npm run build` (recommended; missing runtime uses fail-open minimal safety fallback — I38)
 2. `cursor-goal init && cursor-goal compile` — re-run after GOAL edits (I19/I42); emits `dispatch-queue.json` (I36)
 3. `cursor-goal discovery complete "notes"` — advances to IMPLEMENT
-4. Open units: `cursor-goal dispatch --run` or `node cursor-goal/supervisor/run-goal.mjs` (I37/I46); in-IDE: `cursor-goal dispatch`
+4. Open units: `cursor-goal dispatch --run` or `node supervisor/run-goal.mjs` (I37/I46); in-IDE: `cursor-goal dispatch`
 5. `subagentStop` runs unit acceptance (scope-based default — I43; explicit `acceptance:` override — I31)
 6. Stop followup via `runtime-state.json` with ranked next action (I39) and secondary blockers (I40)
 7. Hooks advise primary agents and enforce only narrow safety/isolation gates (I67); steer via stop, `cursor-goal next [--json]` (I44), dispatch CLI
