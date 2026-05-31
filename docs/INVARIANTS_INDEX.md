@@ -70,7 +70,7 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I140 | Global install dry-run reports without running the runtime build |
 | I141 | Global uninstall removes stale generated hook files while preserving user hooks |
 | I142 | Global upgrade runs the installer from the install manifest source |
-| I143 | Doctor compares global install manifest git_sha with the source repo HEAD |
+| I143 | Doctor validates global install manifest git_sha and source availability |
 | I144 | Core install honors CURSOR_HOME when detecting a global runtime |
 | I145 | Hooks reject invalid direct work_unit_id values before writing unit evidence paths |
 | I146 | Subagent governance path checks normalize evidence paths before allowing writes |

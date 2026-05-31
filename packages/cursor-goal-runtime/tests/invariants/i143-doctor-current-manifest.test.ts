@@ -53,6 +53,31 @@ describe("I143 doctor current global manifest", () => {
     return { sourceDir: source.dir };
   }
 
+  async function setupGlobalInstallWithMissingSource(): Promise<{ root: string }> {
+    tempDir = path.join(os.tmpdir(), `i143-cursor-missing-${Date.now()}`);
+    const cursorHome = path.join(tempDir, "cursor");
+    const runtime = path.join(cursorHome, "cursor-goal-runtime");
+    const manifest = path.join(cursorHome, "cursor-goal/install-manifest.json");
+    const missingSource = path.join(tempDir, "missing-source");
+
+    await mkdir(path.join(cursorHome, "hooks"), { recursive: true });
+    await mkdir(path.join(runtime, "dist"), { recursive: true });
+    await mkdir(path.dirname(manifest), { recursive: true });
+    await writeFile(path.join(cursorHome, "hooks/goal-stop.sh"), "#!/usr/bin/env bash\n", "utf8");
+    await writeFile(path.join(runtime, "dist/hook-stop.mjs"), "", "utf8");
+    await writeFile(path.join(runtime, "package.json"), JSON.stringify({ version: "0.1.0" }), "utf8");
+    await writeFile(
+      manifest,
+      JSON.stringify({ source: missingSource, git_sha: "deadbee" }),
+      "utf8",
+    );
+
+    process.env.CURSOR_HOME = cursorHome;
+    delete process.env.CURSOR_GOAL_RUNTIME;
+
+    return { root: tempDir };
+  }
+
   it("does not warn stale when the manifest git_sha matches the source repo HEAD", async () => {
     const { sourceDir } = await setupGlobalInstall();
 
@@ -67,5 +92,15 @@ describe("I143 doctor current global manifest", () => {
     const issues = await runDoctor(sourceDir);
 
     expect(issues.some((issue) => /Global runtime may be stale/.test(issue.message))).toBe(true);
+  });
+
+  it("warns when the manifest source repo is unavailable", async () => {
+    const { root } = await setupGlobalInstallWithMissingSource();
+
+    const issues = await runDoctor(root);
+
+    expect(issues.some((issue) => /Global install source unavailable/.test(issue.message))).toBe(
+      true,
+    );
   });
 });

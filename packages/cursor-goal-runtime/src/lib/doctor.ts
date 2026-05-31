@@ -105,6 +105,11 @@ export async function runDoctor(root = projectRoot()): Promise<DoctorIssue[]> {
             level: "warn",
             message: `Global runtime may be stale (installed from ${manifest.git_sha}) — run: cursor-goal upgrade`,
           });
+        } else if (current === null) {
+          issues.push({
+            level: "warn",
+            message: `Global install source unavailable (${manifest.source}) — run: npm run install:global from a current checkout`,
+          });
         }
         void pkg.version;
       }

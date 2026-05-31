@@ -131,7 +131,7 @@ Only claim what invariant tests prove.
 | I140 | Global install dry-run reports without running the runtime build | — | yes | — | i140-install-global-dry-run-no-build | tested |
 | I141 | Global uninstall removes stale generated hook files while preserving user hooks | — | yes | — | i141-uninstall-stale-hook-files | tested |
 | I142 | Global upgrade runs the installer from the install manifest source | — | yes | — | i142-upgrade-manifest-source | tested |
-| I143 | Doctor compares global install manifest git_sha with the source repo HEAD | — | yes | — | i143-doctor-current-manifest | tested |
+| I143 | Doctor validates global install manifest git_sha and source availability | — | yes | — | i143-doctor-current-manifest | tested |
 | I144 | Core install honors CURSOR_HOME when detecting a global runtime | yes | — | — | i144-core-install-cursor-home | tested |
 | I145 | Hooks reject invalid direct work_unit_id values before writing unit evidence paths | — | yes | — | i145-invalid-work-unit-id-path | tested |
 | I146 | Subagent governance path checks normalize evidence paths before allowing writes | — | yes | — | i146-normalized-governance-path | tested |
