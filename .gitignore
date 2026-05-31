@@ -7,4 +7,6 @@ artifacts/
 *.zip
 .codex-backups/
 .claude/
+/.cursor/
+/.autoreview/
 packages/cursor-goal-runtime/.cursor/
