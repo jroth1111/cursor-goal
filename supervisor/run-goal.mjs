@@ -158,6 +158,46 @@ async function readWorkUnits(root) {
   return raw.units ?? [];
 }
 
+async function readLatestUnitEvidence(root, unit) {
+  const evidencePath = unit.evidence_path ?? `evidence/units/${unit.id}.jsonl`;
+  const p = path.join(root, ".cursor/goal", evidencePath);
+  if (!existsSync(p)) return null;
+  const lines = (await readFile(p, "utf8"))
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    try {
+      const parsed = JSON.parse(lines[i]);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+      return { malformed: true };
+    } catch {
+      return { malformed: true };
+    }
+  }
+  return null;
+}
+
+function blockedUnitReason(unit, record) {
+  if (!record) return null;
+  if (record.malformed === true) return `latest evidence for ${unit.id} is malformed`;
+  if (record.blocked === true || record.ok === false) {
+    return typeof record.blocker === "string" && record.blocker.trim()
+      ? record.blocker
+      : `latest evidence for ${unit.id} is blocked or failed`;
+  }
+  const status = typeof record.status === "string" ? record.status.trim().toLowerCase() : "";
+  if (["failed", "blocked", "cancelled", "canceled", "error", "timeout", "aborted"].includes(status)) {
+    return typeof record.blocker === "string" && record.blocker.trim()
+      ? record.blocker
+      : `latest evidence for ${unit.id} has status ${status}`;
+  }
+  if (record.evidence_version === 1 && record.acceptance_ok !== true) {
+    return `latest evidence for ${unit.id} has not passed acceptance`;
+  }
+  return null;
+}
+
 async function readDispatchQueue(root) {
   const p = path.join(root, ".cursor/goal/dispatch-queue.json");
   if (!existsSync(p)) return null;
@@ -215,6 +255,11 @@ async function dispatchOpenUnits(root, rt, agent, dryRun) {
   }
 
   for (const unit of toDispatch) {
+    const blocked = blockedUnitReason(unit, await readLatestUnitEvidence(root, unit));
+    if (blocked) {
+      console.warn(`Blocked unit: ${unit.id} - ${blocked}`);
+      break;
+    }
     const prompt = buildUnitTaskPrompt(unit);
     const args = buildAgentArgs(prompt);
     console.log("Dispatch unit:", unit.id);
