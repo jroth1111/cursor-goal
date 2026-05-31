@@ -819,6 +819,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i127-capability-layer-claims.test.ts"
+    },
+    {
+      "id": "I128",
+      "description": "Read-only operator commands reject unsupported arguments before normal output",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i128-readonly-operator-strict-args.test.ts"
     }
   ]
 }

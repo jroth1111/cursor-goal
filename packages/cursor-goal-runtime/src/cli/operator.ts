@@ -21,6 +21,10 @@ import { runGlobalUpgrade } from "../lib/upgrade.js";
 import { operatorOptionsFromArgv } from "./shared.js";
 
 const doctorOptions = new Set(["--json", "--fix"]);
+const nextOptions = new Set(["--json", "--verbose"]);
+const explainOptions = new Set(["--json"]);
+const statusOptions = new Set(["--json"]);
+const conversationValueOptions = new Set(["--conversation"]);
 const dispatchFlags = new Set(["--dry-run", "--run", "--verify", "--spawn"]);
 const dispatchValueOptions = new Set(["--unit", "--record-response", "--from"]);
 
@@ -57,6 +61,28 @@ function rejectUnsupportedOptionOnlyArgs(rest: string[], allowed: Set<string>): 
   }
 }
 
+function rejectUnsupportedOperatorArgs(
+  rest: string[],
+  allowedFlags: Set<string>,
+  valueOptions = conversationValueOptions,
+): void {
+  for (let i = 0; i < rest.length; i += 1) {
+    const arg = rest[i];
+    if (allowedFlags.has(arg)) continue;
+    if (valueOptions.has(arg)) {
+      const value = rest[i + 1];
+      if (!value || value.startsWith("-")) {
+        console.error(`Missing value for ${arg}`);
+        process.exit(1);
+      }
+      i += 1;
+      continue;
+    }
+    console.error(arg.startsWith("-") ? `Unknown option: ${arg}` : `Unexpected argument: ${arg}`);
+    process.exit(1);
+  }
+}
+
 function rejectUnsupportedDispatchArgs(rest: string[]): void {
   for (let i = 0; i < rest.length; i += 1) {
     const arg = rest[i];
@@ -70,7 +96,27 @@ function rejectUnsupportedDispatchArgs(rest: string[]): void {
   }
 }
 
+function parseLogsTailArg(rest: string[]): number {
+  let tail = 20;
+  let seenTail = false;
+  for (const arg of rest) {
+    if (/^\d+$/.test(arg)) {
+      if (seenTail) {
+        console.error(`Unexpected argument: ${arg}`);
+        process.exit(1);
+      }
+      seenTail = true;
+      tail = Number(arg);
+      continue;
+    }
+    console.error(arg.startsWith("-") ? `Unknown option: ${arg}` : `Unexpected argument: ${arg}`);
+    process.exit(1);
+  }
+  return tail;
+}
+
 export async function handleNext(rest: string[]): Promise<void> {
+  rejectUnsupportedOperatorArgs(rest, nextOptions);
   const verbose = rest.includes("--verbose");
   if (rest.includes("--json")) {
     const snap = await buildOperatorSnapshot(projectRoot(), operatorOptionsFromArgv(rest));
@@ -148,8 +194,7 @@ export async function handleDispatch(rest: string[]): Promise<void> {
 }
 
 export async function handleLogs(rest: string[]): Promise<void> {
-  const tailArg = rest.find((a) => /^\d+$/.test(a));
-  const n = tailArg ? Number(tailArg) : 20;
+  const n = parseLogsTailArg(rest);
   const entries = await readStopTraceTail(projectRoot(), n);
   console.log(JSON.stringify(entries, null, 2));
   process.exit(0);
@@ -164,6 +209,7 @@ export async function handleUpgrade(rest: string[]): Promise<void> {
 }
 
 export async function handleExplain(rest: string[]): Promise<void> {
+  rejectUnsupportedOperatorArgs(rest, explainOptions);
   const report = await buildExplainReport({
     status: "completed",
     conversation_id: operatorOptionsFromArgv(rest)?.conversation_id,
@@ -208,6 +254,7 @@ export async function handleResume(rest: string[]): Promise<void> {
 }
 
 export async function handleStatus(rest: string[]): Promise<void> {
+  rejectUnsupportedOperatorArgs(rest, statusOptions);
   if (rest.includes("--json")) {
     const snap = await buildOperatorSnapshot(projectRoot(), operatorOptionsFromArgv(rest));
     if ("error" in snap) {

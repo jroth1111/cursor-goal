@@ -114,6 +114,7 @@ Only claim what invariant tests prove.
 | I125 | Capability matrix uses Supervisor layer columns instead of legacy Pi claims | — | yes | — | i125-capability-supervisor-column | tested |
 | I126 | .gitignore covers generated, cache, virtualenv, editor, and local secret artifacts | — | yes | — | i126-gitignore-noise-dirs | tested |
 | I127 | Capability Core, Runtime, and Supervisor layer claims match INVARIANTS.json | — | yes | — | i127-capability-layer-claims | tested |
+| I128 | Read-only operator commands reject unsupported arguments before normal output | — | yes | — | i128-readonly-operator-strict-args | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |
