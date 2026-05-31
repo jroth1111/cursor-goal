@@ -87,7 +87,7 @@ export function autoSliceWorkUnits(scope: string[], globalChecks: string[]): Wor
     return {
       id,
       title: `Work in ${path}`,
-      scope: [path.endsWith("/") ? path : `${path.replace(/\/?$/, "")}/`],
+      scope: [path],
       acceptance: [],
     };
   });

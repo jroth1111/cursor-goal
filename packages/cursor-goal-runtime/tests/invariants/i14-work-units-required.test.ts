@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
@@ -45,5 +45,24 @@ describe("I14 work-units when scope non-empty", () => {
       await readFile(path.join(p.dir, ".cursor/goal/work-units.json"), "utf8"),
     );
     expect(wu.units[0]?.id).toBe("root");
+  });
+
+  it("preserves file scope paths when auto-slicing units", async () => {
+    const p = await mkGitProject("i14-file-scope");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await mkdir(path.join(p.dir, "scripts"), { recursive: true });
+    await writeFile(path.join(p.dir, "scripts/task.py"), "print('ok')\n", "utf8");
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      "## Goal\nx\n## Scope\n- `scripts/task.py`\n## Checks\n- `true`\n",
+      "utf8",
+    );
+    await compileGoalV2(p.dir);
+    const { readFile } = await import("node:fs/promises");
+    const wu = JSON.parse(
+      await readFile(path.join(p.dir, ".cursor/goal/work-units.json"), "utf8"),
+    );
+    expect(wu.units[0]?.scope).toEqual(["scripts/task.py"]);
   });
 });
