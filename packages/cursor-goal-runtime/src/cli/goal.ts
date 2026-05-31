@@ -42,6 +42,12 @@ function rejectUnknownOptions(rest: string[], allowed: Set<string>): void {
   }
 }
 
+function rejectUnexpectedArg(arg: string | undefined): void {
+  if (!arg) return;
+  console.error(arg.startsWith("-") ? `Unknown option: ${arg}` : `Unexpected argument: ${arg}`);
+  process.exit(1);
+}
+
 export async function seedGoal(): Promise<void> {
   const root = projectRoot();
   const template = goalTemplatePath();
@@ -120,6 +126,7 @@ export async function handleGoal(rest: string[]): Promise<void> {
 export async function handlePhase(rest: string[]): Promise<void> {
   const sub = rest[0];
   if (sub === "advance") {
+    rejectUnexpectedArg(rest[2]);
     const to = (rest[1] ?? "IMPLEMENT") as Parameters<typeof advancePhase>[0];
     const r = await advancePhase(to);
     if (!r.ok) {
@@ -128,6 +135,7 @@ export async function handlePhase(rest: string[]): Promise<void> {
     }
     console.log(`phase=${to}`);
   } else {
+    rejectUnexpectedArg(rest[1]);
     const raw = sub ?? "IMPLEMENT";
     const phase = parseDirectSetPhase(raw);
     if (!phase) {

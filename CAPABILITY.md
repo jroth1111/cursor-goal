@@ -97,6 +97,7 @@ Only claim what invariant tests prove.
 | I108 | cursor-goal compile rejects unknown flags before writing compiled artifacts | — | yes | — | i108-compile-strict-flags | tested |
 | I109 | cursor-goal dispatch rejects missing values for value-bearing options | — | yes | — | i109-dispatch-strict-args | tested |
 | I110 | State-mutating operator commands reject stray args before writing state | — | yes | — | i110-operator-mutator-strict-args | tested |
+| I111 | cursor-goal phase rejects stray args before writing trajectory state | — | yes | — | i111-phase-strict-args | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |
