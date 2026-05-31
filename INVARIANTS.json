@@ -777,6 +777,13 @@
       "layers": ["core"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i121-install-global-hook-sync.test.ts"
+    },
+    {
+      "id": "I122",
+      "description": "Capability verifier fails when a registered invariant is missing from CAPABILITY.md",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i122-capability-missing-row.test.ts"
     }
   ]
 }

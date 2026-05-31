@@ -7,7 +7,6 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const invariants = JSON.parse(readFileSync(path.join(root, "INVARIANTS.json"), "utf8"));
 const capability = readFileSync(path.join(root, "CAPABILITY.md"), "utf8");
 const errors = [];
-const warnings = [];
 
 for (const inv of invariants.invariants ?? []) {
   const testPath = inv.test;
@@ -38,12 +37,8 @@ for (const inv of invariants.invariants ?? []) {
   const stem = path.basename(inv.test, ".test.ts");
   const inCap = capability.includes(`| ${inv.id} `);
   if (!inCap) {
-    warnings.push(`${inv.id}: registered in INVARIANTS.json but missing from CAPABILITY.md`);
+    errors.push(`${inv.id}: registered in INVARIANTS.json but missing from CAPABILITY.md`);
   }
-}
-
-if (warnings.length) {
-  console.warn("Capability warnings:\n", warnings.join("\n"));
 }
 
 if (errors.length) {
