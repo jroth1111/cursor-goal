@@ -4,7 +4,7 @@
  * Spawns cursor-agent with --print --trust and polls passports.
  */
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -110,6 +110,22 @@ function resolveRuntime(root) {
 function coreInstalled(root) {
   if (existsSync(path.join(root, ".cursor/hooks/goal-stop.sh"))) return true;
   return existsSync(path.join(cursorHome(), "hooks/goal-stop.sh"));
+}
+
+function activeDispositionPaths(root) {
+  const out = [];
+  const legacy = path.join(root, ".cursor/goal/passports/DISPOSITION.json");
+  if (existsSync(legacy)) out.push(legacy);
+  const agentsDir = path.join(root, ".cursor/goal/agents");
+  try {
+    for (const agentId of readdirSync(agentsDir)) {
+      const disposition = path.join(agentsDir, agentId, "DISPOSITION.json");
+      if (existsSync(disposition)) out.push(disposition);
+    }
+  } catch {
+    /* no per-agent disposition directory */
+  }
+  return [...new Set(out)];
 }
 
 async function ensureCore(root) {
@@ -221,7 +237,6 @@ export async function main(argv = process.argv) {
   const root = process.cwd();
   const passports = path.join(root, ".cursor/goal/passports");
   const release = path.join(passports, "RELEASE.json");
-  const disposition = path.join(passports, "DISPOSITION.json");
   const paused = path.join(root, ".cursor/goal/PAUSED");
 
   await ensureCore(root);
@@ -231,8 +246,9 @@ export async function main(argv = process.argv) {
     console.error("Plan paused (.cursor/goal/PAUSED) — run: cursor-goal resume");
     process.exit(2);
   }
-  if (existsSync(disposition)) {
-    console.error("Disposition active — resolve .cursor/goal/passports/DISPOSITION.json before supervisor run");
+  const startupDispositions = activeDispositionPaths(root);
+  if (startupDispositions.length) {
+    console.error(`Disposition active — resolve ${startupDispositions[0]} before supervisor run`);
     process.exit(2);
   }
 
@@ -287,7 +303,7 @@ export async function main(argv = process.argv) {
     await new Promise((resolve) => {
       pollUntil(
         {
-          check: () => existsSync(release) || existsSync(disposition) || existsSync(paused),
+          check: () => existsSync(release) || activeDispositionPaths(root).length > 0 || existsSync(paused),
           finish: () => {
             if (!child.killed) child.kill("SIGTERM");
             resolve();
@@ -315,8 +331,9 @@ export async function main(argv = process.argv) {
     console.log("RELEASE:", release);
     process.exit(0);
   }
-  if (existsSync(disposition)) {
-    console.log("DISPOSITION:", disposition);
+  const finalDispositions = activeDispositionPaths(root);
+  if (finalDispositions.length) {
+    console.log("DISPOSITION:", finalDispositions[0]);
     process.exit(2);
   }
   process.exit(1);
