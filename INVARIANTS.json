@@ -910,6 +910,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i140-install-global-dry-run-no-build.test.ts"
+    },
+    {
+      "id": "I141",
+      "description": "Global uninstall removes stale generated hook files while preserving user hooks",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i141-uninstall-stale-hook-files.test.ts"
     }
   ]
 }

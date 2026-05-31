@@ -31,25 +31,13 @@ done
 CURSOR_HOME="${CURSOR_HOME:-$HOME/.cursor}"
 LOCAL_BIN="${HOME}/.local/bin"
 
-GOAL_HOOKS=(
-  goal-stop.sh
-  goal-session-start.sh
-  goal-prompt.sh
-  goal-pre-tool.sh
-  goal-shell.sh
-  goal-post-tool.sh
-  goal-subagent-stop.sh
-  goal-session-end.sh
-  _cgr-lib.sh
-  handlers-minimal.sh
-  verify-minimal.sh
-)
-
 echo "Uninstalling cursor-goal global hooks from $CURSOR_HOME"
 
-for h in "${GOAL_HOOKS[@]}"; do
-  rm -f "$CURSOR_HOME/hooks/$h"
-done
+if [[ -d "$CURSOR_HOME/hooks" ]]; then
+  find "$CURSOR_HOME/hooks" -maxdepth 1 -type f \
+    \( -name 'goal-*.sh' -o -name '_cgr-lib.sh' -o -name 'handlers-minimal.sh' -o -name 'verify-minimal.sh' \) \
+    -delete
+fi
 
 if [[ -f "$CURSOR_HOME/hooks.json" ]] && command -v jq >/dev/null 2>&1; then
   tmp="$(mktemp)"

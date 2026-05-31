@@ -66,3 +66,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I138 | Supervisor rejects missing prompt values before deriving launch options |
 | I139 | Global install dry-run does not require built runtime artifacts |
 | I140 | Global install dry-run reports without running the runtime build |
+| I141 | Global uninstall removes stale generated hook files while preserving user hooks |
