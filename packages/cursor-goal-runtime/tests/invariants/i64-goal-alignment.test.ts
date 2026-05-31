@@ -86,4 +86,29 @@ describe("I64 GOAL/repo alignment audit", () => {
       ]),
     );
   });
+
+  it("does not warn for the supported broad work-unit scope", async () => {
+    const p = await mkGitProject("i64-broad-scope");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      `## Goal
+x
+
+## Work units
+
+### broad
+Whole repo
+- \`**\`
+
+## Checks
+- \`true\`
+`,
+      "utf8",
+    );
+
+    const issues = await auditGoalAlignment(p.dir);
+    expect(issues.some((issue) => /scope "\*\*"/.test(issue.message))).toBe(false);
+  });
 });

@@ -21,6 +21,7 @@ function hasUvOrPytestChecks(checks: string[]): boolean {
 
 function scopeExists(root: string, scopePath: string): boolean {
   const normalized = scopePath.replace(/\/$/, "");
+  if (normalized === "**") return true;
   if (!normalized) return false;
   return existsSync(path.join(root, normalized));
 }
