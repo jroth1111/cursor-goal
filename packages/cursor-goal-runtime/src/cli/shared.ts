@@ -12,7 +12,7 @@ export function printUsage(): void {
   console.log(`cursor-goal — governance runtime for cursor-goal
 
 Usage:
-  cursor-goal init [--interactive] [--detect] [--compile]
+  cursor-goal init [--interactive] [--force] [--detect] [--compile]
   cursor-goal compile [--watch]
   cursor-goal verify
   cursor-goal explain [--json]

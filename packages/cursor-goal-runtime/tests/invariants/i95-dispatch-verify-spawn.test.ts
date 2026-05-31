@@ -4,7 +4,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
-import { runDispatchVerifySpawn } from "../../src/lib/dispatch-verify.js";
+import { cursorAgentAvailable, runDispatchVerifySpawn } from "../../src/lib/dispatch-verify.js";
 import { unitVerifierResultPath } from "../../src/lib/adversarial-paths.js";
 
 describe("I95 dispatch verify spawn", () => {
@@ -124,5 +124,57 @@ fi
     const stored = JSON.parse(await readFile(unitVerifierResultPath(p.dir, "u1"), "utf8"));
     expect(stored.passed).toBe(true);
     expect(stored.reprompt_used).toBe(true);
+  });
+
+  it("fails fast when agent --version exits non-zero", async () => {
+    const p = await mkGitProject("i95-bad-version");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await seedVerifiedUnit(p);
+
+    const binDir = path.join(p.dir, "bin");
+    await mkdir(binDir, { recursive: true });
+    const mockAgent = path.join(binDir, "cursor-agent");
+    await writeFile(
+      mockAgent,
+      `#!/usr/bin/env bash
+if [[ "\${1:-}" == "--version" ]]; then
+  exit 1
+fi
+echo "VERDICT: PASS"
+`,
+      "utf8",
+    );
+    await chmod(mockAgent, 0o755);
+    process.env.CURSOR_AGENT_BIN = mockAgent;
+
+    expect(cursorAgentAvailable(mockAgent)).toBe(false);
+    await expect(runDispatchVerifySpawn(p.dir)).rejects.toThrow(/not found or not runnable/);
+  });
+
+  it("fails fast when agent --version exits zero with empty output", async () => {
+    const p = await mkGitProject("i95-empty-version");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await seedVerifiedUnit(p);
+
+    const binDir = path.join(p.dir, "bin");
+    await mkdir(binDir, { recursive: true });
+    const mockAgent = path.join(binDir, "cursor-agent");
+    await writeFile(
+      mockAgent,
+      `#!/usr/bin/env bash
+if [[ "\${1:-}" == "--version" ]]; then
+  exit 0
+fi
+echo "VERDICT: PASS"
+`,
+      "utf8",
+    );
+    await chmod(mockAgent, 0o755);
+    process.env.CURSOR_AGENT_BIN = mockAgent;
+
+    expect(cursorAgentAvailable(mockAgent)).toBe(false);
+    await expect(runDispatchVerifySpawn(p.dir)).rejects.toThrow(/not found or not runnable/);
   });
 });

@@ -150,7 +150,7 @@ function resolveCursorAgentBin(): string {
 
 export function cursorAgentAvailable(bin = resolveCursorAgentBin()): boolean {
   const r = spawnSync(bin, ["--version"], { encoding: "utf8", timeout: 15_000 });
-  return r.status === 0 || r.error === undefined;
+  return r.error === undefined && r.status === 0 && (r.stdout ?? "").trim().length > 0;
 }
 
 function spawnVerifierAgent(bin: string, prompt: string, root: string): string {

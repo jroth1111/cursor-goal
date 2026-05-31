@@ -584,7 +584,7 @@
     },
     {
       "id": "I94",
-      "description": "cursor-goal init --interactive writes non-placeholder GOAL.md",
+      "description": "cursor-goal init --interactive writes non-placeholder GOAL.md; refuses overwrite unless --force",
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i94-init-interactive.test.ts"

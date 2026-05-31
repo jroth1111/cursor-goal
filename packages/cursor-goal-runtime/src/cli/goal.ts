@@ -40,10 +40,17 @@ export async function handleInit(rest: string[]): Promise<void> {
   const doCompile = rest.includes("--compile");
   const doDetect = rest.includes("--detect");
   const forceInteractive = rest.includes("--interactive");
+  const forceOverwrite = rest.includes("--force");
 
   if (forceInteractive) {
-    const dest = await writeInteractiveGoal(projectRoot());
-    console.log(`Created ${dest}`);
+    const dest = goalMd(projectRoot());
+    const existed = existsSync(dest);
+    if (existed && !forceOverwrite) {
+      console.error("GOAL.md already exists; use --force to overwrite or edit in place");
+      process.exit(1);
+    }
+    await writeInteractiveGoal(projectRoot());
+    console.log(`${existed && forceOverwrite ? "Wrote" : "Created"} ${dest}`);
     if (doDetect) {
       const detected = await applyDetectedChecks(projectRoot());
       console.log(`Detected checks from ${detected.source}: ${detected.commands.join(", ")}`);
