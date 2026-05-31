@@ -3,6 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+function cursorHome() {
+  return process.env.CURSOR_HOME ?? path.join(os.homedir(), ".cursor");
+}
+
 function resolveRuntimePromptModule() {
   const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   for (const base of [
@@ -10,7 +14,7 @@ function resolveRuntimePromptModule() {
     path.join(repoRoot, "packages/cursor-goal-runtime"),
     path.join(process.cwd(), "packages/cursor-goal-runtime"),
     path.join(process.cwd(), "node_modules/@cursor-goal/runtime"),
-    path.join(os.homedir(), ".cursor", "cursor-goal-runtime"),
+    path.join(cursorHome(), "cursor-goal-runtime"),
   ]) {
     if (!base) continue;
     const mod = path.join(base, "dist/lib/unit-task-prompt.js");
