@@ -114,7 +114,11 @@ export async function runDoctor(root = projectRoot()): Promise<DoctorIssue[]> {
         void pkg.version;
       }
     } catch {
-      /* ignore manifest parse */
+      issues.push({
+        level: "warn",
+        message:
+          "Global install manifest unreadable — run: npm run install:global from a current checkout",
+      });
     }
   }
 

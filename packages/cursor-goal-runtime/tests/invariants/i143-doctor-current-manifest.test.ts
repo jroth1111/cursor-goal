@@ -78,6 +78,26 @@ describe("I143 doctor current global manifest", () => {
     return { root: tempDir };
   }
 
+  async function setupGlobalInstallWithMalformedManifest(): Promise<{ root: string }> {
+    tempDir = path.join(os.tmpdir(), `i143-cursor-malformed-${Date.now()}`);
+    const cursorHome = path.join(tempDir, "cursor");
+    const runtime = path.join(cursorHome, "cursor-goal-runtime");
+    const manifest = path.join(cursorHome, "cursor-goal/install-manifest.json");
+
+    await mkdir(path.join(cursorHome, "hooks"), { recursive: true });
+    await mkdir(path.join(runtime, "dist"), { recursive: true });
+    await mkdir(path.dirname(manifest), { recursive: true });
+    await writeFile(path.join(cursorHome, "hooks/goal-stop.sh"), "#!/usr/bin/env bash\n", "utf8");
+    await writeFile(path.join(runtime, "dist/hook-stop.mjs"), "", "utf8");
+    await writeFile(path.join(runtime, "package.json"), JSON.stringify({ version: "0.1.0" }), "utf8");
+    await writeFile(manifest, "{", "utf8");
+
+    process.env.CURSOR_HOME = cursorHome;
+    delete process.env.CURSOR_GOAL_RUNTIME;
+
+    return { root: tempDir };
+  }
+
   it("does not warn stale when the manifest git_sha matches the source repo HEAD", async () => {
     const { sourceDir } = await setupGlobalInstall();
 
@@ -100,6 +120,16 @@ describe("I143 doctor current global manifest", () => {
     const issues = await runDoctor(root);
 
     expect(issues.some((issue) => /Global install source unavailable/.test(issue.message))).toBe(
+      true,
+    );
+  });
+
+  it("warns when the global install manifest is malformed", async () => {
+    const { root } = await setupGlobalInstallWithMalformedManifest();
+
+    const issues = await runDoctor(root);
+
+    expect(issues.some((issue) => /Global install manifest unreadable/.test(issue.message))).toBe(
       true,
     );
   });
