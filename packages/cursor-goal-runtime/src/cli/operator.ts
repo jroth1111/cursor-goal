@@ -26,6 +26,17 @@ export async function handleVerify(): Promise<void> {
   process.exit(r.kind === "release" ? 0 : 1);
 }
 
+function optionValue(rest: string[], option: string): string | undefined {
+  const idx = rest.indexOf(option);
+  if (idx < 0) return undefined;
+  const value = rest[idx + 1];
+  if (!value || value.startsWith("-")) {
+    console.error(`Missing value for ${option}`);
+    process.exit(1);
+  }
+  return value;
+}
+
 export async function handleNext(rest: string[]): Promise<void> {
   const verbose = rest.includes("--verbose");
   if (rest.includes("--json")) {
@@ -54,12 +65,18 @@ export async function handleDispatch(rest: string[]): Promise<void> {
   const run = rest.includes("--run");
   const verify = rest.includes("--verify");
   const verifySpawn = rest.includes("--spawn");
-  const unitIdx = rest.indexOf("--unit");
-  const unitId = unitIdx >= 0 ? rest[unitIdx + 1] : undefined;
-  const recordIdx = rest.indexOf("--record-response");
-  const recordUnit = recordIdx >= 0 ? rest[recordIdx + 1] : undefined;
-  const fromIdx = rest.indexOf("--from");
-  const fromFile = fromIdx >= 0 ? rest[fromIdx + 1] : undefined;
+  const unitId = optionValue(rest, "--unit");
+  const recordUnit = optionValue(rest, "--record-response");
+  const fromFile = optionValue(rest, "--from");
+
+  if (recordUnit && !fromFile) {
+    console.error("dispatch --record-response <id> requires --from <file>");
+    process.exit(1);
+  }
+  if (fromFile && !recordUnit) {
+    console.error("dispatch --from <file> requires --record-response <id>");
+    process.exit(1);
+  }
 
   if (recordUnit && fromFile) {
     const r = await recordVerifierFromFile(recordUnit, fromFile);

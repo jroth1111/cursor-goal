@@ -686,6 +686,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i108-compile-strict-flags.test.ts"
+    },
+    {
+      "id": "I109",
+      "description": "cursor-goal dispatch rejects missing values for value-bearing options",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i109-dispatch-strict-args.test.ts"
     }
   ]
 }
