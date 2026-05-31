@@ -14,7 +14,12 @@ export async function isGoalStale(root?: string): Promise<boolean> {
   if (!existsSync(md)) return false;
   const manifestPath = path.join(goalDir(root), "manifest.json");
   if (!existsSync(manifestPath)) return true;
-  const manifest = await readJson<{ compiled_at?: string }>(manifestPath);
+  let manifest: { compiled_at?: string } | null;
+  try {
+    manifest = await readJson<{ compiled_at?: string }>(manifestPath);
+  } catch {
+    return true;
+  }
   if (!manifest?.compiled_at) return true;
   const goalStat = await stat(md);
   const compiledAt = Date.parse(manifest.compiled_at);

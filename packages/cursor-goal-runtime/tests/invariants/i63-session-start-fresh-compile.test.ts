@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { existsSync } from "node:fs";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
@@ -172,6 +172,42 @@ A
     });
 
     expectHookOk(r);
+    expect(existsSync(path.join(p.dir, ".cursor/goal/work-units.json"))).toBe(true);
+  });
+
+  it("recovers malformed generated manifest during session-start compile", async () => {
+    const p = await mkGitProject("i63-malformed-manifest-recovery");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      `## Goal
+x
+## Work units
+### mod-a
+A
+- \`pkg/a/\`
+## Checks
+- \`true\`
+`,
+      "utf8",
+    );
+    await compileGoalV2(p.dir);
+    const manifest = path.join(p.dir, ".cursor/goal/manifest.json");
+    await writeFile(manifest, "{not json", "utf8");
+
+    const hook = path.resolve(import.meta.dirname, "../../dist/hook-sessionStart.mjs");
+    const r = spawnSync("node", [hook], {
+      cwd: p.dir,
+      input: JSON.stringify({ conversation_id: "governed-agent" }),
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+    });
+
+    expectHookOk(r);
+    const recoveredManifest = await readFile(manifest, "utf8");
+    expect(() => JSON.parse(recoveredManifest)).not.toThrow();
     expect(existsSync(path.join(p.dir, ".cursor/goal/work-units.json"))).toBe(true);
   });
 });
