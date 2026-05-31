@@ -1,9 +1,11 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { appendFile, readFile } from "node:fs/promises";
 import { readGovernanceConfig, readSessionMode, type GovernanceMode } from "./governance-config.js";
 import { goalDir, goalMd, readJson } from "./paths.js";
 import { isAgentSubmitBlocked } from "./disposition.js";
 import { resolveAgentId } from "./runtime-state.js";
+import { hashPrompt } from "./explain-stop.js";
 
 export type EffectiveMode = "chat" | "nudge" | "governed";
 
@@ -168,4 +170,55 @@ export function formatModeStatus(
   if (session) parts.push(`session_mode=${session.mode}`);
   else parts.push("session_mode=(none)");
   return parts.join(" ");
+}
+
+export type TriageLogEntry = {
+  at: string;
+  agent_id: string;
+  mode: EffectiveMode;
+  classification: PromptClassification;
+  reasons: string[];
+  prompt_hash: string;
+};
+
+function triageLogPath(root: string): string {
+  return path.join(goalDir(root), "triage-log.jsonl");
+}
+
+export async function appendTriageLog(
+  root: string,
+  prompt: string,
+  mode: EffectiveMode,
+  conversationId?: string,
+): Promise<void> {
+  const classification = classifyPrompt(prompt);
+  const entry: TriageLogEntry = {
+    at: new Date().toISOString(),
+    agent_id: resolveAgentId(conversationId),
+    mode,
+    classification,
+    reasons: classification.reasons,
+    prompt_hash: hashPrompt(prompt),
+  };
+  await appendFile(triageLogPath(root), `${JSON.stringify(entry)}\n`, "utf8");
+}
+
+export async function readLastTriageEntry(
+  root: string,
+  conversationId?: string,
+): Promise<TriageLogEntry | null> {
+  const file = triageLogPath(root);
+  if (!existsSync(file)) return null;
+  const raw = await readFile(file, "utf8");
+  const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const agentId = resolveAgentId(conversationId);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    try {
+      const parsed = JSON.parse(lines[i]) as TriageLogEntry;
+      if (parsed.agent_id === agentId) return parsed;
+    } catch {
+      continue;
+    }
+  }
+  return null;
 }

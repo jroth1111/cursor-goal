@@ -6,6 +6,8 @@ export type WorkUnitDraft = {
   title: string;
   scope: string[];
   acceptance: string[];
+  verified_by?: string | null;
+  verify_prompt?: string | null;
 };
 
 export type ParsedGoal = {
@@ -131,6 +133,16 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
         current.acceptance.push(unquote(accM[1]));
         continue;
       }
+      const verifyByM = t.match(/^-\s*verified_by:\s*(.+)$/i);
+      if (verifyByM) {
+        current.verified_by = unquote(verifyByM[1]) || null;
+        continue;
+      }
+      const verifyPromptM = t.match(/^-\s*verify_prompt:\s*(.+)$/i);
+      if (verifyPromptM) {
+        current.verify_prompt = verifyPromptM[1].trim();
+        continue;
+      }
       if (t.startsWith("-") && !t.includes(":")) {
         current.scope.push(unquote(t.slice(1).trim()));
       }
@@ -149,6 +161,8 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
     let title = heading;
     const scope: string[] = [];
     const acceptance: string[] = [];
+    let verified_by: string | null = null;
+    let verify_prompt: string | null = null;
     for (let i = 1; i < lines.length; i++) {
       const t = lines[i].trim();
       if (!t.startsWith("-")) {
@@ -161,6 +175,16 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
         acceptance.push(unquote(accM[1]));
         continue;
       }
+      const verifyByM = body.match(/^verified_by:\s*(.+)$/i);
+      if (verifyByM) {
+        verified_by = unquote(verifyByM[1]) || null;
+        continue;
+      }
+      const verifyPromptM = body.match(/^verify_prompt:\s*(.+)$/i);
+      if (verifyPromptM) {
+        verify_prompt = verifyPromptM[1].trim();
+        continue;
+      }
       const scopeM = body.match(/^scope:\s*(.+)$/i);
       if (scopeM) {
         scope.push(unquote(scopeM[1]));
@@ -168,7 +192,7 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
       }
       scope.push(unquote(body));
     }
-    units.push({ id, title, scope, acceptance });
+    units.push({ id, title, scope, acceptance, verified_by, verify_prompt });
   }
   return units;
 }

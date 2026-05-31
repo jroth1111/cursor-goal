@@ -8,6 +8,7 @@ import { buildDispatchQueue } from "../lib/dispatch-queue.js";
 import { invalidateRuntimeState } from "../lib/dispatch-cli.js";
 import { auditGoalAlignment } from "../lib/goal-alignment.js";
 import { validateAll } from "./schemas.js";
+import { defaultUnitAcceptance } from "../lib/unit-acceptance-defaults.js";
 
 export type CompiledArtifacts = {
   manifest: Record<string, unknown>;
@@ -29,21 +30,9 @@ export type WorkUnitCompiled = {
   status: "pending" | "in_progress" | "evidence_received" | "done";
   subagent_id: string | null;
   evidence_path: string;
+  verified_by?: string | null;
+  verify_prompt?: string | null;
 };
-
-function defaultUnitAcceptance(
-  unit: { id: string; scope: string[] },
-  explicit: string[],
-): string[] {
-  if (explicit.length > 0) return explicit;
-  if (unit.scope.length > 0) {
-    return unit.scope.map((p) => {
-      const normalized = p.replace(/\/$/, "");
-      return `bash -c 'test -e ${normalized} || test -d ${normalized}'`;
-    });
-  }
-  return [`test -s .cursor/goal/evidence/units/${unit.id}.jsonl`];
-}
 
 async function atomicWriteJson(file: string, data: unknown): Promise<void> {
   const dir = path.dirname(file);
@@ -104,6 +93,8 @@ async function mergeWorkUnits(
       ...u,
       status: prev.status,
       subagent_id: prev.subagent_id,
+      verified_by: u.verified_by ?? prev.verified_by ?? null,
+      verify_prompt: u.verify_prompt ?? prev.verify_prompt ?? null,
     };
   });
 }
@@ -140,6 +131,8 @@ export async function buildCompiledArtifacts(root: string): Promise<CompiledArti
     status: "pending" as const,
     subagent_id: null,
     evidence_path: `evidence/units/${u.id}.jsonl`,
+    verified_by: u.verified_by ?? null,
+    verify_prompt: u.verify_prompt ?? null,
   }));
 
   const existingWu = path.join(goalDir(root), "work-units.json");
@@ -175,6 +168,8 @@ export async function buildCompiledArtifacts(root: string): Promise<CompiledArti
         title: u.title,
         scope: u.scope,
         acceptance: u.acceptance,
+        verified_by: u.verified_by ?? null,
+        verify_prompt: u.verify_prompt ?? null,
       })),
     },
     workUnits: { units },

@@ -7,7 +7,7 @@ import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 import { execCoreHook } from "../hooks/exec-hook.js";
 import { runStopVerifier } from "../../src/lib/verify.js";
 
-describe("subagent work units integration", () => {
+describe("subagent work units integration", { timeout: 30_000 }, () => {
   let cleanup: () => Promise<void>;
   let restore: () => void;
 

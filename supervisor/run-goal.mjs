@@ -177,6 +177,15 @@ export async function main(argv = process.argv) {
   await ensureCore(root);
   await mkdir(passports, { recursive: true });
 
+  if (existsSync(paused)) {
+    console.error("Plan paused (.cursor/goal/PAUSED) — run: cursor-goal resume");
+    process.exit(2);
+  }
+  if (existsSync(disposition)) {
+    console.error("Disposition active — resolve .cursor/goal/passports/DISPOSITION.json before supervisor run");
+    process.exit(2);
+  }
+
   const rt = resolveRuntime(root);
   console.log("Supervisor:", {
     core: true,

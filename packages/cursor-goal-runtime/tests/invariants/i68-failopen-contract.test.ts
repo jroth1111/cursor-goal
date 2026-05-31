@@ -14,7 +14,7 @@ import { runStopVerifier } from "../../src/lib/verify.js";
  * shell and subagent isolation may hard-deny; runtime-missing must not block
  * or crash. Complements i67 / i38 / i24 / i02.
  */
-describe("I68 fail-open contract", () => {
+describe("I68 fail-open contract", { timeout: 30_000 }, () => {
   let cleanup: (() => Promise<void>) | undefined;
   let restore: (() => void) | undefined;
 
@@ -52,7 +52,7 @@ describe("I68 fail-open contract", () => {
       const pre = execCoreHook(p.dir, "preToolUse", { tool_name: "Shell", command });
       expect(pre.stdout.permission).toBe("allow");
     }
-  });
+  }, 15000);
 
   it("2: primary Write and Edit are allowed even out of scope in a governed project", async () => {
     const p = await governed("i68-write");

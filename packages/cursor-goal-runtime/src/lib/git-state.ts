@@ -1,6 +1,6 @@
+import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { goalDir, projectRoot, readJson, writeJson } from "./paths.js";
 
@@ -19,26 +19,84 @@ function gitOutput(root: string, cmd: string): string {
   }).trim();
 }
 
-export function gitTreeId(root: string): string {
+function hashString(s: string): string {
+  return createHash("sha256").update(s).digest("hex").slice(0, 16);
+}
+
+function hashFile(root: string, rel: string): string {
+  try {
+    const buf = readFileSync(path.join(root, rel));
+    return createHash("sha256").update(buf).digest("hex").slice(0, 16);
+  } catch {
+    return "missing";
+  }
+}
+
+export function isGoalArtifactPath(filePath: string): boolean {
+  const norm = filePath.replace(/\\/g, "/").replace(/^\.\//, "");
+  return norm === ".cursor/goal" || norm.startsWith(".cursor/goal/");
+}
+
+/** Content-addressed working tree fingerprint excluding .cursor/goal artifacts. */
+export function workingTreeFingerprint(root: string): string {
   try {
     const head = gitOutput(root, "git rev-parse HEAD");
-    const dirty = gitOutput(root, "git status --porcelain");
+    const parts: string[] = [`head:${head}`];
+
+    try {
+      const diff = gitOutput(
+        root,
+        'git diff --binary HEAD -- . ":(exclude).cursor/goal"',
+      );
+      if (diff) parts.push(`diff:${hashString(diff)}`);
+    } catch {
+      /* no diff */
+    }
+
+    try {
+      const staged = gitOutput(
+        root,
+        'git diff --binary --cached HEAD -- . ":(exclude).cursor/goal"',
+      );
+      if (staged) parts.push(`staged:${hashString(staged)}`);
+    } catch {
+      /* no staged diff */
+    }
+
+    try {
+      const untracked = gitOutput(root, "git ls-files --others --exclude-standard");
+      for (const rel of untracked.split("\n").filter(Boolean).sort()) {
+        if (isGoalArtifactPath(rel)) continue;
+        parts.push(`ut:${rel}:${hashFile(root, rel)}`);
+      }
+    } catch {
+      /* no untracked */
+    }
+
+    const dirty = parts.length > 1;
     if (!dirty) return head;
-    return `${head}-dirty-${hashString(dirty)}`;
+    return `${head}-wt-${hashString(parts.join("\n"))}`;
   } catch {
     try {
-      const dirty = gitOutput(root, "git status --porcelain");
-      return dirty ? `uncommitted-${hashString(dirty)}` : "no-git";
+      const untracked = gitOutput(root, "git ls-files --others --exclude-standard");
+      const productUntracked = untracked
+        .split("\n")
+        .filter(Boolean)
+        .filter((f) => !isGoalArtifactPath(f));
+      if (!productUntracked.length) return "no-git";
+      const parts = productUntracked
+        .sort()
+        .map((rel) => `ut:${rel}:${hashFile(root, rel)}`);
+      return `uncommitted-wt-${hashString(parts.join("\n"))}`;
     } catch {
       return "no-git";
     }
   }
 }
 
-function hashString(s: string): string {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return (h >>> 0).toString(16);
+/** Uses content-addressed fingerprint (name kept for callers). */
+export function gitTreeId(root: string): string {
+  return workingTreeFingerprint(root);
 }
 
 export function statePath(root = projectRoot()): string {
@@ -68,7 +126,9 @@ export function listDiffFiles(root: string): string[] {
     const untracked = gitOutput(root, "git ls-files --others --exclude-standard");
     const all = new Set<string>();
     for (const block of [unstaged, staged, untracked]) {
-      for (const f of block.split("\n").filter(Boolean)) all.add(f);
+      for (const f of block.split("\n").filter(Boolean)) {
+        if (!isGoalArtifactPath(f)) all.add(f);
+      }
     }
     return [...all];
   } catch {

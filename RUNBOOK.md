@@ -62,13 +62,19 @@ When global runtime exists, plain `install.sh` skips hook copy and only seeds te
 5. Stop hook returns ranked `followup_message` from `runtime-state.json` (I39/I40). Stale tree during verify blocks release (I41).
 6. Operator commands:
    ```bash
+   cursor-goal explain           # why blocked (L-level, checks, next action)
    cursor-goal next              # human-readable next action
+   cursor-goal next --verbose    # same as explain (text)
    cursor-goal next --json       # machine-readable snapshot (I44)
    cursor-goal status [--json]
    cursor-goal verify
+   cursor-goal goal lint
+   cursor-goal dispatch --verify --unit <id>   # adversarial prompt (I85)
+   cursor-goal logs 20           # tail stop-trace.jsonl
+   cursor-goal upgrade           # refresh global runtime install
    ```
 
-Keep `CURSOR_GOAL_PI_INTENT` unset for this path.
+Optional: set `CURSOR_GOAL_LEGACY_EVIDENCE=1` only when migrating old unit evidence files. Use `cursor-goal init` (seeds GOAL only) or `cursor-goal init --detect` to add project-native checks; `init --compile` opts into immediate compile.
 
 ## Work units + subagents
 

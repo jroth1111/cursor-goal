@@ -1,6 +1,6 @@
 # cursor-goal
 
-Governed long-horizon runs for **cursor-agent** without patching Cursor. Proof-first: see [`INVARIANTS.json`](INVARIANTS.json), [`CAPABILITY.md`](CAPABILITY.md), and [`AGENTS.md`](AGENTS.md).
+Governed long-horizon runs for **cursor-agent** without patching Cursor. Proof-first: see [`INVARIANTS.json`](INVARIANTS.json), [`CAPABILITY.md`](CAPABILITY.md), and [`AGENTS.md`](AGENTS.md). Architecture and contributing: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md).
 
 | Layer | Path | Required? | Role |
 |-------|------|-----------|------|

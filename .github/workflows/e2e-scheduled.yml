@@ -1,0 +1,28 @@
+name: cursor-goal-e2e
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  e2e-global:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.19.0"
+      - run: npm ci
+      - run: npm run build
+      - name: Global E2E (hooks + optional agent)
+        env:
+          E2E_AGENT_TESTS: T17,T18,T22
+        run: npm run e2e:global
+      - name: Upload E2E traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-traces
+          path: /tmp/cgr-e2e-*
+          if-no-files-found: ignore

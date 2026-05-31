@@ -1,26 +1,23 @@
 import { existsSync } from "node:fs";
+import { unlink } from "node:fs/promises";
 import path from "node:path";
+import { compileGoalV2 } from "../compile/compile-v2.js";
 import { goalDir, goalMd, projectRoot } from "./paths.js";
 import { auditGoalAlignment } from "./goal-alignment.js";
+import { readFile } from "node:fs/promises";
 import { cursorHome } from "./template.js";
+import { resolveRuntimeRoot as resolveRuntime } from "./resolve-runtime.js";
 
 export type DoctorIssue = { level: "error" | "warn"; message: string };
 
+export type DoctorReport = {
+  issues: DoctorIssue[];
+  runtime_root: string | null;
+  hooks: { global: boolean; project: boolean };
+};
+
 export function resolveRuntimeRoot(root: string): string | null {
-  if (
-    process.env.CURSOR_GOAL_RUNTIME &&
-    existsSync(path.join(process.env.CURSOR_GOAL_RUNTIME, "dist/hook-stop.mjs"))
-  ) {
-    return process.env.CURSOR_GOAL_RUNTIME;
-  }
-  for (const p of [
-    path.join(cursorHome(), "cursor-goal-runtime"),
-    path.join(root, "packages/cursor-goal-runtime"),
-    path.join(root, "node_modules/@cursor-goal/runtime"),
-  ]) {
-    if (existsSync(path.join(p, "dist/hook-stop.mjs"))) return p;
-  }
-  return null;
+  return resolveRuntime(root);
 }
 
 export function hasProjectHooks(root: string): boolean {
@@ -76,5 +73,54 @@ export async function runDoctor(root = projectRoot()): Promise<DoctorIssue[]> {
       issues.push({ level: "warn", message: "GOAL alignment audit failed — run: cursor-goal doctor" });
     }
   }
+
+  const manifestPath = path.join(cursorHome(), "cursor-goal/install-manifest.json");
+  const rt = resolveRuntimeRoot(root);
+  if (globalHooks && existsSync(manifestPath) && rt) {
+    try {
+      const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
+        source?: string;
+        git_sha?: string;
+      };
+      const pkgPath = path.join(rt, "package.json");
+      if (existsSync(pkgPath)) {
+        const pkg = JSON.parse(await readFile(pkgPath, "utf8")) as { version?: string };
+        if (manifest.source && !rt.startsWith(manifest.source) && manifest.git_sha) {
+          issues.push({
+            level: "warn",
+            message: `Global runtime may be stale (installed from ${manifest.git_sha}) — run: cursor-goal upgrade`,
+          });
+        }
+        void pkg.version;
+      }
+    } catch {
+      /* ignore manifest parse */
+    }
+  }
+
   return issues;
+}
+
+export async function buildDoctorReport(root = projectRoot()): Promise<DoctorReport> {
+  return {
+    issues: await runDoctor(root),
+    runtime_root: resolveRuntimeRoot(root),
+    hooks: { global: hasGlobalHooks(), project: hasProjectHooks(root) },
+  };
+}
+
+export async function applyDoctorFixes(root = projectRoot()): Promise<string[]> {
+  const actions: string[] = [];
+  for (const stale of ["NEXT_UNIT.md", "LAST_CHECK_FAIL.md"]) {
+    const file = path.join(goalDir(root), stale);
+    if (existsSync(file)) {
+      await unlink(file);
+      actions.push(`removed ${stale}`);
+    }
+  }
+  if (existsSync(goalMd(root)) && !existsSync(path.join(goalDir(root), "manifest.json"))) {
+    await compileGoalV2(root);
+    actions.push("compiled GOAL.md");
+  }
+  return actions;
 }

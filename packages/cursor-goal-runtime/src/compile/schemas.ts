@@ -46,13 +46,14 @@ export function schemasRoot(): string {
   if (process.env.CURSOR_GOAL_SCHEMAS) {
     return process.env.CURSOR_GOAL_SCHEMAS;
   }
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  for (const rel of ["../../../../core/.cursor/goal/schemas", "../../../../../core/.cursor/goal/schemas"]) {
+    const repoSchemas = path.resolve(here, rel);
+    if (existsSync(repoSchemas)) return repoSchemas;
+  }
   const globalSchemas = path.join(cursorHome(), "goal/schemas");
   if (existsSync(globalSchemas)) return globalSchemas;
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const fromDist = path.resolve(here, "../../../../core/.cursor/goal/schemas");
-  if (existsSync(fromDist)) return fromDist;
-  const fromSrc = path.resolve(here, "../../../../../core/.cursor/goal/schemas");
-  return fromSrc;
+  throw new Error("cursor-goal schemas not found — run npm run install:global");
 }
 
 async function loadValidators(): Promise<Map<SchemaName, Validator>> {

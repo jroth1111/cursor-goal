@@ -6,7 +6,9 @@ import { hasAgentDisposition, isAgentSubmitBlocked } from "../lib/disposition.js
 import { goalDir, goalMd, projectRoot } from "../lib/paths.js";
 import { hookJson } from "../lib/verify.js";
 import { readStdinJson } from "../lib/stdin.js";
-import { nudgeMessage, resolveEffectiveMode } from "../lib/prompt-triage.js";
+import { nudgeMessage, resolveEffectiveMode, appendTriageLog } from "../lib/prompt-triage.js";
+import { isStrictGovernance } from "../lib/strict-mode.js";
+import { resolveRuntimeRoot } from "../lib/resolve-runtime.js";
 
 async function main(): Promise<void> {
   const root = projectRoot();
@@ -29,8 +31,19 @@ async function main(): Promise<void> {
     return;
   }
 
+  await appendTriageLog(root, prompt, resolved.mode, input.conversation_id).catch(() => undefined);
+
   if (resolved.mode === "chat") {
     hookJson(notes.length ? { continue: true, agent_message: notes.join("; ") } : { continue: true });
+    return;
+  }
+
+  if (isStrictGovernance() && !resolveRuntimeRoot(root)) {
+    hookJson({
+      continue: false,
+      agent_message:
+        "CURSOR_GOAL_STRICT=1: runtime missing — run npm run install:global or npm run build before governed delivery",
+    });
     return;
   }
 

@@ -469,6 +469,118 @@
       "layers": ["core", "runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i77-standalone-boundary.test.ts"
+    },
+    {
+      "id": "I87",
+      "description": "Working tree fingerprint is content-addressed and stale-proof blocks check mutations on dirty tracked files",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i87-working-tree-fingerprint.test.ts"
+    },
+    {
+      "id": "I88",
+      "description": "Failed or non-success subagent status cannot mark work units done",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i88-subagent-status-gate.test.ts"
+    },
+    {
+      "id": "I89",
+      "description": "Unit completion evidence requires strict v1 schema by default",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i89-unit-evidence-schema.test.ts"
+    },
+    {
+      "id": "I90",
+      "description": "cursor-goal init seeds GOAL without compiling by default",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i90-init-no-compile.test.ts"
+    },
+    {
+      "id": "I91",
+      "description": "cursor-goal init --detect writes project-native checks into GOAL.md",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i91-init-detect.test.ts"
+    },
+    {
+      "id": "I92",
+      "description": "Default unit acceptance requires evidence file not path existence",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i92-acceptance-defaults.test.ts"
+    },
+    {
+      "id": "I93",
+      "description": "Proof-plan shell policy emits advisory warnings without blocking release",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i93-proof-plan-advisory.test.ts"
+    },
+    {
+      "id": "I78",
+      "description": "cursor-goal explain reports failing L-level, checks, and next action",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i78-explain-stop.test.ts"
+    },
+    {
+      "id": "I79",
+      "description": "cursor-goal goal lint catches placeholder GOAL.md and alignment errors",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i79-goal-lint.test.ts"
+    },
+    {
+      "id": "I80",
+      "description": "Prompt triage writes and reads triage-log.jsonl per conversation",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i80-triage-log.test.ts"
+    },
+    {
+      "id": "I81",
+      "description": "Supervisor unit Task prompt matches runtime buildUnitTaskPrompt",
+      "layers": ["runtime", "supervisor"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i81-unit-prompt-parity.test.ts"
+    },
+    {
+      "id": "I82",
+      "description": "verified_by units require deliverable.md before RELEASE",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i82-deliverable-required.test.ts"
+    },
+    {
+      "id": "I83",
+      "description": "VERDICT line parsing for adversarial verifier responses",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i83-verdict-parse.test.ts"
+    },
+    {
+      "id": "I84",
+      "description": "RELEASE requires fresh VERDICT PASS for verified_by units",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i84-adversarial-release-gate.test.ts"
+    },
+    {
+      "id": "I85",
+      "description": "cursor-goal dispatch --verify emits adversarial verification prompt",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i85-dispatch-verify-cli.test.ts"
+    },
+    {
+      "id": "I86",
+      "description": "CURSOR_GOAL_STRICT blocks governed prompts when runtime is missing",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i86-strict-governance.test.ts"
     }
   ]
 }

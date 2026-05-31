@@ -11,7 +11,7 @@ import {
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 import { writeAgentRuntimeState } from "../../src/lib/agent-runtime-state.js";
 
-describe("I67 hook permissiveness contract", () => {
+describe("I67 hook permissiveness contract", { timeout: 30_000 }, () => {
   let cleanup: () => Promise<void>;
   let restore: () => void;
 

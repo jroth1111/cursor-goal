@@ -28,17 +28,3 @@ export async function runStopVerifier(input: StopInput): Promise<VerifyResult> {
 export function hookJson(body: Record<string, unknown>): void {
   process.stdout.write(`${JSON.stringify(body)}\n`);
 }
-
-/** @deprecated use runStopPipeline */
-export async function runStopVerifierLegacy(input: StopInput): Promise<VerifyResult> {
-  const root = projectRoot();
-  if (!existsSync(goalMd(root))) {
-    return {
-      kind: "continue",
-      message:
-        "GOAL.md is missing. Create it from .cursor/goal/templates/GOAL.md with ## Checks.",
-    };
-  }
-  await parseGoalMd(root);
-  return runStopPipeline(input);
-}

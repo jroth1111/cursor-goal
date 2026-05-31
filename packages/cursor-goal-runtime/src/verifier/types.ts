@@ -7,6 +7,10 @@ export type StopInput = {
   conversation_id?: string;
 };
 
+export type PipelineOptions = {
+  dryRun?: boolean;
+};
+
 export type VerifyKind = "idle" | "release" | "continue" | "disposition";
 
 export type VerifierContext = {
@@ -23,6 +27,7 @@ export type VerifierContext = {
   phase?: import("../trajectory/fsm.js").Phase;
   /** Prefer this over generic followup when set by invalidators. */
   followupMessage?: string;
+  advisoryWarnings?: string[];
 };
 
 export type LevelResult = {

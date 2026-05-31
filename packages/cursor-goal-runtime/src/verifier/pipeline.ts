@@ -35,13 +35,21 @@ import {
   levelIntentStructure,
   levelInvalidators,
 } from "./invalidators.js";
-import type { StopInput, VerifyKind, VerifierContext } from "./types.js";
+import { levelProofPlanAdvisory } from "./l5b-proof-plan-advisory.js";
+import { levelAdversarialBlocked } from "./l-adversarial.js";
+import { appendStopTrace } from "../lib/stop-trace.js";
+import type { StopInput, VerifyKind, VerifierContext, PipelineOptions } from "./types.js";
 
 export type VerifyResult =
   | { kind: "release" }
   | { kind: "continue"; message: string }
   | { kind: "disposition"; failed: string[]; message: string }
   | { kind: "idle" };
+
+export type StopDiagnostics = {
+  result: VerifyResult;
+  ctx: VerifierContext;
+};
 
 function wrap(
   ctx: VerifierContext,
@@ -65,7 +73,9 @@ async function finishEarly(
   result: VerifyResult,
   agentId: string,
   ctx?: VerifierContext,
+  options?: PipelineOptions,
 ): Promise<VerifyResult> {
+  if (options?.dryRun) return result;
   if (result.kind === "continue") {
     await writeUnblockedContinueState(root, {
       loopCount: ctx?.loopCount,
@@ -75,13 +85,17 @@ async function finishEarly(
   return result;
 }
 
-export async function runStopPipeline(input: StopInput): Promise<VerifyResult> {
+export async function runStopPipeline(
+  input: StopInput,
+  options?: PipelineOptions,
+): Promise<VerifyResult> {
   const root = projectRoot();
   const agentId = resolveAgentId(input);
+  const dryRun = options?.dryRun === true;
   await ensureGoalDirs(root);
 
   if (!existsSync(goalMd(root))) {
-    await writeUnblockedContinueState(root, { agentId });
+    if (!dryRun) await writeUnblockedContinueState(root, { agentId });
     return {
       kind: "continue",
       message:
@@ -105,19 +119,20 @@ export async function runStopPipeline(input: StopInput): Promise<VerifyResult> {
   };
 
   let early = wrap(ctx, levelPaused(ctx));
-  if (early) return finishEarly(root, early, agentId, ctx);
+  if (early) return finishEarly(root, early, agentId, ctx, options);
 
   early = wrap(ctx, levelContract(ctx));
-  if (early) return finishEarly(root, early, agentId, ctx);
+  if (early) return finishEarly(root, early, agentId, ctx, options);
 
   early = wrap(ctx, levelChecksPresent(ctx));
-  if (early) return finishEarly(root, early, agentId, ctx);
+  if (early) return finishEarly(root, early, agentId, ctx, options);
 
   levelScope(ctx);
   levelForbiddenProxy(ctx);
   levelIntentStructure(ctx);
   await levelChecksPass(ctx);
   await levelFreshProofBlocked(ctx);
+  ctx.advisoryWarnings = await levelProofPlanAdvisory(ctx);
 
   ctx.unitsBlocked = await levelWorkUnitsBlocked(ctx);
   const advanced = await maybeAutoAdvanceToVerify(ctx.root);
@@ -131,10 +146,38 @@ export async function runStopPipeline(input: StopInput): Promise<VerifyResult> {
   const del = await levelDeliverableCoherence(ctx);
   if (del.halt && del.message && !ctx.followupMessage) ctx.followupMessage = del.message;
 
-  const blocked =
+  let blocked =
     ctx.failures.length > 0 || ctx.unitsBlocked || ctx.phaseBlocked;
 
   if (!blocked) {
+    const adv = await levelAdversarialBlocked(ctx);
+    if (adv.blocked) {
+      blocked = true;
+      if (adv.message) ctx.followupMessage = adv.message;
+    }
+  }
+
+  const levelFailed =
+    ctx.failures[0]?.startsWith("adversarial")
+      ? "L-adversarial"
+      : ctx.failures.some((f) => ctx.checkResults.some((c) => !c.ok && c.cmd === f))
+        ? "L3"
+        : ctx.failures[0]?.startsWith("stale-proof")
+          ? "L6"
+          : ctx.failures.length
+            ? "L-other"
+            : null;
+
+  await appendStopTrace(ctx.root, {
+    at: new Date().toISOString(),
+    level_failed: levelFailed,
+    failures: [...ctx.failures],
+    pipeline_result: blocked ? "continue" : "release",
+    dry_run: dryRun,
+  }).catch(() => undefined);
+
+  if (!blocked) {
+    if (dryRun) return { kind: "release" };
     ctx.loopCount = 0;
     await levelFreshProofOnRelease(ctx);
     const releasedState = await computeRuntimeState({
@@ -154,6 +197,31 @@ export async function runStopPipeline(input: StopInput): Promise<VerifyResult> {
       checks: ctx.parsed.checks,
     });
     return { kind: "release" };
+  }
+
+  if (dryRun) {
+    const nextLoop = ctx.loopCount + 1;
+    const runtimeState = await computeRuntimeState({
+      ctx: { ...ctx, loopCount: nextLoop },
+      phase: ctx.phase,
+      phaseBlocked: ctx.phaseBlocked,
+      unitsBlocked: ctx.unitsBlocked,
+      blocked: true,
+    });
+    const budgetCtx = { ...ctx, loopCount: nextLoop };
+    const followup = await resolveLoopBudgetMessage(budgetCtx, runtimeState);
+    const disposition = dispositionForLoop(budgetCtx, followup, nextLoop);
+    if (disposition) {
+      return {
+        kind: "disposition",
+        failed: [...ctx.failures],
+        message: disposition.mdBody ?? followup,
+      };
+    }
+    return {
+      kind: "continue",
+      message: ctx.followupMessage ?? followup,
+    };
   }
 
   await appendProgress(ctx);
@@ -207,6 +275,8 @@ export async function runStopPipeline(input: StopInput): Promise<VerifyResult> {
 
 async function appendProgress(ctx: VerifierContext): Promise<void> {
   const progress = nodePath.join(goalDir(ctx.root), "PROGRESS.md");
-  const line = `\n## ${new Date().toISOString()} stop-blocked\n- failures: ${ctx.failures.join("; ") || "none"}\n- phase_blocked: ${ctx.phaseBlocked}\n- units_blocked: ${ctx.unitsBlocked}\n`;
+  const advisory =
+    ctx.advisoryWarnings?.length ? `\n- advisory: ${ctx.advisoryWarnings.join("; ")}` : "";
+  const line = `\n## ${new Date().toISOString()} stop-blocked\n- failures: ${ctx.failures.join("; ") || "none"}\n- phase_blocked: ${ctx.phaseBlocked}\n- units_blocked: ${ctx.unitsBlocked}${advisory}\n`;
   await appendFile(progress, line, "utf8").catch(() => undefined);
 }

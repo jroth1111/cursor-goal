@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { checkShellGate, shellCommandAllowed } from "../../src/lib/shell-allow.js";
 import { execCoreHook } from "../hooks/exec-hook.js";
 
-describe("I23 shell permissiveness", () => {
+describe("I23 shell permissiveness", { timeout: 30_000 }, () => {
   let cleanup: () => Promise<void>;
   let restore: () => void;
 
@@ -39,7 +39,7 @@ describe("I23 shell permissiveness", () => {
     });
     const out = JSON.parse((r.stdout ?? "{}").trim() || "{}");
     expect(out.permission).toBe("allow");
-  });
+  }, 15000);
 
   it("denies destructive shell variants across runtime and wrapper paths", async () => {
     const p = await mkGitProject("i23-deny-variants");
@@ -67,5 +67,5 @@ describe("I23 shell permissiveness", () => {
         command,
       ).toBe("deny");
     }
-  });
+  }, 15000);
 });

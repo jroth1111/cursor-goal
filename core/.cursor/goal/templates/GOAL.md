@@ -18,19 +18,31 @@ Paths the agent may change (one per line):
 
 Optional. When omitted, one unit is created per Scope path.
 
-### auth-middleware
+<!--
+Example unit (uncomment and edit):
 
-Add auth middleware
+### example-unit
+Short title
 
-- scope: `src/auth/`
-- acceptance: `npm test -- src/auth`
+- scope: `src/example/`
+- acceptance: `npm test -- src/example`
+- verified_by: verifier
+- verify_prompt: Re-run tests and spot-check the user-facing path
+-->
 
 ## Checks
 
 Machine-verified stopping condition. Each line is a shell command that must exit 0:
 
+- `true`
+
+<!--
+Examples for your stack (replace `true` above):
+
 - `npm test`
 - `npm run lint`
+- `uv run pytest`
+-->
 
 ## Forbidden proxies
 

@@ -71,6 +71,22 @@ Only claim what invariant tests prove.
 | I75 | Same-agent blocked-stop loop atomicity | — | yes | — | i75-agent-loop-atomicity | tested |
 | I76 | RELEASE/session terminal lifecycle consistency | yes | yes | — | i76-release-session-lifecycle | tested |
 | I77 | Standalone package boundary and no legacy runtime aliases | yes | yes | — | i77-standalone-boundary | tested |
+| I78 | cursor-goal explain reports failing L-level, checks, next action | — | yes | — | i78-explain-stop | tested |
+| I79 | cursor-goal goal lint catches placeholder GOAL.md and alignment errors | — | yes | — | i79-goal-lint | tested |
+| I80 | Prompt triage writes and reads triage-log.jsonl per conversation | — | yes | — | i80-triage-log | tested |
+| I81 | Supervisor unit prompt matches runtime buildUnitTaskPrompt | — | yes | — | i81-unit-prompt-parity | tested |
+| I82 | verified_by units require deliverable.md before RELEASE | — | yes | — | i82-deliverable-required | tested |
+| I83 | VERDICT parsing for adversarial verifier | — | yes | — | i83-verdict-parse | tested |
+| I84 | RELEASE requires VERDICT PASS for verified_by units | — | yes | — | i84-adversarial-release-gate | tested |
+| I85 | cursor-goal dispatch --verify CLI | — | yes | — | i85-dispatch-verify-cli | tested |
+| I86 | CURSOR_GOAL_STRICT blocks governed prompts without runtime | — | yes | — | i86-strict-governance | tested |
+| I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
+| I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
+| I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |
+| I90 | cursor-goal init seeds GOAL without compiling by default | — | yes | — | i90-init-no-compile | tested |
+| I91 | cursor-goal init --detect writes project-native checks | — | yes | — | i91-init-detect | tested |
+| I92 | Default unit acceptance requires evidence file not path existence | — | yes | — | i92-acceptance-defaults | tested |
+| I93 | Proof-plan shell policy emits advisory warnings only | — | yes | — | i93-proof-plan-advisory | tested |
 
 ## Multi-agent runtime state (one repo, many parent conversations)
 
@@ -123,5 +139,5 @@ If the runtime is missing, hooks use the minimal safety fallback automatically.
 | Budget vs display split (e.g. cursor 38/40 → DISPOSITION, show goal 1/40) | I54 |
 | Minimal bash persists goal loop in `runtime-state.json` | I10 stuck case, T21 |
 | Parallel parent agents: per-conversation block + locked repo stop total | I56–I58 |
-| Live `cursor-agent-goal` fires stop hooks | T22 (optional; `E2E_AGENT_TESTS`) |
+| Live `cursor-agent-goal` fires stop hooks | T22 (optional; `E2E_AGENT_TESTS`; nightly [e2e-scheduled.yml](.github/workflows/e2e-scheduled.yml)) |
 | Full IDE session loop scheduling / exact Cursor `loop_count` semantics | Not proven in default CI |

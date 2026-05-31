@@ -1,4 +1,5 @@
-import { appendFile } from "node:fs/promises";
+import { appendFile, mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { ensureGoalDirs, goalDir, projectRoot } from "../lib/paths.js";
 import { hookJson } from "../lib/verify.js";
@@ -12,6 +13,7 @@ import {
   findUnitById,
 } from "../lib/work-units.js";
 import { runUnitAcceptance } from "../lib/unit-acceptance.js";
+import { subagentStatusOk, subagentStatusBlockedReason } from "../lib/subagent-status.js";
 
 const input = await readStdinJson<Record<string, unknown>>();
 const root = projectRoot();
@@ -49,21 +51,40 @@ if (unitId) {
   const unit = findUnitById(wu?.units ?? [], unitId);
   let acceptanceOk = true;
   if (unit) {
+    const evidenceFull = path.join(goalDir(root), evidenceRel);
+    await mkdir(path.dirname(evidenceFull), { recursive: true });
+    if (!existsSync(evidenceFull)) {
+      await appendFile(
+        evidenceFull,
+        JSON.stringify({
+          at: new Date().toISOString(),
+          evidence_version: 1,
+          work_unit_id: unitId,
+          pending: true,
+        }) + "\n",
+        "utf8",
+      );
+    }
     const acc = await runUnitAcceptance(unit, root);
     acceptanceOk = acc.ok;
+    const statusOk = subagentStatusOk(status);
+    const evidenceLine = {
+      at: new Date().toISOString(),
+      evidence_version: 1,
+      subagent_id: subagentId,
+      subagent_status: status,
+      status,
+      work_unit_id: unitId,
+      acceptance: acc.commands,
+      acceptance_ok: acc.ok,
+      ...(statusOk ? {} : { blocked: true, blocker: subagentStatusBlockedReason(status) }),
+    };
     await appendFile(
       path.join(goalDir(root), evidenceRel),
-      JSON.stringify({
-        at: new Date().toISOString(),
-        subagent_id: subagentId,
-        status,
-        work_unit_id: unitId,
-        acceptance: acc.commands,
-        acceptance_ok: acc.ok,
-      }) + "\n",
+      JSON.stringify(evidenceLine) + "\n",
       "utf8",
     );
-    if (acc.ok) {
+    if (acc.ok && statusOk) {
       await markUnitDone(unitId, root);
     }
   } else {

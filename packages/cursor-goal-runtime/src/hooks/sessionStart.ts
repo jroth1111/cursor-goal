@@ -18,6 +18,7 @@ import { readLoopLimit } from "../lib/loop-limit.js";
 import { sessionBrief } from "../lib/stop-playbook.js";
 import { goalTemplatePath } from "../lib/template.js";
 import { auditGoalAlignment } from "../lib/goal-alignment.js";
+import { parseGoalMd } from "../lib/parse-goal-md.js";
 import { isGoalStale } from "../lib/compile-stale.js";
 import { hookJson } from "../lib/verify.js";
 import { readStdinJson } from "../lib/stdin.js";
@@ -102,6 +103,22 @@ async function main(): Promise<void> {
       }
     } catch {
       /* ignore */
+    }
+
+    const governed = session?.mode === "governed" || config.default_mode === "governed";
+    if (governed) {
+      try {
+        const parsed = await parseGoalMd(root);
+        const emptyChecks =
+          !parsed.checks.length ||
+          parsed.checks.every((c) => !c.trim() || c.trim() === "true");
+        if (emptyChecks) {
+          brief +=
+            "; GOAL checks empty — run: cursor-goal goal lint && cursor-goal init --detect";
+        }
+      } catch {
+        /* ignore */
+      }
     }
   }
 

@@ -38,3 +38,12 @@ for (const name of hooks) {
 await chmod(path.join(root, "dist", "cli.js"), 0o755);
 
 console.log("Linked hook-*.mjs for cursor-goal dispatch");
+
+try {
+  const { spawnSync } = await import("node:child_process");
+  const emit = path.join(root, "scripts/emit-unit-prompts.mjs");
+  const r = spawnSync("node", [emit], { stdio: "inherit" });
+  if (r.status !== 0) process.exit(r.status ?? 1);
+} catch (e) {
+  console.warn("emit-unit-prompts skipped:", e);
+}

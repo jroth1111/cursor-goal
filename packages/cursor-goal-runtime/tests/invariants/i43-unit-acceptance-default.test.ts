@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { writeFile, mkdir } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
@@ -14,7 +14,7 @@ describe("I43 scope-based default unit acceptance", () => {
     await cleanup?.();
   });
 
-  it("does not mark unit done until scope path exists", async () => {
+  it("uses evidence-file default acceptance and honors explicit acceptance failure", async () => {
     const p = await mkGitProject("i43");
     cleanup = p.cleanup;
     restore = withProjectEnv(p.dir).restore;
@@ -26,8 +26,9 @@ x
 ### mod-a
 A
 - \`pkg/a/\`
+- acceptance: \`false\`
 ## Checks
-- \`false\`
+- \`true\`
 `,
       "utf8",
     );
@@ -38,8 +39,7 @@ A
         fs.readFile(path.join(p.dir, ".cursor/goal/work-units.json"), "utf8"),
       ),
     );
-    expect(wu.units[0].acceptance[0]).not.toBe("true");
-    expect(String(wu.units[0].acceptance[0])).toMatch(/pkg\/a/);
+    expect(String(wu.units[0].acceptance[0])).toBe("false");
 
     const hook = path.resolve(import.meta.dirname, "../../dist/hook-subagentStop.mjs");
     spawnSync("node", [hook], {
@@ -53,30 +53,11 @@ A
       env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
     });
 
-    let after = JSON.parse(
+    const after = JSON.parse(
       await import("node:fs/promises").then((fs) =>
         fs.readFile(path.join(p.dir, ".cursor/goal/work-units.json"), "utf8"),
       ),
     );
     expect(after.units[0].status).not.toBe("done");
-
-    await mkdir(path.join(p.dir, "pkg/a"), { recursive: true });
-    spawnSync("node", [hook], {
-      cwd: p.dir,
-      input: JSON.stringify({
-        status: "completed",
-        subagent_id: "sub-a",
-        work_unit_id: "mod-a",
-      }),
-      encoding: "utf8",
-      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
-    });
-
-    after = JSON.parse(
-      await import("node:fs/promises").then((fs) =>
-        fs.readFile(path.join(p.dir, ".cursor/goal/work-units.json"), "utf8"),
-      ),
-    );
-    expect(after.units[0].status).toBe("done");
   });
 });

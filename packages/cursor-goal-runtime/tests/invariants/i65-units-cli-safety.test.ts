@@ -99,8 +99,10 @@ A
       path.join(evidenceDir, "unit-a.jsonl"),
       JSON.stringify({
         at: new Date().toISOString(),
+        evidence_version: 1,
         work_unit_id: "unit-a",
-        ok: true,
+        acceptance_ok: true,
+        subagent_status: "completed",
         status: "passed",
       }) + "\n",
       "utf8",
