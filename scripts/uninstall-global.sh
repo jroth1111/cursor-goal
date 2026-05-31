@@ -38,10 +38,15 @@ if [[ -f "$CURSOR_HOME/hooks.json" ]] && command -v jq >/dev/null 2>&1; then
     .hooks = (
       .hooks // {} |
       with_entries(
-        select(
-          (.value | type) != "array" or
-          ([.value[]?.command // ""] | all(test("goal-") | not))
-        )
+        if (.value | type) == "array" then
+          .value = [
+            .value[]?
+            | select(((.command // "") | test("(^|/)goal-[^/]*$")) | not)
+          ]
+          | select((.value | length) > 0)
+        else
+          .
+        end
       )
     )
   ' "$CURSOR_HOME/hooks.json" > "$tmp" && mv "$tmp" "$CURSOR_HOME/hooks.json"
