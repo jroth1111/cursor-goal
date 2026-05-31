@@ -128,6 +128,27 @@ Module B
     expect(JSON.parse((inside.stdout ?? "{}").trim() || "{}").permission).toBe("allow");
   });
 
+  it("runtime preToolUse denies dot-segment escape from unit scope", async () => {
+    const p = await mkGitProject("i24-dot-segment");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await seed(p);
+
+    const hook = path.resolve(import.meta.dirname, "../../dist/hook-preToolUse.mjs");
+    const outside = spawnSync("node", [hook], {
+      cwd: p.dir,
+      input: JSON.stringify({
+        tool_name: "Write",
+        file_path: "pkg/a/../b/outside.ts",
+        is_subagent: true,
+        work_unit_id: "mod-a",
+      }),
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+    });
+    expect(JSON.parse((outside.stdout ?? "{}").trim() || "{}").permission).toBe("deny");
+  });
+
   it("runtime preToolUse only allows exact unit evidence jsonl under goal governance", async () => {
     const p = await mkGitProject("i24-evidence-exact");
     cleanup = p.cleanup;
@@ -199,6 +220,14 @@ Module B
         work_unit_id: "mod-a",
       }).stdout.permission,
     ).toBe("allow");
+    expect(
+      execCoreHook(p.dir, "preToolUse", {
+        tool_name: "Write",
+        file_path: "pkg/a/../b/outside.ts",
+        is_subagent: true,
+        work_unit_id: "mod-a",
+      }).stdout.permission,
+    ).toBe("deny");
     expect(
       execCoreHook(p.dir, "preToolUse", {
         tool_name: "Write",

@@ -3,7 +3,7 @@ import { extractWorkUnitId, findUnitById, isUnitEvidencePath, readWorkUnits } fr
 import type { WriteGateResult } from "./write-gate.js";
 
 function normalizePath(filePath: string): string {
-  return filePath.replace(/\\/g, "/");
+  return path.posix.normalize(filePath.replace(/\\/g, "/"));
 }
 
 function relativePathForScope(filePath: string, root?: string): string {

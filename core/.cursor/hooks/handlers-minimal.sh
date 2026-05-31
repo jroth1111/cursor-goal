@@ -27,9 +27,32 @@ destructive_shell() {
   printf '%s' "$cmd" | grep -qiE '\bdrop[[:space:]]+database\b|\bgit\b.*\bpush\b.*(--force([=[:space:]]|$)|--force-with-lease([=[:space:]]|$)|(^|[[:space:]])-f([[:space:]]|$)|(^|[[:space:];&|])\+[^[:space:];&|]+)|\brm\b.*(-[[:alpha:]]*r[[:alpha:]]*f|-[[:alpha:]]*f[[:alpha:]]*r|--recursive.*--force|--force.*--recursive)'
 }
 
-relative_file_path() {
+normalize_file_path() {
   local f="${1//\\//}"
-  local r="${ROOT//\\//}"
+  jq -nr --arg p "$f" '
+    def norm($path):
+      ($path | gsub("/+"; "/")) as $compact |
+      ($compact | startswith("/")) as $abs |
+      reduce ($compact | split("/"))[] as $part
+        ([];
+          if $part == "" or $part == "." then .
+          elif $part == ".." then
+            if length > 0 and .[-1] != ".." then .[0:length - 1]
+            elif $abs then .
+            else . + [".."] end
+          else . + [$part] end
+        ) as $parts |
+      (if $abs then "/" else "" end) + ($parts | join("/")) |
+      if . == "" then (if $abs then "/" else "." end) else . end;
+    norm($p)
+  '
+}
+
+relative_file_path() {
+  local f
+  local r
+  f="$(normalize_file_path "$1")"
+  r="$(normalize_file_path "$ROOT")"
   if [[ "$f" == "$r" ]]; then
     printf '.'
   elif [[ "$f" == "$r/"* ]]; then
@@ -40,12 +63,14 @@ relative_file_path() {
 }
 
 unit_id_from_path() {
-  local f="${1//\\//}"
+  local f
+  f="$(normalize_file_path "$1")"
   printf '%s' "$f" | sed -nE 's|.*/evidence/units/([a-z0-9][a-z0-9_-]*)\.jsonl$|\1|Ip' | head -1
 }
 
 unit_evidence_path() {
-  local f="${1//\\//}"
+  local f
+  f="$(normalize_file_path "$1")"
   local id="$2"
   [[ "$id" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]] || return 1
   [[ -n "$id" && "$f" =~ (^|/)evidence/units/${id}\.jsonl$ ]]
@@ -114,7 +139,13 @@ case "$STEP" in
         fi
         IN_UNIT="$(jq -r --arg id "$WUID" --arg f "$REL_FILE" '
           .units[]? | select(.id == $id) | .scope[]? as $p |
-          ($p | gsub("\\\\"; "/") | rtrimstr("/")) as $base |
+          ($p | gsub("\\\\"; "/") | split("/") | reduce .[] as $part ([];
+            if $part == "" or $part == "." then .
+            elif $part == ".." then
+              if length > 0 and .[-1] != ".." then .[0:length - 1]
+              else . + [".."] end
+            else . + [$part] end
+          ) | join("/") | rtrimstr("/")) as $base |
           if $base == "**" or $base == "." or $base == "" or $f == $base or ($f | startswith($base + "/")) then "yes" else empty end
         ' "$GOAL_DIR/work-units.json" 2>/dev/null | head -1)"
         if [[ "$IN_UNIT" != "yes" ]]; then
