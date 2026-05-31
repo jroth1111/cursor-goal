@@ -33,7 +33,7 @@ export async function runCli(argv: string[]): Promise<void> {
       await handleCompile(rest);
       break;
     case "verify":
-      await handleVerify();
+      await handleVerify(rest);
       break;
     case "next":
       await handleNext(rest);

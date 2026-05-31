@@ -24,7 +24,8 @@ const doctorOptions = new Set(["--json", "--fix"]);
 const dispatchFlags = new Set(["--dry-run", "--run", "--verify", "--spawn"]);
 const dispatchValueOptions = new Set(["--unit", "--record-response", "--from"]);
 
-export async function handleVerify(): Promise<void> {
+export async function handleVerify(rest: string[]): Promise<void> {
+  rejectUnexpectedArgs(rest);
   const r = await runStopVerifier({ status: "completed", loop_count: 0 });
   console.log(JSON.stringify(r, null, 2));
   process.exit(r.kind === "release" ? 0 : 1);
