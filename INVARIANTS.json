@@ -1050,6 +1050,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i160-session-end-fail-open.test.ts"
+    },
+    {
+      "id": "I161",
+      "description": "Subagent WriteGate denies when work-unit state is unreadable",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i161-subagent-malformed-work-units.test.ts"
     }
   ]
 }

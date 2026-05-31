@@ -154,6 +154,10 @@ case "$STEP" in
           echo '{"permission":"allow"}'
           exit 0
         fi
+        if ! jq -e 'type == "object" and (.units | type == "array")' "$GOAL_DIR/work-units.json" >/dev/null 2>&1; then
+          printf '{"permission":"deny","agent_message":"Subagent WriteGate: work-units.json unreadable - cannot verify unit scope"}\n'
+          exit 0
+        fi
         IN_UNIT="$(jq -r --arg id "$WUID" --arg f "$REL_FILE" '
           .units[]? | select(.id == $id) | .scope[]? as $p |
           ($p | gsub("\\\\"; "/") | split("/") | reduce .[] as $part ([];
