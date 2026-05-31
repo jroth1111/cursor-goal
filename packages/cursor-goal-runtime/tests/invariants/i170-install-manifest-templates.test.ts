@@ -56,4 +56,39 @@ describe("I170 global install manifest template path", () => {
     expect(manifest.hooks).toBe(path.join(fakeCursorHome, "hooks"));
     expect(existsSync(path.join(manifest.templates ?? "", "GOAL.md"))).toBe(true);
   });
+
+  it("records install target directories in the dry-run manifest", async () => {
+    const suffix = `${process.pid}-${Date.now()}`;
+    fakeCursorHome = path.join(os.tmpdir(), `i170-dry-cursor-${suffix}`);
+    fakeHome = path.join(os.tmpdir(), `i170-dry-home-${suffix}`);
+
+    const script = path.resolve(import.meta.dirname, "../../../../scripts/install-global.sh");
+    const repoRoot = path.resolve(import.meta.dirname, "../../../../../");
+    const r = spawnSync("bash", [script, "--skip-build", "--dry-run"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CURSOR_HOME: fakeCursorHome,
+        HOME: fakeHome,
+      },
+    });
+
+    expect(r.status, r.stderr || r.stdout).toBe(0);
+
+    const manifestPath = path.join(fakeCursorHome, "cursor-goal/install-manifest.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
+      runtime?: string;
+      schemas?: string;
+      templates?: string;
+      hooks?: string;
+      dry_run?: boolean;
+    };
+
+    expect(manifest.dry_run).toBe(true);
+    expect(manifest.runtime).toBe(path.join(fakeCursorHome, "cursor-goal-runtime"));
+    expect(manifest.schemas).toBe(path.join(fakeCursorHome, "goal/schemas"));
+    expect(manifest.templates).toBe(path.join(fakeCursorHome, "goal/templates"));
+    expect(manifest.hooks).toBe(path.join(fakeCursorHome, "hooks"));
+  });
 });

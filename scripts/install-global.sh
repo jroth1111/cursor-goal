@@ -64,6 +64,11 @@ if [[ "$NODE_MAJOR" -lt 22 ]]; then
   exit 1
 fi
 
+GIT_SHA=""
+if git -C "$REPO_ROOT" rev-parse --short HEAD >/dev/null 2>&1; then
+  GIT_SHA="$(git -C "$REPO_ROOT" rev-parse --short HEAD)"
+fi
+
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "DRY RUN — would install to $CURSOR_HOME"
   mkdir -p "$CURSOR_HOME/cursor-goal"
@@ -71,7 +76,11 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
 {
   "installed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "source": "$REPO_ROOT",
+  "git_sha": "$GIT_SHA",
   "runtime": "$GLOBAL_RUNTIME",
+  "schemas": "$GLOBAL_SCHEMAS",
+  "templates": "$GLOBAL_TEMPLATES",
+  "hooks": "$GLOBAL_HOOKS",
   "dry_run": true
 }
 EOF
@@ -145,11 +154,6 @@ ln -sf "$GLOBAL_RUNTIME/dist/cli.js" "$LOCAL_BIN/cursor-goal"
 ln -sf "$SCRIPT_DIR/cursor-agent-goal.sh" "$LOCAL_BIN/cursor-agent-goal"
 chmod +x "$SCRIPT_DIR/cursor-agent-goal.sh"
 
-# Manifest
-GIT_SHA=""
-if git -C "$REPO_ROOT" rev-parse --short HEAD >/dev/null 2>&1; then
-  GIT_SHA="$(git -C "$REPO_ROOT" rev-parse --short HEAD)"
-fi
 cat > "$GLOBAL_MANIFEST" <<EOF
 {
   "installed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
