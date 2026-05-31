@@ -98,4 +98,28 @@ A
     expect(r.ok).toBe(false);
     expect(r.reason).toMatch(/malformed/i);
   });
+
+  it("rejects a non-object latest evidence line instead of using an older pass", async () => {
+    const dir = await setupProject();
+    const wu = await readWorkUnits(dir);
+    const unit = wu!.units[0];
+    const evidenceDir = path.join(dir, ".cursor/goal/evidence/units");
+    await mkdir(evidenceDir, { recursive: true });
+    await writeFile(
+      path.join(evidenceDir, "unit-a.jsonl"),
+      `${JSON.stringify({
+        at: new Date().toISOString(),
+        evidence_version: 1,
+        work_unit_id: "unit-a",
+        acceptance_ok: true,
+        subagent_status: "completed",
+        status: "completed",
+      })}\n"not an evidence object"\n`,
+      "utf8",
+    );
+
+    const r = await checkUnitCompletionEvidence(dir, unit);
+    expect(r.ok).toBe(false);
+    expect(r.reason).toMatch(/malformed/i);
+  });
 });

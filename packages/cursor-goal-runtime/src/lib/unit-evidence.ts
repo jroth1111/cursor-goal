@@ -48,6 +48,8 @@ export async function readLatestUnitEvidence(
     try {
       const parsed = JSON.parse(lines[i]) as UnitEvidenceRecord;
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+      if (legacyEvidenceAllowed()) return {};
+      return { [MALFORMED_EVIDENCE]: true };
     } catch {
       if (legacyEvidenceAllowed()) return {};
       return { [MALFORMED_EVIDENCE]: true };
