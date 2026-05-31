@@ -8,7 +8,7 @@ These IDs are intentionally unused in the registry (do not recycle without docum
 
 I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 
-## New operator surfaces (I78–I86, I94–I118)
+## New operator surfaces (I78–I86, I94–I119)
 
 | ID | Summary |
 |----|---------|
@@ -44,3 +44,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I116 | `cursor-goal verify` rejects unsupported args before writing release state |
 | I117 | `cursor-goal upgrade` rejects unsupported args before invoking the installer |
 | I118 | Supervisor rejects unsupported flags before deriving launch options |
+| I119 | Supervisor rejects invalid wall-clock values before deriving timeout behavior |

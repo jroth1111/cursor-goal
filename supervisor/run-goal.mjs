@@ -35,6 +35,18 @@ function rejectUnsupportedSupervisorArgs(args) {
   }
 }
 
+function wallValue(args, option, defaultValue) {
+  const prefix = `${option}=`;
+  const arg = args.find((a) => a.startsWith(prefix));
+  if (!arg) return defaultValue;
+  const raw = arg.slice(prefix.length);
+  const value = Number(raw);
+  if (!raw || !Number.isFinite(value) || value < 0) {
+    throw new Error(`Invalid value for ${option}: ${raw}`);
+  }
+  return value;
+}
+
 export function parseSupervisorArgs(argv) {
   const args = argv.slice(2);
   rejectUnsupportedSupervisorArgs(args);
@@ -45,8 +57,8 @@ export function parseSupervisorArgs(argv) {
     dispatchUnits: args.includes("--dispatch-units"),
     parentOnly: args.includes("--parent-only"),
     unitsOnly: args.includes("--units-only"),
-    wallMin: Number(args.find((a) => a.startsWith("--wall-min="))?.split("=")[1] ?? 120),
-    wallSec: Number(args.find((a) => a.startsWith("--wall-sec="))?.split("=")[1] ?? 0),
+    wallMin: wallValue(args, "--wall-min", 120),
+    wallSec: wallValue(args, "--wall-sec", 0),
     prompt:
       promptIdx >= 0 ? args.slice(promptIdx + 1).join(" ") : "Work toward GOAL.md until RELEASE.",
   };
