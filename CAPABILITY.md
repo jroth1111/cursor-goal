@@ -100,6 +100,7 @@ Only claim what invariant tests prove.
 | I111 | cursor-goal phase rejects stray args before writing trajectory state | — | yes | — | i111-phase-strict-args | tested |
 | I112 | cursor-goal units done rejects stray args before marking units done | — | yes | — | i112-units-strict-args | tested |
 | I113 | cursor-goal init and compile reject stray positional args before writing state | — | yes | — | i113-init-compile-strict-positionals | tested |
+| I114 | cursor-goal doctor rejects unsupported args before applying fixes | — | yes | — | i114-doctor-strict-args | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

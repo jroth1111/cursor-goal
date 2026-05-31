@@ -721,6 +721,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i113-init-compile-strict-positionals.test.ts"
+    },
+    {
+      "id": "I114",
+      "description": "cursor-goal doctor rejects unsupported args before applying fixes",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i114-doctor-strict-args.test.ts"
     }
   ]
 }

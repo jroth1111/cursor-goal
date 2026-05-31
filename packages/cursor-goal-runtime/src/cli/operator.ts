@@ -20,6 +20,8 @@ import { readStopTraceTail } from "../lib/stop-trace.js";
 import { runGlobalUpgrade } from "../lib/upgrade.js";
 import { operatorOptionsFromArgv } from "./shared.js";
 
+const doctorOptions = new Set(["--json", "--fix"]);
+
 export async function handleVerify(): Promise<void> {
   const r = await runStopVerifier({ status: "completed", loop_count: 0 });
   console.log(JSON.stringify(r, null, 2));
@@ -42,6 +44,14 @@ function rejectUnexpectedArgs(rest: string[]): void {
   if (!arg) return;
   console.error(arg.startsWith("-") ? `Unknown option: ${arg}` : `Unexpected argument: ${arg}`);
   process.exit(1);
+}
+
+function rejectUnsupportedOptionOnlyArgs(rest: string[], allowed: Set<string>): void {
+  for (const arg of rest) {
+    if (allowed.has(arg)) continue;
+    console.error(arg.startsWith("-") ? `Unknown option: ${arg}` : `Unexpected argument: ${arg}`);
+    process.exit(1);
+  }
 }
 
 export async function handleNext(rest: string[]): Promise<void> {
@@ -149,6 +159,7 @@ export async function handleExplain(rest: string[]): Promise<void> {
 }
 
 export async function handleDoctor(rest: string[]): Promise<void> {
+  rejectUnsupportedOptionOnlyArgs(rest, doctorOptions);
   const json = rest.includes("--json");
   const fix = rest.includes("--fix");
   if (fix) {
