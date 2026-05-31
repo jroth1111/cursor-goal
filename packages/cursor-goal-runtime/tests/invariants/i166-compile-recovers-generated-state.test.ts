@@ -88,4 +88,49 @@ x
     };
     expect(manifest.loop_limit).toBe(40);
   });
+
+  it("rebuilds trajectory.json when existing generated trajectory state is schema-invalid", async () => {
+    const p = await mkGitProject("i166-compile-recovers-schema-invalid-trajectory");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      `## Goal
+x
+
+## Checks
+- \`true\`
+`,
+      "utf8",
+    );
+    await compileGoalV2(p.dir);
+
+    const goalDir = path.join(p.dir, ".cursor/goal");
+    await writeFile(
+      path.join(goalDir, "trajectory.json"),
+      `${JSON.stringify(
+        {
+          phase: "NOT_A_PHASE",
+          sliceBudget: "bad",
+          discovery_completed_at: 123,
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
+    await compileGoalV2(p.dir);
+
+    const trajectory = JSON.parse(
+      await readFile(path.join(goalDir, "trajectory.json"), "utf8"),
+    ) as {
+      phase?: string;
+      sliceBudget?: number;
+      discovery_completed_at?: unknown;
+    };
+    expect(trajectory.phase).toBe("DISCOVERY");
+    expect(trajectory.sliceBudget).toBe(8);
+    expect(trajectory.discovery_completed_at).toBeUndefined();
+  });
 });

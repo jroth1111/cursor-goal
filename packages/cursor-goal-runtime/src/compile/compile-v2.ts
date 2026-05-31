@@ -127,6 +127,24 @@ function assertUniqueWorkUnitIds(units: WorkUnitCompiled[]): void {
   }
 }
 
+const VALID_PHASES = new Set(["INTAKE", "DISCOVERY", "PLAN", "IMPLEMENT", "VERIFY", "DONE"]);
+
+function sanitizedTrajectoryState(value: unknown): {
+  phase?: string;
+  discovery_completed_at?: string;
+} {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const raw = value as { phase?: unknown; discovery_completed_at?: unknown };
+  return {
+    ...(typeof raw.phase === "string" && VALID_PHASES.has(raw.phase)
+      ? { phase: raw.phase }
+      : {}),
+    ...(typeof raw.discovery_completed_at === "string"
+      ? { discovery_completed_at: raw.discovery_completed_at }
+      : {}),
+  };
+}
+
 async function mergeWorkUnits(
   compiled: WorkUnitCompiled[],
   existingPath: string,
@@ -188,7 +206,9 @@ export async function buildCompiledArtifacts(root: string): Promise<CompiledArti
   const units = await mergeWorkUnits(unitDrafts, existingWu);
 
   const trajPath = path.join(goalDir(root), "trajectory.json");
-  const existingTraj = await readJson<{ phase?: string }>(trajPath).catch(() => null);
+  const existingTraj = sanitizedTrajectoryState(
+    await readJson<unknown>(trajPath).catch(() => null),
+  );
   const phase = existingTraj?.phase ?? "DISCOVERY";
 
   return {
@@ -288,9 +308,9 @@ export async function compileGoalV2(root?: string): Promise<void> {
   if (!existsSync(trajPath)) {
     await atomicWriteJson(trajPath, artifacts.trajectory);
   } else {
-    const existingTraj = await readJson<{ phase?: string; discovery_completed_at?: string }>(
-      trajPath,
-    ).catch(() => null);
+    const existingTraj = sanitizedTrajectoryState(
+      await readJson<unknown>(trajPath).catch(() => null),
+    );
     await atomicWriteJson(trajPath, {
       ...existingTraj,
       phase: existingTraj?.phase ?? artifacts.trajectory.phase,
