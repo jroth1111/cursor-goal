@@ -26,6 +26,25 @@ AGENT_DIR="$GOAL_DIR/agents/$AGENT_ID"
 AGENT_STATE="$AGENT_DIR/runtime-state.json"
 mkdir -p "$PASSPORTS" "$GOAL_DIR/evidence" "$AGENT_DIR"
 
+destructive_shell() {
+  local cmd="$1"
+  if command -v perl >/dev/null 2>&1; then
+    printf '%s' "$cmd" | perl -0777 -ne '
+      exit 0 if /\bdrop\s+database\b/i;
+      if (/\bgit\b[\s\S]*\bpush\b/i &&
+          /(?:^|[\s;&|])(?:-f\b|--force(?:[=\s]|$)|--force-with-lease(?:[=\s]|$)|\+[^\s;&|]+)/i) { exit 0; }
+      if (/(?:^|[\s;&|])rm(?:[\s;&|]|$)/i &&
+          (/(?:^|[\s;&|])-[a-z]*r[a-z]*f[a-z]*(?=$|[\s;&|])/i ||
+           /(?:^|[\s;&|])-[a-z]*f[a-z]*r[a-z]*(?=$|[\s;&|])/i ||
+           /(?:^|[\s;&|])(?:-[a-z]*r[a-z]*|--recursive)(?=$|[\s;&|])[\s\S]*(?:^|[\s;&|])(?:-[a-z]*f[a-z]*|--force)(?=$|[\s;&|])/i ||
+           /(?:^|[\s;&|])(?:-[a-z]*f[a-z]*|--force)(?=$|[\s;&|])[\s\S]*(?:^|[\s;&|])(?:-[a-z]*r[a-z]*|--recursive)(?=$|[\s;&|])/i)) { exit 0; }
+      exit 1;
+    '
+    return $?
+  fi
+  printf '%s' "$cmd" | grep -qiE '\bdrop[[:space:]]+database\b|\bgit\b.*\bpush\b.*(--force([=[:space:]]|$)|--force-with-lease([=[:space:]]|$)|(^|[[:space:]])-f([[:space:]]|$)|(^|[[:space:];&|])\+[^[:space:];&|]+)|\brm\b.*(-[[:alpha:]]*r[[:alpha:]]*f|-[[:alpha:]]*f[[:alpha:]]*r|--recursive.*--force|--force.*--recursive)'
+}
+
 if [[ -f "$GOAL_DIR/PAUSED" ]]; then
   echo '{}'
   exit 0
@@ -400,7 +419,9 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     cmd="$(echo "$cmd" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
     [[ -z "$cmd" ]] && continue
     CHECK_COUNT=$((CHECK_COUNT + 1))
-    if ! bash -c "$cmd" </dev/null >/dev/null 2>&1; then
+    if destructive_shell "$cmd"; then
+      FAILURES+=("destructive check blocked: $cmd")
+    elif ! bash -c "$cmd" </dev/null >/dev/null 2>&1; then
       FAILURES+=("$cmd")
     fi
   fi

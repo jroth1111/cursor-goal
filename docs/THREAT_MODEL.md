@@ -12,7 +12,7 @@ When the TypeScript runtime is missing or errors:
 
 | Gate | Invariant |
 |------|-----------|
-| Destructive shell (`rm -rf`, `git push --force`, `drop database`) | I23 |
+| Destructive shell (`rm -rf`, `git push --force`, `drop database`), including stop-time checks | I23, I167 |
 | Subagent writes outside unit scope | I24 |
 | Subagent writes to `.cursor/goal` (except evidence paths) | I16 |
 | Second subagent on same in-progress unit | I18 |

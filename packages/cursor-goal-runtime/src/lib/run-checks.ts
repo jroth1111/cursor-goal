@@ -3,6 +3,7 @@ import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { goalDir } from "./paths.js";
 import { gitTreeId } from "./git-state.js";
+import { shellCommandAllowed } from "./shell-allow.js";
 
 export type CheckResult = { cmd: string; ok: boolean; tree: string; output?: string };
 
@@ -29,24 +30,28 @@ export async function runChecks(root: string, commands: string[]): Promise<Check
   for (const cmd of commands) {
     let ok = false;
     let output = "";
-    try {
-      execSync(cmd, {
-        cwd: root,
-        stdio: "pipe",
-        encoding: "utf8",
-        shell: "/bin/bash",
-        ...(timeoutMs > 0 ? { timeout: timeoutMs, killSignal: "SIGKILL" } : {}),
-      });
-      ok = true;
-    } catch (err) {
-      ok = false;
-      output = captureExecError(err);
-      const e = err as { code?: string; signal?: string; killed?: boolean };
-      if (
-        timeoutMs > 0 &&
-        (e?.code === "ETIMEDOUT" || e?.signal === "SIGKILL" || e?.signal === "SIGTERM" || e?.killed)
-      ) {
-        output = `check timed out after ${timeoutMs}ms (CURSOR_GOAL_CHECK_TIMEOUT_MS)\n${output}`;
+    if (!shellCommandAllowed(cmd)) {
+      output = "Destructive command blocked by cursor-goal-runtime.";
+    } else {
+      try {
+        execSync(cmd, {
+          cwd: root,
+          stdio: "pipe",
+          encoding: "utf8",
+          shell: "/bin/bash",
+          ...(timeoutMs > 0 ? { timeout: timeoutMs, killSignal: "SIGKILL" } : {}),
+        });
+        ok = true;
+      } catch (err) {
+        ok = false;
+        output = captureExecError(err);
+        const e = err as { code?: string; signal?: string; killed?: boolean };
+        if (
+          timeoutMs > 0 &&
+          (e?.code === "ETIMEDOUT" || e?.signal === "SIGKILL" || e?.signal === "SIGTERM" || e?.killed)
+        ) {
+          output = `check timed out after ${timeoutMs}ms (CURSOR_GOAL_CHECK_TIMEOUT_MS)\n${output}`;
+        }
       }
     }
     const row = { cmd, ok, tree, ...(output ? { output } : {}) };
