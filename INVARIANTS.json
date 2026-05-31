@@ -1148,6 +1148,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i174-done-units-require-evidence.test.ts"
+    },
+    {
+      "id": "I175",
+      "description": "Runtime-required schemas are tracked for clean-checkout distribution",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i175-tracked-schema-coverage.test.ts"
     }
   ]
 }

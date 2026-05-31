@@ -5,4 +5,7 @@ session.meta.json
 trajectory.json
 discovery.json
 target-snapshot.json
+!schemas/trajectory.json
+!schemas/discovery.json
+!schemas/target-snapshot.json
 pi-store.events.json

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cursor-goal/target-snapshot.json",
+  "type": "object",
+  "required": ["tree_id", "captured_at"],
+  "additionalProperties": true,
+  "properties": {
+    "tree_id": { "type": "string" },
+    "goal_summary_hash": { "type": "string" },
+    "files": { "type": "array", "items": { "type": "string" }, "maxItems": 500 },
+    "captured_at": { "type": "string" }
+  }
+}

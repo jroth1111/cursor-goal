@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cursor-goal/discovery.json",
+  "type": "object",
+  "required": ["completed", "notes"],
+  "additionalProperties": true,
+  "properties": {
+    "completed": { "type": "boolean" },
+    "notes": { "type": "string" },
+    "completed_at": { "type": "string" }
+  }
+}
