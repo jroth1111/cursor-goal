@@ -19,6 +19,7 @@ export function levelScope(ctx: VerifierContext): void {
     if (f === "GOAL.md" || f.startsWith(".cursor/goal/")) continue;
     const ok = scope.paths.some((p) => {
       if (p === "**") return true;
+      if (p === "." || p === "./") return true;
       const prefix = p.endsWith("/") ? p : `${p}/`;
       return f === p || f.startsWith(prefix);
     });

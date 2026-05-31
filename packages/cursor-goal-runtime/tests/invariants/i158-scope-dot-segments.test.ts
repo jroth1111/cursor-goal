@@ -56,4 +56,34 @@ Allowed unit
     );
     expect(workUnits.units[0].scope).toEqual(["allowed/"]);
   });
+
+  it("treats explicit root scope as the repository root for L4 enforcement", async () => {
+    const p = await mkGitProject("i158-root-scope");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      `## Goal
+x
+## Scope
+- \`.\`
+## Work units
+### root-unit
+Root unit
+- scope: \`.\`
+- acceptance: \`true\`
+## Checks
+- \`true\`
+`,
+      "utf8",
+    );
+
+    await compileGoalV2(p.dir);
+    await markUnitDone("root-unit", p.dir);
+    await seedReleaseReady(p.dir);
+    await writeFile(path.join(p.dir, "root-file.ts"), "export const ok = true;\n", "utf8");
+
+    const result = await runStopVerifier({ status: "completed", loop_count: 0 });
+    expect(result.kind).toBe("release");
+  });
 });
