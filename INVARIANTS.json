@@ -672,6 +672,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i106-init-strict-flags.test.ts"
+    },
+    {
+      "id": "I107",
+      "description": "cursor-goal discovery complete rejects unknown flags before writing phase state",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i107-discovery-strict-flags.test.ts"
     }
   ]
 }

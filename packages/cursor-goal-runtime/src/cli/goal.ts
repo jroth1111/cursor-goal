@@ -27,13 +27,14 @@ const validDirectSetPhases = new Set<Phase>([
   "DONE",
 ]);
 const initOptions = new Set(["--compile", "--detect", "--interactive", "--force"]);
+const discoveryCompleteOptions = new Set(["--plan-only"]);
 
 function parseDirectSetPhase(value: string): Phase | null {
   return validDirectSetPhases.has(value as Phase) ? (value as Phase) : null;
 }
 
-function rejectUnknownInitOptions(rest: string[]): void {
-  const unknown = rest.find((arg) => arg.startsWith("-") && !initOptions.has(arg));
+function rejectUnknownOptions(rest: string[], allowed: Set<string>): void {
+  const unknown = rest.find((arg) => arg.startsWith("-") && !allowed.has(arg));
   if (unknown) {
     console.error(`Unknown option: ${unknown}`);
     process.exit(1);
@@ -52,7 +53,7 @@ export async function seedGoal(): Promise<void> {
 }
 
 export async function handleInit(rest: string[]): Promise<void> {
-  rejectUnknownInitOptions(rest);
+  rejectUnknownOptions(rest, initOptions);
   const doCompile = rest.includes("--compile");
   const doDetect = rest.includes("--detect");
   const forceInteractive = rest.includes("--interactive");
@@ -138,6 +139,7 @@ export async function handlePhase(rest: string[]): Promise<void> {
 
 export async function handleDiscovery(rest: string[]): Promise<void> {
   if (rest[0] === "complete") {
+    rejectUnknownOptions(rest.slice(1), discoveryCompleteOptions);
     const planOnly = rest.includes("--plan-only");
     const notes =
       rest.filter((x) => x !== "--plan-only").slice(1).join(" ") || "discovery complete";
