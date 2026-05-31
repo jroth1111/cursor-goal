@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { unlink } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -7,14 +7,41 @@ import { formatDispatchInstruction, resolveDispatchHead } from "./dispatch-head.
 import { goalMd, fileMtimeMs, passportsDir } from "./paths.js";
 import { dispatchQueuePath } from "./dispatch-queue.js";
 import { runtimeStatePath } from "./runtime-state.js";
+import { cursorHome } from "./template.js";
+
+function manifestSupervisorScript(): string | null {
+  const manifestPath = path.join(cursorHome(), "cursor-goal/install-manifest.json");
+  if (!existsSync(manifestPath)) return null;
+  try {
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { source?: unknown };
+    if (typeof manifest.source !== "string" || manifest.source.length === 0) return null;
+    return path.join(manifest.source, "supervisor/run-goal.mjs");
+  } catch {
+    return null;
+  }
+}
+
+function resolveSupervisorScript(): string | null {
+  const repoSupervisor = fileURLToPath(
+    new URL("../../../../supervisor/run-goal.mjs", import.meta.url),
+  );
+  return [repoSupervisor, manifestSupervisorScript()].find(
+    (candidate): candidate is string => Boolean(candidate && existsSync(candidate)),
+  ) ?? null;
+}
 
 export function runSupervisorDispatch(
   root: string,
   flags: { dryRun?: boolean; unitsOnly?: boolean },
 ): { status: number; stdout: string; stderr: string } {
-  const supervisor = fileURLToPath(
-    new URL("../../../../supervisor/run-goal.mjs", import.meta.url),
-  );
+  const supervisor = resolveSupervisorScript();
+  if (!supervisor) {
+    return {
+      status: 1,
+      stdout: "",
+      stderr: "supervisor/run-goal.mjs not found - run from cursor-goal repo or reinstall globally\n",
+    };
+  }
   const args = [supervisor];
   if (flags.dryRun) args.push("--dry-run");
   if (flags.unitsOnly) args.push("--units-only");
