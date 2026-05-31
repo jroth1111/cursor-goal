@@ -12,7 +12,8 @@ import {
 import { formatModeStatus, readLastTriageEntry } from "../lib/prompt-triage.js";
 import { seedGoal } from "./goal.js";
 
-const modeUsage = "Usage: cursor-goal mode [chat|governed|auto|set auto|chat|governed|why]";
+const modeUsage =
+  "Usage: cursor-goal mode [chat|governed|auto|set auto|chat|governed|why] | cursor-goal mode why [--conversation <id>]";
 
 function rejectModeUsage(): never {
   console.error(modeUsage);

@@ -254,8 +254,8 @@ export async function handleResume(rest: string[]): Promise<void> {
 }
 
 export async function handleStatus(rest: string[]): Promise<void> {
-  rejectUnsupportedOperatorArgs(rest, statusOptions);
   if (rest.includes("--json")) {
+    rejectUnsupportedOperatorArgs(rest, statusOptions);
     const snap = await buildOperatorSnapshot(projectRoot(), operatorOptionsFromArgv(rest));
     if ("error" in snap) {
       console.error(snap.error);
@@ -264,5 +264,6 @@ export async function handleStatus(rest: string[]): Promise<void> {
     console.log(JSON.stringify(snap, null, 2));
     process.exit(0);
   }
+  rejectUnsupportedOperatorArgs(rest, statusOptions, new Set());
   console.log(await formatOperatorStatus());
 }

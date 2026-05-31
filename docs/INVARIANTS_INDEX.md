@@ -56,3 +56,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I128 | Read-only operator commands reject unsupported arguments before normal output |
 | I129 | Unknown top-level CLI commands fail while help usage remains successful |
 | I130 | Read-only subcommands reject stray arguments before normal output |
+| I131 | Conversation-scoped operator options are documented and rejected when ignored |

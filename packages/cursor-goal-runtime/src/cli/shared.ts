@@ -15,8 +15,8 @@ Usage:
   cursor-goal init [--interactive] [--force] [--detect] [--compile]
   cursor-goal compile [--watch]
   cursor-goal verify
-  cursor-goal explain [--json]
-  cursor-goal next [--json|--verbose]
+  cursor-goal explain [--json] [--conversation <id>]
+  cursor-goal next [--json|--verbose] [--conversation <id>]
   cursor-goal goal lint
   cursor-goal dispatch [--verify] [--spawn] [--unit <id>] [--record-response <id> --from <file>] [--dry-run|--run]
   cursor-goal logs [N]
@@ -24,10 +24,12 @@ Usage:
   cursor-goal doctor [--json|--fix]
   cursor-goal pause|resume
   cursor-goal mode [chat|governed|auto|set auto|chat|governed|why]
+  cursor-goal mode why [--conversation <id>]
   cursor-goal phase advance IMPLEMENT
   cursor-goal discovery complete [notes]
   cursor-goal units list
   cursor-goal units done <id>
-  cursor-goal status [--json]
+  cursor-goal status
+  cursor-goal status --json [--conversation <id>]
 `);
 }

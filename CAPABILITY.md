@@ -117,6 +117,7 @@ Only claim what invariant tests prove.
 | I128 | Read-only operator commands reject unsupported arguments before normal output | — | yes | — | i128-readonly-operator-strict-args | tested |
 | I129 | Unknown top-level CLI commands fail while help usage remains successful | — | yes | — | i129-top-level-command-strictness | tested |
 | I130 | Read-only subcommands reject stray arguments before normal output | — | yes | — | i130-subcommand-strict-args | tested |
+| I131 | Conversation-scoped operator options are documented and rejected when ignored | — | yes | — | i131-conversation-option-usage | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |
