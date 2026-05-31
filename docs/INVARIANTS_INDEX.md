@@ -64,3 +64,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I136 | Dispatch rejects conflicting run modes before selecting dry-run behavior |
 | I137 | Supervisor parses options only before the prompt boundary |
 | I138 | Supervisor rejects missing prompt values before deriving launch options |
+| I139 | Global install dry-run does not require built runtime artifacts |

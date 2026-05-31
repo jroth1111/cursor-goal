@@ -896,6 +896,13 @@
       "layers": ["supervisor"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i138-supervisor-prompt-value.test.ts"
+    },
+    {
+      "id": "I139",
+      "description": "Global install dry-run does not require built runtime artifacts",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i139-install-global-dry-run-runtime-optional.test.ts"
     }
   ]
 }

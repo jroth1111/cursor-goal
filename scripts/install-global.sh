@@ -69,11 +69,6 @@ if [[ "$SKIP_BUILD" -eq 0 ]]; then
   (cd "$REPO_ROOT" && npm run build)
 fi
 
-if [[ ! -f "$RUNTIME_SRC/dist/hook-stop.mjs" ]]; then
-  echo "Runtime not built: $RUNTIME_SRC/dist/hook-stop.mjs" >&2
-  exit 1
-fi
-
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "DRY RUN — would install to $CURSOR_HOME"
   mkdir -p "$CURSOR_HOME/cursor-goal"
@@ -90,6 +85,11 @@ EOF
   merge_hooks_json "$CURSOR_HOME/hooks.json" "$CORE_DIR/.cursor/hooks.json.user.example"
   echo "Dry run complete — manifest at $GLOBAL_MANIFEST"
   exit 0
+fi
+
+if [[ ! -f "$RUNTIME_SRC/dist/hook-stop.mjs" ]]; then
+  echo "Runtime not built: $RUNTIME_SRC/dist/hook-stop.mjs" >&2
+  exit 1
 fi
 
 echo "Installing cursor-goal globally → $CURSOR_HOME"
