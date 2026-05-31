@@ -246,13 +246,13 @@ cgr_subagent_governance_safety() {
   fi
   [[ -n "$file" ]] || return 1
 
-  norm="${file//\\//}"
+  norm="$(cgr_normalize_path "$file")"
   if [[ "$norm" != ".cursor/goal" && "$norm" != .cursor/goal/* && "$norm" != */.cursor/goal && "$norm" != */.cursor/goal/* ]]; then
     return 1
   fi
 
   wuid="$(cgr_json_string_field "$input" "work_unit_id")"
-  if [[ "$wuid" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ && "$norm" =~ (^|/)evidence/units/${wuid}\.jsonl$ ]]; then
+  if [[ "$wuid" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ && "$norm" =~ (^|/)\.cursor/goal/evidence/units/${wuid}\.jsonl$ ]]; then
     if ! cgr_path_inside_project "$file"; then
       printf '{"permission":"deny","agent_message":"Subagent WriteGate: path outside project root"}\n'
       return 0

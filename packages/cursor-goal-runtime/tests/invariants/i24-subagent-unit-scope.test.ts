@@ -4,7 +4,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
-import { execCoreHook } from "../hooks/exec-hook.js";
+import { execCoreHook, execCoreHookBare } from "../hooks/exec-hook.js";
 
 describe("I24 subagent unit scope WriteGate", () => {
   let cleanup: () => Promise<void>;
@@ -183,6 +183,27 @@ Module B
     expect(JSON.parse((exact.stdout ?? "{}").trim() || "{}").permission).toBe("allow");
   });
 
+  it("runtime preToolUse denies evidence-looking paths outside goal governance", async () => {
+    const p = await mkGitProject("i24-evidence-outside-goal");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await seed(p);
+
+    const hook = path.resolve(import.meta.dirname, "../../dist/hook-preToolUse.mjs");
+    const outside = spawnSync("node", [hook], {
+      cwd: p.dir,
+      input: JSON.stringify({
+        tool_name: "Write",
+        file_path: "pkg/b/evidence/units/mod-a.jsonl",
+        is_subagent: true,
+        work_unit_id: "mod-a",
+      }),
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+    });
+    expect(JSON.parse((outside.stdout ?? "{}").trim() || "{}").permission).toBe("deny");
+  });
+
   it("minimal hook denies subagent Write outside unit scope", async () => {
     const p = await mkGitProject("i24c");
     cleanup = p.cleanup;
@@ -232,6 +253,22 @@ Module B
       execCoreHook(p.dir, "preToolUse", {
         tool_name: "Write",
         file_path: path.join(p.dir, ".cursor/goal/evidence/units/mod-a.jsonl.bak"),
+        is_subagent: true,
+        work_unit_id: "mod-a",
+      }).stdout.permission,
+    ).toBe("deny");
+  });
+
+  it("minimal hook denies evidence-looking paths outside goal governance", async () => {
+    const p = await mkGitProject("i24-minimal-evidence-outside-goal");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await seed(p);
+
+    expect(
+      execCoreHookBare(p.dir, "preToolUse", {
+        tool_name: "Write",
+        file_path: "pkg/b/evidence/units/mod-a.jsonl",
         is_subagent: true,
         work_unit_id: "mod-a",
       }).stdout.permission,

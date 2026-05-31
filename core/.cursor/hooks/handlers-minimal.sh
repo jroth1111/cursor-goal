@@ -77,7 +77,7 @@ path_inside_project() {
 unit_id_from_path() {
   local f
   f="$(normalize_file_path "$1")"
-  printf '%s' "$f" | sed -nE 's|.*/evidence/units/([a-z0-9][a-z0-9_-]*)\.jsonl$|\1|Ip' | head -1
+  printf '%s' "$f" | sed -nE 's|(^|.*/)\.cursor/goal/evidence/units/([a-z0-9][a-z0-9_-]*)\.jsonl$|\2|Ip' | head -1
 }
 
 unit_evidence_path() {
@@ -85,7 +85,7 @@ unit_evidence_path() {
   f="$(normalize_file_path "$1")"
   local id="$2"
   [[ "$id" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]] || return 1
-  [[ -n "$id" && "$f" =~ (^|/)evidence/units/${id}\.jsonl$ ]]
+  [[ -n "$id" && "$f" =~ (^|/)\.cursor/goal/evidence/units/${id}\.jsonl$ ]]
 }
 
 case "$STEP" in
