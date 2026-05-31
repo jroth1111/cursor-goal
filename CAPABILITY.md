@@ -136,6 +136,7 @@ Only claim what invariant tests prove.
 | I147 | Subagent work unit scopes cannot authorize writes outside the project root | yes | yes | — | i147-subagent-outside-root | tested |
 | I148 | Structured work_unit_id fields outrank free-form tool payload text | — | yes | — | i148-structured-work-unit-id | tested |
 | I149 | Dispatch rejects duplicate single-value options before side effects | — | yes | — | i149-dispatch-duplicate-value-options | tested |
+| I150 | Work unit parsing ignores template prose and commented examples | — | yes | — | i150-work-unit-markdown-noise | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

@@ -71,6 +71,10 @@ function unquote(s: string): string {
   return s.replace(/^`/, "").replace(/`$/, "").trim();
 }
 
+function stripHtmlComments(s: string): string {
+  return s.replace(/<!--[\s\S]*?-->/g, "");
+}
+
 function slugId(raw: string): string {
   return raw
     .toLowerCase()
@@ -94,7 +98,7 @@ export function autoSliceWorkUnits(scope: string[], globalChecks: string[]): Wor
 }
 
 export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
-  const block = sectionBody(text, "Work units");
+  const block = stripHtmlComments(sectionBody(text, "Work units"));
   if (!block.trim()) return [];
 
   const units: WorkUnitDraft[] = [];
@@ -151,7 +155,9 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
     return units;
   }
 
-  const chunks = block.split(/^###\s+/m).filter(Boolean);
+  if (!/^###\s+/m.test(block)) return [];
+
+  const chunks = block.split(/^###\s+/m).slice(1).filter((chunk) => chunk.trim());
   for (const chunk of chunks) {
     const lines = chunk.split("\n");
     const heading = lines[0]?.trim() ?? "";

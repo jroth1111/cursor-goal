@@ -973,6 +973,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i149-dispatch-duplicate-value-options.test.ts"
+    },
+    {
+      "id": "I150",
+      "description": "Work unit parsing ignores template prose and commented examples",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i150-work-unit-markdown-noise.test.ts"
     }
   ]
 }
