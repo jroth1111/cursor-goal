@@ -38,6 +38,22 @@ export function detectProjectChecks(root: string): DetectedChecks {
   return { commands: ["true"], source: "fallback" };
 }
 
+function replaceMarkdownSection(raw: string, heading: string, block: string): string {
+  const headingMatch = new RegExp(`^## ${heading}\\b.*$`, "m").exec(raw);
+  if (!headingMatch) {
+    return `${raw.trim()}\n\n${block}`.trim() + "\n";
+  }
+
+  const start = headingMatch.index;
+  const afterHeading = start + headingMatch[0].length;
+  const rest = raw.slice(afterHeading);
+  const nextHeading = /^##\s/m.exec(rest);
+  const end = nextHeading ? afterHeading + nextHeading.index : raw.length;
+  const before = raw.slice(0, start).trimEnd();
+  const after = raw.slice(end).trimStart();
+  return [before, block.trimEnd(), after].filter(Boolean).join("\n\n") + "\n";
+}
+
 export async function applyDetectedChecks(root: string): Promise<DetectedChecks> {
   const detected = detectProjectChecks(root);
   const file = goalMd(root);
@@ -53,11 +69,7 @@ export async function applyDetectedChecks(root: string): Promise<DetectedChecks>
     ...detected.commands.map((c) => `- \`${c}\``),
     "",
   ].join("\n");
-  if (/^## Checks\b/m.test(raw)) {
-    raw = raw.replace(/^## Checks[\s\S]*?(?=^## |\Z)/m, `${block}\n`);
-  } else {
-    raw = `${raw.trim()}\n\n${block}`.trim() + "\n";
-  }
+  raw = replaceMarkdownSection(raw, "Checks", block);
   await writeFile(file, raw, "utf8");
   return detected;
 }

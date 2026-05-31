@@ -33,4 +33,30 @@ describe("I91 init --detect", () => {
     const goal = await readFile(path.join(p.dir, "GOAL.md"), "utf8");
     expect(goal).toMatch(/npm test/);
   });
+
+  it("replaces an existing terminal Checks section", async () => {
+    const p = await mkGitProject("i91-terminal-checks");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await writeFile(
+      path.join(p.dir, "package.json"),
+      JSON.stringify({ scripts: { test: "vitest run" } }, null, 2),
+      "utf8",
+    );
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      "## Goal\nShip tested behavior\n\n## Checks\n- `true`\n",
+      "utf8",
+    );
+    const cli = path.resolve(import.meta.dirname, "../../dist/cli.js");
+    const r = spawnSync("node", [cli, "init", "--detect"], {
+      cwd: p.dir,
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+    });
+    expect(r.status).toBe(0);
+    const goal = await readFile(path.join(p.dir, "GOAL.md"), "utf8");
+    expect(goal).toMatch(/npm test/);
+    expect(goal).not.toMatch(/- `true`/);
+  });
 });
