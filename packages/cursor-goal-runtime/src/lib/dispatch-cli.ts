@@ -52,12 +52,23 @@ async function clearInvalidatedLifecyclePassports(root: string): Promise<void> {
   await unlink(path.join(passports, "SESSION_END.md")).catch(() => undefined);
 }
 
-export async function readManifestCompiledAt(root: string): Promise<string | null> {
+async function readManifestState(root: string): Promise<{
+  compiledAt: string | null;
+  malformed: boolean;
+}> {
   const manifestPath = path.join(root, ".cursor/goal/manifest.json");
-  if (!existsSync(manifestPath)) return null;
+  if (!existsSync(manifestPath)) return { compiledAt: null, malformed: false };
   const { readJson } = await import("./paths.js");
-  const m = await readJson<{ compiled_at?: string }>(manifestPath);
-  return m?.compiled_at ?? null;
+  try {
+    const m = await readJson<{ compiled_at?: string }>(manifestPath);
+    return { compiledAt: m?.compiled_at ?? null, malformed: false };
+  } catch {
+    return { compiledAt: null, malformed: true };
+  }
+}
+
+export async function readManifestCompiledAt(root: string): Promise<string | null> {
+  return (await readManifestState(root)).compiledAt;
 }
 
 export async function isRuntimeStateStale(root: string): Promise<boolean> {
@@ -68,7 +79,9 @@ export async function isRuntimeStateStale(root: string): Promise<boolean> {
   const updatedMs = Date.parse(state.updated_at);
   if (Number.isNaN(updatedMs)) return true;
 
-  const compiledAt = await readManifestCompiledAt(root);
+  const manifest = await readManifestState(root);
+  if (manifest.malformed) return true;
+  const compiledAt = manifest.compiledAt;
   if (compiledAt) {
     const compiledMs = Date.parse(compiledAt);
     if (!Number.isNaN(compiledMs) && compiledMs > updatedMs) return true;

@@ -89,6 +89,24 @@ A
     expect(await isRuntimeStateStale(p.dir)).toBe(true);
   });
 
+  it("2b. malformed generated manifest marks runtime-state stale", async () => {
+    const p = await mkGitProject("i50-stale-manifest");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      "## Goal\nx\n## Checks\n- `true`\n",
+      "utf8",
+    );
+    await compileGoalV2(p.dir);
+    await seedReleaseReady(p.dir);
+    await runStopVerifier({ status: "completed", loop_count: 0 });
+    expect(await isRuntimeStateStale(p.dir)).toBe(false);
+
+    await writeFile(path.join(p.dir, ".cursor/goal/manifest.json"), "{", "utf8");
+    await expect(isRuntimeStateStale(p.dir)).resolves.toBe(true);
+  });
+
   it("3. subagentStop preserves RELEASE.json", async () => {
     const p = await mkGitProject("i50-release");
     cleanup = p.cleanup;
