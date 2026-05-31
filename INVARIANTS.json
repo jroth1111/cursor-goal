@@ -966,6 +966,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i148-structured-work-unit-id.test.ts"
+    },
+    {
+      "id": "I149",
+      "description": "Dispatch rejects duplicate single-value options before side effects",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i149-dispatch-duplicate-value-options.test.ts"
     }
   ]
 }
