@@ -268,15 +268,16 @@ export async function handleDoctor(rest: string[]): Promise<void> {
   rejectUnsupportedOptionOnlyArgs(rest, doctorOptions);
   const json = rest.includes("--json");
   const fix = rest.includes("--fix");
+  const actions = fix ? await applyDoctorFixes(projectRoot()) : [];
+  const report = await buildDoctorReport();
+  if (json) {
+    console.log(JSON.stringify(fix ? { ...report, fixes: actions } : report, null, 2));
+    process.exit(report.issues.some((i) => i.level === "error") ? 1 : 0);
+  }
   if (fix) {
-    const actions = await applyDoctorFixes(projectRoot());
     for (const a of actions) console.log(`fix: ${a}`);
   }
-  if (json) {
-    console.log(JSON.stringify(await buildDoctorReport(), null, 2));
-    process.exit((await runDoctor()).some((i) => i.level === "error") ? 1 : 0);
-  }
-  const issues = await runDoctor();
+  const issues = report.issues;
   for (const i of issues) console.log(`${i.level}: ${i.message}`);
   process.exit(issues.some((i) => i.level === "error") ? 1 : 0);
 }

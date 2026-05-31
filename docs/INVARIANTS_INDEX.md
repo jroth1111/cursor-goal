@@ -87,3 +87,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I158 | Scope dot-segment paths are normalized before verifier enforcement |
 | I160 | Session-end hook reports local marker write failures without crashing |
 | I161 | Subagent WriteGate denies when work-unit state is unreadable |
+| I162 | Doctor --json --fix emits one parseable JSON document |

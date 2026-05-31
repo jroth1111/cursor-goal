@@ -1057,6 +1057,13 @@
       "layers": ["core", "runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i161-subagent-malformed-work-units.test.ts"
+    },
+    {
+      "id": "I162",
+      "description": "Doctor --json --fix emits one parseable JSON document",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i162-doctor-json-fix.test.ts"
     }
   ]
 }
