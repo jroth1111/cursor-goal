@@ -959,6 +959,13 @@
       "layers": ["core", "runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i147-subagent-outside-root.test.ts"
+    },
+    {
+      "id": "I148",
+      "description": "Structured work_unit_id fields outrank free-form tool payload text",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i148-structured-work-unit-id.test.ts"
     }
   ]
 }

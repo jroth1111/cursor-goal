@@ -73,3 +73,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I145 | Hooks reject invalid direct work_unit_id values before writing unit evidence paths |
 | I146 | Subagent governance path checks normalize evidence paths before allowing writes |
 | I147 | Subagent work unit scopes cannot authorize writes outside the project root |
+| I148 | Structured work_unit_id fields outrank free-form tool payload text |

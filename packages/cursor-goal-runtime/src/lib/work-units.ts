@@ -15,6 +15,14 @@ export function cleanWorkUnitId(value: unknown): string | null {
   return WORK_UNIT_ID_RE.test(id) ? id : null;
 }
 
+export function structuredWorkUnitId(input: Record<string, unknown>): string | null {
+  const toolInput =
+    input.tool_input && typeof input.tool_input === "object"
+      ? (input.tool_input as Record<string, unknown>)
+      : {};
+  return cleanWorkUnitId(input.work_unit_id) ?? cleanWorkUnitId(toolInput.work_unit_id);
+}
+
 export async function readWorkUnits(root?: string): Promise<WorkUnitsFile | null> {
   return readJson<WorkUnitsFile>(path.join(goalDir(root), "work-units.json"));
 }
