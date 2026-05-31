@@ -48,4 +48,44 @@ x
     expect(manifest.loop_limit).toBe(40);
     expect(trajectory.phase).toBe("DISCOVERY");
   });
+
+  it("rebuilds manifest.json when an existing generated manifest is schema-invalid", async () => {
+    const p = await mkGitProject("i166-compile-recovers-schema-invalid-manifest");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      `## Goal
+x
+
+## Checks
+- \`true\`
+`,
+      "utf8",
+    );
+    await compileGoalV2(p.dir);
+
+    const goalDir = path.join(p.dir, ".cursor/goal");
+    await writeFile(
+      path.join(goalDir, "manifest.json"),
+      `${JSON.stringify(
+        {
+          goal_id: "default",
+          loop_limit: "oops",
+          runtime: "package",
+          compiled_at: new Date().toISOString(),
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+
+    await compileGoalV2(p.dir);
+
+    const manifest = JSON.parse(await readFile(path.join(goalDir, "manifest.json"), "utf8")) as {
+      loop_limit?: number;
+    };
+    expect(manifest.loop_limit).toBe(40);
+  });
 });

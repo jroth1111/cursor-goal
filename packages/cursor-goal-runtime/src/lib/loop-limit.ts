@@ -4,12 +4,16 @@ import { readLoopLimitFromHooksJson } from "./git-state.js";
 
 const DEFAULT_LOOP_LIMIT = 40;
 
+function validLoopLimit(value: unknown): number | null {
+  return Number.isInteger(value) && Number(value) >= 1 ? Number(value) : null;
+}
+
 export async function readLoopLimit(root = projectRoot()): Promise<number> {
   const fromHooks = readLoopLimitFromHooksJson(root);
-  const manifest = await readJson<{ loop_limit?: number }>(
+  const manifest = await readJson<{ loop_limit?: unknown }>(
     path.join(goalDir(root), "manifest.json"),
   ).catch(() => null);
-  return fromHooks ?? manifest?.loop_limit ?? DEFAULT_LOOP_LIMIT;
+  return fromHooks ?? validLoopLimit(manifest?.loop_limit) ?? DEFAULT_LOOP_LIMIT;
 }
 
 export async function syncLoopLimitToManifest(root = projectRoot()): Promise<number> {
