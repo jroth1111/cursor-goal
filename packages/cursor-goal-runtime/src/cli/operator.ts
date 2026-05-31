@@ -113,6 +113,10 @@ function rejectUnsupportedDispatchArgs(rest: string[]): void {
   }
 }
 
+function isDispatchVerifyRejection(text: string): boolean {
+  return /^(No work units|Unknown unit|No unit with verified_by|Missing deliverable:)/.test(text);
+}
+
 function parseLogsTailArg(rest: string[]): number {
   let tail = 20;
   let seenTail = false;
@@ -221,7 +225,12 @@ export async function handleDispatch(rest: string[]): Promise<void> {
   }
 
   if (verify) {
-    console.log(await formatDispatchVerifyCli(projectRoot(), unitId));
+    const text = await formatDispatchVerifyCli(projectRoot(), unitId);
+    if (isDispatchVerifyRejection(text)) {
+      console.error(text);
+      process.exit(1);
+    }
+    console.log(text);
     process.exit(0);
   }
 

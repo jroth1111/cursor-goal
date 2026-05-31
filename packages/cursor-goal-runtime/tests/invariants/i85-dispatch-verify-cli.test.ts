@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 import { formatDispatchVerifyCli } from "../../src/lib/dispatch-verify.js";
@@ -73,5 +74,14 @@ Unit
 
     expect(text).toMatch(/Unknown unit or unit has no verified_by: u1/);
     expect(text).not.toMatch(/Adversarial verification/);
+
+    const cli = path.resolve(import.meta.dirname, "../../dist/cli.js");
+    const r = spawnSync("node", [cli, "dispatch", "--verify", "--unit", "u1"], {
+      cwd: p.dir,
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+    });
+    expect(r.status).toBe(1);
+    expect(`${r.stdout}\n${r.stderr}`).toMatch(/Unknown unit or unit has no verified_by: u1/);
   });
 });
