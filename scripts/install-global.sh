@@ -157,6 +157,7 @@ cat > "$GLOBAL_MANIFEST" <<EOF
   "git_sha": "$GIT_SHA",
   "runtime": "$GLOBAL_RUNTIME",
   "schemas": "$GLOBAL_SCHEMAS",
+  "templates": "$GLOBAL_TEMPLATES",
   "hooks": "$GLOBAL_HOOKS"
 }
 EOF

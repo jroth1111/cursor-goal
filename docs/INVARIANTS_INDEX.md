@@ -8,7 +8,7 @@ These IDs are intentionally unused in the registry (do not recycle without docum
 
 I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 
-## New operator surfaces (I78–I86, I94–I169)
+## New operator surfaces (I78–I86, I94–I170)
 
 | ID | Summary |
 |----|---------|
@@ -95,3 +95,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I167 | Stop-time check execution blocks destructive shell commands before side effects |
 | I168 | Default chat mode suppresses GOAL-governed prompt triage unless the conversation is blocked |
 | I169 | subagentStop returns fail-open JSON when generated work-unit state is malformed |
+| I170 | Global install manifest records the installed template directory |

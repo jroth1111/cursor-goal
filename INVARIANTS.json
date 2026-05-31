@@ -1113,6 +1113,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i169-subagent-stop-malformed-work-units.test.ts"
+    },
+    {
+      "id": "I170",
+      "description": "Global install manifest records the installed template directory",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i170-install-manifest-templates.test.ts"
     }
   ]
 }
