@@ -42,6 +42,14 @@ function rejectUnknownOptions(rest: string[], allowed: Set<string>): void {
   }
 }
 
+function rejectUnsupportedOptionOnlyArgs(rest: string[], allowed: Set<string>): void {
+  for (const arg of rest) {
+    if (allowed.has(arg)) continue;
+    console.error(arg.startsWith("-") ? `Unknown option: ${arg}` : `Unexpected argument: ${arg}`);
+    process.exit(1);
+  }
+}
+
 function rejectUnexpectedArg(arg: string | undefined): void {
   if (!arg) return;
   console.error(arg.startsWith("-") ? `Unknown option: ${arg}` : `Unexpected argument: ${arg}`);
@@ -60,7 +68,7 @@ export async function seedGoal(): Promise<void> {
 }
 
 export async function handleInit(rest: string[]): Promise<void> {
-  rejectUnknownOptions(rest, initOptions);
+  rejectUnsupportedOptionOnlyArgs(rest, initOptions);
   const doCompile = rest.includes("--compile");
   const doDetect = rest.includes("--detect");
   const forceInteractive = rest.includes("--interactive");
@@ -102,7 +110,7 @@ export async function handleInit(rest: string[]): Promise<void> {
 }
 
 export async function handleCompile(rest: string[]): Promise<void> {
-  rejectUnknownOptions(rest, compileOptions);
+  rejectUnsupportedOptionOnlyArgs(rest, compileOptions);
   if (rest.includes("--watch")) {
     startCompileWatch(projectRoot());
     await new Promise(() => {});

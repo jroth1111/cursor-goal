@@ -714,6 +714,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i112-units-strict-args.test.ts"
+    },
+    {
+      "id": "I113",
+      "description": "cursor-goal init and compile reject stray positional args before writing state",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i113-init-compile-strict-positionals.test.ts"
     }
   ]
 }

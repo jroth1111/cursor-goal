@@ -8,7 +8,7 @@ These IDs are intentionally unused in the registry (do not recycle without docum
 
 I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 
-## New operator surfaces (I78–I86, I94–I112)
+## New operator surfaces (I78–I86, I94–I113)
 
 | ID | Summary |
 |----|---------|
@@ -38,3 +38,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I110 | State-mutating operator commands reject stray args before writing state |
 | I111 | `cursor-goal phase` rejects stray args before writing trajectory state |
 | I112 | `cursor-goal units done` rejects stray args before marking units done |
+| I113 | `cursor-goal init` and `compile` reject stray positional args before writing state |
