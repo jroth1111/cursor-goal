@@ -1,13 +1,29 @@
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { cursorHome } from "./template.js";
+
+function manifestInstallScript(): string | null {
+  const manifestPath = path.join(cursorHome(), "cursor-goal/install-manifest.json");
+  if (!existsSync(manifestPath)) return null;
+  try {
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { source?: unknown };
+    if (typeof manifest.source !== "string" || manifest.source.length === 0) return null;
+    return path.join(manifest.source, "scripts/install-global.sh");
+  } catch {
+    return null;
+  }
+}
 
 export function runGlobalUpgrade(): { status: number; stdout: string; stderr: string } {
-  const script = fileURLToPath(
+  const fallbackScript = fileURLToPath(
     new URL("../../../../scripts/install-global.sh", import.meta.url),
   );
-  if (!existsSync(script)) {
+  const script = [manifestInstallScript(), fallbackScript].find(
+    (candidate): candidate is string => Boolean(candidate && existsSync(candidate)),
+  );
+  if (!script) {
     return {
       status: 1,
       stdout: "",

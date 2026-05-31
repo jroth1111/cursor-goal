@@ -917,6 +917,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i141-uninstall-stale-hook-files.test.ts"
+    },
+    {
+      "id": "I142",
+      "description": "Global upgrade runs the installer from the install manifest source",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i142-upgrade-manifest-source.test.ts"
     }
   ]
 }
