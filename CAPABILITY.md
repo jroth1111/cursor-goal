@@ -82,6 +82,7 @@ Only claim what invariant tests prove.
 | I86 | CURSOR_GOAL_STRICT blocks governed prompts without runtime (runtime + core bash) | yes | yes | — | i86-strict-governance | tested |
 | I94 | cursor-goal init --interactive writes non-placeholder GOAL.md | — | yes | — | i94-init-interactive | tested |
 | I95 | cursor-goal dispatch --verify --spawn dry-run prints agent command | — | yes | — | i95-dispatch-verify-spawn | tested |
+| I96 | core/install.sh parses --local-hooks without a target path | yes | — | — | i96-core-install-flags | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

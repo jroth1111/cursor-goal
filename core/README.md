@@ -5,7 +5,7 @@ Self-contained hook pack for cursor-agent. **No npm install required** — `bash
 ## Install
 
 ```bash
-bash cursor-goal/core/install.sh [TARGET_REPO_ROOT]
+bash cursor-goal/core/install.sh [TARGET_REPO_ROOT] [--local-hooks]
 ```
 
 ## Without the runtime package

@@ -3,14 +3,33 @@
 set -euo pipefail
 
 SRC="$(cd "$(dirname "$0")" && pwd)"
-DEST="${1:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+DEST=""
 LOCAL_HOOKS=0
 
 for arg in "$@"; do
   case "$arg" in
     --local-hooks) LOCAL_HOOKS=1 ;;
+    --help|-h)
+      echo "Usage: bash core/install.sh [TARGET_REPO_ROOT] [--local-hooks]"
+      exit 0
+      ;;
+    --*)
+      echo "Unknown option: $arg" >&2
+      exit 1
+      ;;
+    *)
+      if [[ -n "$DEST" ]]; then
+        echo "Unexpected extra destination: $arg" >&2
+        exit 1
+      fi
+      DEST="$arg"
+      ;;
   esac
 done
+
+if [[ -z "$DEST" ]]; then
+  DEST="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+fi
 
 if [[ ! -d "$DEST" ]]; then
   echo "Destination not found: $DEST" >&2

@@ -595,6 +595,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i95-dispatch-verify-spawn.test.ts"
+    },
+    {
+      "id": "I96",
+      "description": "core/install.sh parses --local-hooks as a flag when no target path is provided",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i96-core-install-flags.test.ts"
     }
   ]
 }
