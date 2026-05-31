@@ -92,6 +92,7 @@ Only claim what invariant tests prove.
 | I103 | cursor-goal phase direct-set rejects unknown phases | — | yes | — | i103-phase-direct-set-validation | tested |
 | I104 | Stop trace appends create the goal directory before writing | — | yes | — | i104-stop-trace-path | tested |
 | I105 | cursor-goal discovery complete reports actual phase transition result | — | yes | — | i105-discovery-cli-phase-output | tested |
+| I106 | cursor-goal init rejects unknown flags before creating GOAL.md | — | yes | — | i106-init-strict-flags | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

@@ -665,6 +665,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i105-discovery-cli-phase-output.test.ts"
+    },
+    {
+      "id": "I106",
+      "description": "cursor-goal init rejects unknown flags before creating GOAL.md",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i106-init-strict-flags.test.ts"
     }
   ]
 }

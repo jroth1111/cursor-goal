@@ -8,7 +8,7 @@ These IDs are intentionally unused in the registry (do not recycle without docum
 
 I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 
-## New operator surfaces (I78–I86, I94–I105)
+## New operator surfaces (I78–I86, I94–I106)
 
 | ID | Summary |
 |----|---------|
@@ -31,3 +31,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I103 | `cursor-goal phase <phase>` rejects unknown direct-set phase values |
 | I104 | Stop trace appends create `.cursor/goal/` before writing diagnostics |
 | I105 | `cursor-goal discovery complete` reports the actual phase transition result |
+| I106 | `cursor-goal init` rejects unknown flags before creating `GOAL.md` |

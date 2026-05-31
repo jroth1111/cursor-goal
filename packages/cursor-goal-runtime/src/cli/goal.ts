@@ -26,9 +26,18 @@ const validDirectSetPhases = new Set<Phase>([
   "VERIFY",
   "DONE",
 ]);
+const initOptions = new Set(["--compile", "--detect", "--interactive", "--force"]);
 
 function parseDirectSetPhase(value: string): Phase | null {
   return validDirectSetPhases.has(value as Phase) ? (value as Phase) : null;
+}
+
+function rejectUnknownInitOptions(rest: string[]): void {
+  const unknown = rest.find((arg) => arg.startsWith("-") && !initOptions.has(arg));
+  if (unknown) {
+    console.error(`Unknown option: ${unknown}`);
+    process.exit(1);
+  }
 }
 
 export async function seedGoal(): Promise<void> {
@@ -43,6 +52,7 @@ export async function seedGoal(): Promise<void> {
 }
 
 export async function handleInit(rest: string[]): Promise<void> {
+  rejectUnknownInitOptions(rest);
   const doCompile = rest.includes("--compile");
   const doDetect = rest.includes("--detect");
   const forceInteractive = rest.includes("--interactive");
