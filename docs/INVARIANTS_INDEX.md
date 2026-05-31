@@ -89,3 +89,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I161 | Subagent WriteGate denies when work-unit state is unreadable |
 | I162 | Doctor --json --fix emits one parseable JSON document |
 | I163 | Minimal subagent governance isolation does not require jq |
+| I164 | Compile rebuilds malformed generated work-unit artifacts |

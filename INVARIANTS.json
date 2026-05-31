@@ -1071,6 +1071,13 @@
       "layers": ["core"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i163-minimal-subagent-no-jq.test.ts"
+    },
+    {
+      "id": "I164",
+      "description": "Compile rebuilds malformed generated work-unit artifacts",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i164-compile-recovers-work-units.test.ts"
     }
   ]
 }

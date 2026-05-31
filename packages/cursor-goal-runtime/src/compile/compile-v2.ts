@@ -114,7 +114,7 @@ async function mergeWorkUnits(
   existingPath: string,
 ): Promise<WorkUnitCompiled[]> {
   if (!existsSync(existingPath)) return compiled;
-  const raw = await readJson<{ units?: WorkUnitCompiled[] }>(existingPath);
+  const raw = await readJson<{ units?: WorkUnitCompiled[] }>(existingPath).catch(() => null);
   if (!raw?.units) return compiled;
   const byId = new Map(raw.units.map((u) => [u.id, u]));
   return compiled.map((u) => {
