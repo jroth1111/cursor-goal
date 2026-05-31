@@ -11,11 +11,29 @@ SKIP_BUILD=0
 WRITE_PROFILE=0
 DRY_RUN=0
 
+usage() {
+  echo "Usage: bash scripts/install-global.sh [--skip-build] [--profile] [--dry-run]"
+}
+
 for arg in "$@"; do
   case "$arg" in
     --skip-build) SKIP_BUILD=1 ;;
     --profile) WRITE_PROFILE=1 ;;
     --dry-run) DRY_RUN=1 ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    --*)
+      echo "Unknown option: $arg" >&2
+      usage >&2
+      exit 1
+      ;;
+    *)
+      echo "Unexpected argument: $arg" >&2
+      usage >&2
+      exit 1
+      ;;
   esac
 done
 

@@ -37,4 +37,24 @@ describe("I49 install-global dry-run produces manifest and hooks merge", () => {
     };
     expect(hooks.hooks?.stop?.some((h) => h.command?.includes("goal-stop"))).toBe(true);
   });
+
+  it("rejects unknown flags before mutating the target home", () => {
+    fakeCursorHome = path.join(os.tmpdir(), `i49-cursor-bad-flag-${Date.now()}`);
+    const fakeHome = path.join(os.tmpdir(), `i49-home-bad-flag-${Date.now()}`);
+    const script = path.resolve(import.meta.dirname, "../../../../scripts/install-global.sh");
+    const repoRoot = path.resolve(import.meta.dirname, "../../../../../");
+
+    const r = spawnSync("bash", [script, "--skip-build", "--dry-run", "--dryrun"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_HOME: fakeCursorHome, HOME: fakeHome },
+    });
+
+    rmSync(fakeHome, { recursive: true, force: true });
+    expect(r.status).not.toBe(0);
+    expect(r.stderr).toMatch(/Unknown option: --dryrun/);
+    expect(existsSync(path.join(fakeCursorHome, "cursor-goal/install-manifest.json"))).toBe(
+      false,
+    );
+  });
 });
