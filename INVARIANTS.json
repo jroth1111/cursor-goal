@@ -1008,6 +1008,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i154-readonly-triage-optout.test.ts"
+    },
+    {
+      "id": "I155",
+      "description": "Global uninstall flattens legacy nested hooks before removing goal entries",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i155-uninstall-flattens-hooks.test.ts"
     }
   ]
 }

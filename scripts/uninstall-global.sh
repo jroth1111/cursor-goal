@@ -42,7 +42,10 @@ fi
 if [[ -f "$CURSOR_HOME/hooks.json" ]] && command -v jq >/dev/null 2>&1; then
   tmp="$(mktemp)"
   jq '
+    def flatten_hooks:
+      if (.hooks.hooks? | type) == "object" then .hooks | flatten_hooks else . end;
     .hooks = (
+      flatten_hooks |
       .hooks // {} |
       with_entries(
         if (.value | type) == "array" then
