@@ -8,7 +8,7 @@ These IDs are intentionally unused in the registry (do not recycle without docum
 
 I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 
-## New operator surfaces (I78–I86, I94–I98)
+## New operator surfaces (I78–I86, I94–I99)
 
 | ID | Summary |
 |----|---------|
@@ -24,3 +24,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I96 | `core/install.sh --local-hooks` flag parsing |
 | I97 | `runChecks` proof-runs evidence directory creation |
 | I98 | Compile rejects duplicate work-unit ids |
+| I99 | `cursor-goal compile --watch` avoids nested goal-dir locks |

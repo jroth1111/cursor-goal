@@ -616,6 +616,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i98-unique-work-unit-ids.test.ts"
+    },
+    {
+      "id": "I99",
+      "description": "Compile watch does not nest the goal-dir lock",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i99-compile-watch-lock.test.ts"
     }
   ]
 }

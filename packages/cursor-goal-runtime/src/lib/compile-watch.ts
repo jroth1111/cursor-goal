@@ -1,7 +1,6 @@
 import { watch } from "node:fs";
 import { compileGoalV2 } from "../compile/compile-v2.js";
 import { goalMd, projectRoot } from "./paths.js";
-import { withGoalDirLock } from "./goal-dir-lock.js";
 
 let debounce: ReturnType<typeof setTimeout> | null = null;
 let watcher: ReturnType<typeof watch> | null = null;
@@ -13,7 +12,7 @@ export function startCompileWatch(root = projectRoot()): void {
     if (debounce) clearTimeout(debounce);
     debounce = setTimeout(async () => {
       try {
-        await withGoalDirLock(root, () => compileGoalV2(root));
+        await compileGoalV2(root);
         console.error("cursor-goal: recompiled GOAL.md");
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
