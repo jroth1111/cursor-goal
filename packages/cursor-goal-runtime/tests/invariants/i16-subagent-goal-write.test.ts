@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
-import { execCoreHook } from "../hooks/exec-hook.js";
+import { execCoreHook, execCoreHookBare } from "../hooks/exec-hook.js";
 
 describe("I16 subagent goal governance writes", () => {
   let cleanup: () => Promise<void>;
@@ -20,6 +20,19 @@ describe("I16 subagent goal governance writes", () => {
     const r = execCoreHook(p.dir, "preToolUse", {
       tool_name: "Write",
       file_path: ".cursor/goal/manifest.json",
+      is_subagent: true,
+      work_unit_id: "u1",
+    });
+    expect(r.stdout.permission).toBe("deny");
+  });
+
+  it("minimal fallback denies subagent Write when file_path is under tool_input", async () => {
+    const p = await mkGitProject("i16-minimal-tool-input-file-path");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    const r = execCoreHookBare(p.dir, "preToolUse", {
+      tool_name: "Write",
+      tool_input: { file_path: ".cursor/goal/manifest.json" },
       is_subagent: true,
       work_unit_id: "u1",
     });

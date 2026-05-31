@@ -117,7 +117,7 @@ case "$STEP" in
     ;;
   preToolUse)
     TOOL="$(echo "$INPUT" | jq -r '.tool_name // empty')"
-    FILE="$(echo "$INPUT" | jq -r '.file_path // .tool_input.path // empty')"
+    FILE="$(echo "$INPUT" | jq -r '.file_path // .tool_input.path // .tool_input.file_path // empty')"
     IS_SUB="$(echo "$INPUT" | jq -r '.is_subagent // false')"
     if [[ "$TOOL" == "Shell" || "$TOOL" == "Bash" ]]; then
       CMD="$(echo "$INPUT" | jq -r '.command // .tool_input.command // empty')"
