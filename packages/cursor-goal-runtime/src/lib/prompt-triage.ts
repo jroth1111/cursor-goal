@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { appendFile, readFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { readGovernanceConfig, readSessionMode, type GovernanceMode } from "./governance-config.js";
 import { goalDir, goalMd, readJson } from "./paths.js";
 import { isAgentSubmitBlocked } from "./disposition.js";
@@ -200,7 +200,9 @@ export async function appendTriageLog(
     reasons: classification.reasons,
     prompt_hash: hashPrompt(prompt),
   };
-  await appendFile(triageLogPath(root), `${JSON.stringify(entry)}\n`, "utf8");
+  const file = triageLogPath(root);
+  await mkdir(path.dirname(file), { recursive: true });
+  await appendFile(file, `${JSON.stringify(entry)}\n`, "utf8");
 }
 
 export async function readLastTriageEntry(
