@@ -52,6 +52,8 @@ describe("I23 shell permissiveness", { timeout: 30_000 }, () => {
       "rm --recursive --force /tmp/x",
       "git push -f origin main",
       "git push --force-with-lease origin main",
+      "git push origin +main",
+      "git push origin +refs/heads/main:refs/heads/main",
     ]) {
       expect(shellCommandAllowed(command), command).toBe(false);
       expect((await checkShellGate(command, p.dir)).allowed, command).toBe(false);

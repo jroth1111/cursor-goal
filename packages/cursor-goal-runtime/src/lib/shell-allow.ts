@@ -5,7 +5,9 @@ function hasDropDatabase(cmd: string): boolean {
 function hasForcedGitPush(cmd: string): boolean {
   return (
     /\bgit\b[\s\S]*\bpush\b/i.test(cmd) &&
-    /(^|[\s;&|])(-f\b|--force([=\s]|$)|--force-with-lease([=\s]|$))/i.test(cmd)
+    /(^|[\s;&|])(-f\b|--force([=\s]|$)|--force-with-lease([=\s]|$)|\+[^\s;&|]+)/i.test(
+      cmd,
+    )
   );
 }
 
