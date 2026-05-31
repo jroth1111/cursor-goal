@@ -784,6 +784,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i122-capability-missing-row.test.ts"
+    },
+    {
+      "id": "I123",
+      "description": "Root npm run check includes repository claim verifiers",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i123-root-check-claims.test.ts"
     }
   ]
 }

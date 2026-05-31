@@ -6,7 +6,7 @@
   "scripts": {
     "build": "npm run build -w @cursor-goal/runtime",
     "test": "npm test -w @cursor-goal/runtime",
-    "check": "npm run check -w @cursor-goal/runtime && node scripts/verify-capability.mjs",
+    "check": "npm run check -w @cursor-goal/runtime && node scripts/verify-readme-claims.mjs && node scripts/verify-capability.mjs",
     "test:invariants": "npm run test:invariants -w @cursor-goal/runtime",
     "test:fast": "npm run test:invariants -w @cursor-goal/runtime",
     "install:global": "bash scripts/install-global.sh",
