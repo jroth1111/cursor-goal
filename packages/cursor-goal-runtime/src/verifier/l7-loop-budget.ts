@@ -56,3 +56,11 @@ export function buildDispositionWrite(
   };
 }
 
+export function dispositionForLoop(
+  ctx: VerifierContext,
+  summary: string,
+  loopCount: number,
+): { data: AgentDispositionFile; mdBody: string } | undefined {
+  const finalCtx = { ...ctx, loopCount };
+  return isLoopBudgetDisposition(finalCtx) ? buildDispositionWrite(finalCtx, summary) : undefined;
+}

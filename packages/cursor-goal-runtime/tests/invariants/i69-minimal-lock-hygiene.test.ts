@@ -70,4 +70,27 @@ describe("I69 minimal verifier lock hygiene", () => {
     expect(r.status).not.toBe(0);
     expect(existsSync(path.join(p.dir, ".cursor/goal/.lock"))).toBe(false);
   });
+
+  it("normalizes malformed loop totals instead of crashing under lock", async () => {
+    const p = await mkGitProject("i69-malformed-total");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await writeFile(path.join(p.dir, "GOAL.md"), "## Goal\nx\n## Checks\n- `false`\n", "utf8");
+    await mkdir(path.join(p.dir, ".cursor/goal"), { recursive: true });
+    await writeFile(
+      path.join(p.dir, ".cursor/goal/goal-loop.json"),
+      JSON.stringify({ total_blocked_stops: "oops" }),
+      "utf8",
+    );
+    await writeFile(
+      path.join(p.dir, ".cursor/goal/runtime-state.json"),
+      JSON.stringify({ loop_count: 7 }),
+      "utf8",
+    );
+
+    const r = runMinimalStop(p.dir, { status: "completed", loop_count: 0, conversation_id: "agent-a" });
+    expect(r.status).toBe(0);
+    expect(await readRepoBlockedStopTotal(p.dir)).toBe(8);
+    expect(existsSync(path.join(p.dir, ".cursor/goal/.lock"))).toBe(false);
+  });
 });

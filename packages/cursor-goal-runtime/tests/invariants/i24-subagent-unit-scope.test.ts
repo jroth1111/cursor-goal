@@ -94,6 +94,74 @@ Module B
     expect(out.permission).toBe("allow");
   });
 
+  it("runtime preToolUse handles absolute unit paths segment-safely", async () => {
+    const p = await mkGitProject("i24-absolute-prefix");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await seed(p);
+
+    const hook = path.resolve(import.meta.dirname, "../../dist/hook-preToolUse.mjs");
+    const outside = spawnSync("node", [hook], {
+      cwd: p.dir,
+      input: JSON.stringify({
+        tool_name: "Write",
+        file_path: path.join(p.dir, "pkg/aa/outside.ts"),
+        is_subagent: true,
+        work_unit_id: "mod-a",
+      }),
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+    });
+    expect(JSON.parse((outside.stdout ?? "{}").trim() || "{}").permission).toBe("deny");
+
+    const inside = spawnSync("node", [hook], {
+      cwd: p.dir,
+      input: JSON.stringify({
+        tool_name: "Write",
+        file_path: path.join(p.dir, "pkg/a/inside.ts"),
+        is_subagent: true,
+        work_unit_id: "mod-a",
+      }),
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+    });
+    expect(JSON.parse((inside.stdout ?? "{}").trim() || "{}").permission).toBe("allow");
+  });
+
+  it("runtime preToolUse only allows exact unit evidence jsonl under goal governance", async () => {
+    const p = await mkGitProject("i24-evidence-exact");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await seed(p);
+
+    const hook = path.resolve(import.meta.dirname, "../../dist/hook-preToolUse.mjs");
+    const suffix = spawnSync("node", [hook], {
+      cwd: p.dir,
+      input: JSON.stringify({
+        tool_name: "Write",
+        file_path: path.join(p.dir, ".cursor/goal/evidence/units/mod-a.jsonl.bak"),
+        is_subagent: true,
+        work_unit_id: "mod-a",
+      }),
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+    });
+    expect(JSON.parse((suffix.stdout ?? "{}").trim() || "{}").permission).toBe("deny");
+
+    const exact = spawnSync("node", [hook], {
+      cwd: p.dir,
+      input: JSON.stringify({
+        tool_name: "Write",
+        file_path: path.join(p.dir, ".cursor/goal/evidence/units/mod-a.jsonl"),
+        is_subagent: true,
+        work_unit_id: "mod-a",
+      }),
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+    });
+    expect(JSON.parse((exact.stdout ?? "{}").trim() || "{}").permission).toBe("allow");
+  });
+
   it("minimal hook denies subagent Write outside unit scope", async () => {
     const p = await mkGitProject("i24c");
     cleanup = p.cleanup;
@@ -107,5 +175,37 @@ Module B
       work_unit_id: "mod-a",
     });
     expect(r.stdout.permission).toBe("deny");
+  });
+
+  it("minimal hook handles absolute scope and evidence paths segment-safely", async () => {
+    const p = await mkGitProject("i24-minimal-absolute");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await seed(p);
+
+    expect(
+      execCoreHook(p.dir, "preToolUse", {
+        tool_name: "Write",
+        file_path: path.join(p.dir, "pkg/aa/outside.ts"),
+        is_subagent: true,
+        work_unit_id: "mod-a",
+      }).stdout.permission,
+    ).toBe("deny");
+    expect(
+      execCoreHook(p.dir, "preToolUse", {
+        tool_name: "Write",
+        file_path: path.join(p.dir, "pkg/a/inside.ts"),
+        is_subagent: true,
+        work_unit_id: "mod-a",
+      }).stdout.permission,
+    ).toBe("allow");
+    expect(
+      execCoreHook(p.dir, "preToolUse", {
+        tool_name: "Write",
+        file_path: path.join(p.dir, ".cursor/goal/evidence/units/mod-a.jsonl.bak"),
+        is_subagent: true,
+        work_unit_id: "mod-a",
+      }).stdout.permission,
+    ).toBe("deny");
   });
 });

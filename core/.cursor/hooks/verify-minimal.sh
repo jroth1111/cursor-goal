@@ -61,27 +61,74 @@ goal_loop_line() {
   fi
 }
 
-with_goal_lock() {
-  # Break stale locks left by crashed processes (>30s old).
-  if [[ -d "$LOCK_DIR" ]]; then
-    local lock_mtime now lock_age
-    lock_mtime="$(stat -f %m "$LOCK_DIR" 2>/dev/null || echo 0)"
-    now="$(date +%s)"
-    lock_age=$(( now - lock_mtime ))
-    if [[ "$lock_age" -gt 30 ]]; then
-      rm -rf "$LOCK_DIR" 2>/dev/null || true
+json_nonnegative_int() {
+  local file="$1"
+  local expr="$2"
+  jq -er "$expr as \$v | if ((\$v | type) == \"number\" and (\$v | floor) == \$v and \$v >= 0) then \$v else empty end" "$file" 2>/dev/null || true
+}
+
+lock_owner_file() {
+  printf '%s/owner.json' "$LOCK_DIR"
+}
+
+lock_owner_pid_alive() {
+  local pid="$1"
+  [[ "$pid" =~ ^[0-9]+$ && "$pid" -gt 0 ]] || return 1
+  kill -0 "$pid" 2>/dev/null
+}
+
+write_lock_owner() {
+  jq -n \
+    --argjson pid "$$" \
+    --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{pid:$pid,started_at:$at}' >"$(lock_owner_file)"
+}
+
+remove_stale_lock_if_needed() {
+  [[ -d "$LOCK_DIR" ]] || return 0
+  local owner pid lock_mtime now lock_age owner_at owner_epoch owner_age age
+  owner="$(lock_owner_file)"
+  pid=""
+  if [[ -f "$owner" ]]; then
+    pid="$(jq -r '.pid // empty' "$owner" 2>/dev/null || true)"
+  fi
+  if lock_owner_pid_alive "$pid"; then
+    return 0
+  fi
+  lock_mtime="$(stat -f %m "$LOCK_DIR" 2>/dev/null || echo 0)"
+  now="$(date +%s)"
+  lock_age=$(( now - lock_mtime ))
+  owner_age="$lock_age"
+  if [[ -f "$owner" ]]; then
+    owner_at="$(jq -r '.started_at // empty' "$owner" 2>/dev/null || true)"
+    owner_epoch="$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "$owner_at" +%s 2>/dev/null || echo "")"
+    if [[ "$owner_epoch" =~ ^[0-9]+$ ]]; then
+      owner_age=$(( now - owner_epoch ))
     fi
   fi
+  age="$lock_age"
+  [[ "$owner_age" -gt "$age" ]] && age="$owner_age"
+  if [[ "$age" -gt 30 ]]; then
+    rm -f "$owner" 2>/dev/null || true
+    rmdir "$LOCK_DIR" 2>/dev/null || true
+  fi
+}
+
+with_goal_lock() {
+  remove_stale_lock_if_needed
   local i=0
   while [[ $i -lt 50 ]]; do
     if mkdir "$LOCK_DIR" 2>/dev/null; then
+      write_lock_owner
       # Always release the shared goal-dir lock, even if the locked body fails.
       # The TypeScript runtime uses the same lock directory.
       local rc=0
       "$@" || rc=$?
+      rm -f "$(lock_owner_file)" 2>/dev/null || true
       rmdir "$LOCK_DIR" 2>/dev/null || true
       return "$rc"
     fi
+    remove_stale_lock_if_needed
     sleep 0.05
     i=$((i + 1))
   done
@@ -90,21 +137,39 @@ with_goal_lock() {
 }
 
 read_repo_total() {
+  local n
   if [[ -f "$GOAL_LOOP_FILE" ]]; then
-    jq -r '.total_blocked_stops // 0' "$GOAL_LOOP_FILE" 2>/dev/null || echo 0
-  elif [[ -f "$STATE_FILE" ]]; then
-    jq -r '.total_blocked_stops // .loop_count // 0' "$STATE_FILE" 2>/dev/null || echo 0
-  else
-    echo 0
+    n="$(json_nonnegative_int "$GOAL_LOOP_FILE" '.total_blocked_stops')"
+    if [[ -n "$n" ]]; then
+      echo "$n"
+      return 0
+    fi
   fi
+  if [[ -f "$STATE_FILE" ]]; then
+    n="$(json_nonnegative_int "$STATE_FILE" '.total_blocked_stops')"
+    if [[ -n "$n" ]]; then
+      echo "$n"
+      return 0
+    fi
+    n="$(json_nonnegative_int "$STATE_FILE" '.loop_count')"
+    if [[ -n "$n" ]]; then
+      echo "$n"
+      return 0
+    fi
+  fi
+  echo 0
 }
 
 read_agent_loop() {
+  local n
   if [[ -f "$AGENT_STATE" ]]; then
-    jq -r '.loop_count // 0' "$AGENT_STATE" 2>/dev/null || echo 0
-  else
-    echo 0
+    n="$(json_nonnegative_int "$AGENT_STATE" '.loop_count')"
+    if [[ -n "$n" ]]; then
+      echo "$n"
+      return 0
+    fi
   fi
+  echo 0
 }
 
 write_repo_summary() {

@@ -29,6 +29,7 @@ export async function readJson<T>(file: string): Promise<T | null> {
 }
 
 export async function writeJson(file: string, data: unknown): Promise<void> {
+  await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 

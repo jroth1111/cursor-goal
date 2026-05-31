@@ -8,6 +8,49 @@ ROOT="${CURSOR_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}
 GOAL_DIR="$ROOT/.cursor/goal"
 mkdir -p "$GOAL_DIR/passports" "$GOAL_DIR/evidence"
 
+destructive_shell() {
+  local cmd="$1"
+  if command -v perl >/dev/null 2>&1; then
+    printf '%s' "$cmd" | perl -0777 -ne '
+      exit 0 if /\bdrop\s+database\b/i;
+      if (/\bgit\b[\s\S]*\bpush\b/i &&
+          /(?:^|[\s;&|])(?:-f\b|--force(?:[=\s]|$)|--force-with-lease(?:[=\s]|$))/i) { exit 0; }
+      if (/(?:^|[\s;&|])rm(?:[\s;&|]|$)/i &&
+          (/(?:^|[\s;&|])-[a-z]*r[a-z]*f[a-z]*(?=$|[\s;&|])/i ||
+           /(?:^|[\s;&|])-[a-z]*f[a-z]*r[a-z]*(?=$|[\s;&|])/i ||
+           /(?:^|[\s;&|])(?:-[a-z]*r[a-z]*|--recursive)(?=$|[\s;&|])[\s\S]*(?:^|[\s;&|])(?:-[a-z]*f[a-z]*|--force)(?=$|[\s;&|])/i ||
+           /(?:^|[\s;&|])(?:-[a-z]*f[a-z]*|--force)(?=$|[\s;&|])[\s\S]*(?:^|[\s;&|])(?:-[a-z]*r[a-z]*|--recursive)(?=$|[\s;&|])/i)) { exit 0; }
+      exit 1;
+    '
+    return $?
+  fi
+  printf '%s' "$cmd" | grep -qiE '\bdrop[[:space:]]+database\b|\bgit\b.*\bpush\b.*(--force([=[:space:]]|$)|--force-with-lease([=[:space:]]|$)|(^|[[:space:]])-f([[:space:]]|$))|\brm\b.*(-[[:alpha:]]*r[[:alpha:]]*f|-[[:alpha:]]*f[[:alpha:]]*r|--recursive.*--force|--force.*--recursive)'
+}
+
+relative_file_path() {
+  local f="${1//\\//}"
+  local r="${ROOT//\\//}"
+  if [[ "$f" == "$r" ]]; then
+    printf '.'
+  elif [[ "$f" == "$r/"* ]]; then
+    printf '%s' "${f#"$r/"}"
+  else
+    printf '%s' "$f"
+  fi
+}
+
+unit_id_from_path() {
+  local f="${1//\\//}"
+  printf '%s' "$f" | sed -nE 's|.*/evidence/units/([a-z0-9][a-z0-9_-]*)\.jsonl$|\1|Ip' | head -1
+}
+
+unit_evidence_path() {
+  local f="${1//\\//}"
+  local id="$2"
+  [[ "$id" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]] || return 1
+  [[ -n "$id" && "$f" =~ (^|/)evidence/units/${id}\.jsonl$ ]]
+}
+
 case "$STEP" in
   sessionStart)
     if [[ ! -f "$ROOT/GOAL.md" ]] && [[ -f "$ROOT/.cursor/goal/templates/GOAL.md" ]]; then
@@ -41,14 +84,16 @@ case "$STEP" in
     IS_SUB="$(echo "$INPUT" | jq -r '.is_subagent // false')"
     if [[ "$TOOL" == "Shell" || "$TOOL" == "Bash" ]]; then
       CMD="$(echo "$INPUT" | jq -r '.command // .tool_input.command // empty')"
-      if echo "$CMD" | grep -qiE '\brm[[:space:]]+-rf\b|\bgit[[:space:]]+push[[:space:]]+--force\b|\bdrop[[:space:]]+database\b'; then
+      if destructive_shell "$CMD"; then
         jq -n --arg m "Destructive shell blocked by cursor-goal minimal policy." \
           '{permission:"deny",agent_message:$m}'
         exit 0
       fi
     fi
     if [[ "$IS_SUB" == "true" ]] && echo "$FILE" | grep -qE '\.cursor/goal'; then
-      if echo "$FILE" | grep -qE 'evidence/units/'; then
+      WUID="$(echo "$INPUT" | jq -r '.work_unit_id // .tool_input.work_unit_id // empty')"
+      [[ -z "$WUID" ]] && WUID="$(unit_id_from_path "$FILE")"
+      if unit_evidence_path "$FILE" "$WUID"; then
         echo '{"permission":"allow"}'
         exit 0
       fi
@@ -57,21 +102,27 @@ case "$STEP" in
       exit 0
     fi
     if [[ "$IS_SUB" == "true" ]] && [[ -n "$FILE" ]] && [[ "$TOOL" == "Write" || "$TOOL" == "Edit" || "$TOOL" == "MultiEdit" ]] && [[ -f "$GOAL_DIR/work-units.json" ]]; then
-      WUID="$(echo "$INPUT" | jq -r '.work_unit_id // empty')"
-      if [[ -z "$WUID" ]] && echo "$FILE" | grep -qE 'evidence/units/'; then
-        WUID="$(echo "$FILE" | sed -nE 's|.*/evidence/units/([a-z0-9][a-z0-9_-]*).*|\1|p' | head -1)"
+      WUID="$(echo "$INPUT" | jq -r '.work_unit_id // .tool_input.work_unit_id // empty')"
+      REL_FILE="$(relative_file_path "$FILE")"
+      if [[ -z "$WUID" ]]; then
+        WUID="$(unit_id_from_path "$REL_FILE")"
       fi
       if [[ -n "$WUID" ]]; then
-        IN_UNIT="$(jq -r --arg id "$WUID" --arg f "$FILE" '
+        if unit_evidence_path "$REL_FILE" "$WUID"; then
+          echo '{"permission":"allow"}'
+          exit 0
+        fi
+        IN_UNIT="$(jq -r --arg id "$WUID" --arg f "$REL_FILE" '
           .units[]? | select(.id == $id) | .scope[]? as $p |
-          if ($f | startswith($p)) or ($f == ($p | rtrimstr("/"))) or ($f | contains("evidence/units/" + $id)) then "yes" else empty end
+          ($p | gsub("\\\\"; "/") | rtrimstr("/")) as $base |
+          if $base == "**" or $base == "." or $base == "" or $f == $base or ($f | startswith($base + "/")) then "yes" else empty end
         ' "$GOAL_DIR/work-units.json" 2>/dev/null | head -1)"
-        if [[ "$IN_UNIT" != "yes" ]] && ! echo "$FILE" | grep -qE 'evidence/units/'; then
+        if [[ "$IN_UNIT" != "yes" ]]; then
           jq -n --arg m "Subagent WriteGate: $FILE outside unit $WUID scope" \
             '{permission:"deny",agent_message:$m}'
           exit 0
         fi
-      elif ! echo "$FILE" | grep -qE 'evidence/units/'; then
+      elif ! unit_evidence_path "$REL_FILE" "$(unit_id_from_path "$REL_FILE")"; then
         jq -n --arg m "Subagent WriteGate: missing work_unit_id — cannot verify unit scope" \
           '{permission:"deny",agent_message:$m}'
         exit 0
@@ -82,7 +133,7 @@ case "$STEP" in
   beforeShellExecution)
     # Minimal mode is fail-open except for narrowly destructive commands.
     CMD="$(echo "$INPUT" | jq -r '.command // empty')"
-    if echo "$CMD" | grep -qiE '\brm[[:space:]]+-rf\b|\bgit[[:space:]]+push[[:space:]]+--force\b|\bdrop[[:space:]]+database\b'; then
+    if destructive_shell "$CMD"; then
       jq -n --arg m "Destructive shell blocked by cursor-goal minimal policy." \
         '{permission:"deny",agent_message:$m}'
       exit 0

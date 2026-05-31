@@ -124,7 +124,7 @@ export function pathTouchesGoalGovernance(filePath: string): boolean {
 
 export function isUnitEvidencePath(filePath: string, unitId: string): boolean {
   const norm = filePath.replace(/\\/g, "/");
-  return norm.includes(`evidence/units/${unitId}`);
+  return new RegExp(`(^|/)evidence/units/${unitId}\\.jsonl$`, "i").test(norm);
 }
 
 export function extractWorkUnitId(text: string): string | null {

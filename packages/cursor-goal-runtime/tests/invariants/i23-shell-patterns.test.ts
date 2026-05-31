@@ -4,6 +4,8 @@ import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 import { spawnSync } from "node:child_process";
+import { checkShellGate, shellCommandAllowed } from "../../src/lib/shell-allow.js";
+import { execCoreHook } from "../hooks/exec-hook.js";
 
 describe("I23 shell permissiveness", () => {
   let cleanup: () => Promise<void>;
@@ -37,5 +39,33 @@ describe("I23 shell permissiveness", () => {
     });
     const out = JSON.parse((r.stdout ?? "{}").trim() || "{}");
     expect(out.permission).toBe("allow");
+  });
+
+  it("denies destructive shell variants across runtime and wrapper paths", async () => {
+    const p = await mkGitProject("i23-deny-variants");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+
+    for (const command of [
+      "rm -fr /tmp/x",
+      "rm -r -f /tmp/x",
+      "rm --recursive --force /tmp/x",
+      "git push -f origin main",
+      "git push --force-with-lease origin main",
+    ]) {
+      expect(shellCommandAllowed(command), command).toBe(false);
+      expect((await checkShellGate(command, p.dir)).allowed, command).toBe(false);
+      expect(
+        execCoreHook(p.dir, "preToolUse", {
+          tool_name: "Shell",
+          tool_input: { command },
+        }).stdout.permission,
+        command,
+      ).toBe("deny");
+      expect(
+        execCoreHook(p.dir, "beforeShellExecution", { command }).stdout.permission,
+        command,
+      ).toBe("deny");
+    }
   });
 });

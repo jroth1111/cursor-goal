@@ -131,6 +131,25 @@ try {
   printf '%s' "$input" | sed -nE "s/.*\"$field\"[[:space:]]*:[[:space:]]*\"([^\"]*)\".*/\\1/p" | head -1
 }
 
+cgr_destructive_shell() {
+  local cmd="$1"
+  if command -v perl >/dev/null 2>&1; then
+    printf '%s' "$cmd" | perl -0777 -ne '
+      exit 0 if /\bdrop\s+database\b/i;
+      if (/\bgit\b[\s\S]*\bpush\b/i &&
+          /(?:^|[\s;&|])(?:-f\b|--force(?:[=\s]|$)|--force-with-lease(?:[=\s]|$))/i) { exit 0; }
+      if (/(?:^|[\s;&|])rm(?:[\s;&|]|$)/i &&
+          (/(?:^|[\s;&|])-[a-z]*r[a-z]*f[a-z]*(?=$|[\s;&|])/i ||
+           /(?:^|[\s;&|])-[a-z]*f[a-z]*r[a-z]*(?=$|[\s;&|])/i ||
+           /(?:^|[\s;&|])(?:-[a-z]*r[a-z]*|--recursive)(?=$|[\s;&|])[\s\S]*(?:^|[\s;&|])(?:-[a-z]*f[a-z]*|--force)(?=$|[\s;&|])/i ||
+           /(?:^|[\s;&|])(?:-[a-z]*f[a-z]*|--force)(?=$|[\s;&|])[\s\S]*(?:^|[\s;&|])(?:-[a-z]*r[a-z]*|--recursive)(?=$|[\s;&|])/i)) { exit 0; }
+      exit 1;
+    '
+    return $?
+  fi
+  printf '%s' "$cmd" | grep -qiE '\bdrop[[:space:]]+database\b|\bgit\b.*\bpush\b.*(--force([=[:space:]]|$)|--force-with-lease([=[:space:]]|$)|(^|[[:space:]])-f([[:space:]]|$))|\brm\b.*(-[[:alpha:]]*r[[:alpha:]]*f|-[[:alpha:]]*f[[:alpha:]]*r|--recursive.*--force|--force.*--recursive)'
+}
+
 cgr_safety_response() {
   local step="$1"
   local input="$2"
@@ -138,7 +157,7 @@ cgr_safety_response() {
   tool="$(cgr_json_string_field "$input" "tool_name")"
   cmd="$(cgr_json_string_field "$input" "command")"
   if [[ "$step" == "beforeShellExecution" || "$tool" == "Shell" || "$tool" == "Bash" ]]; then
-    if printf '%s' "$cmd" | grep -qiE '\brm[[:space:]]+-rf\b|\bgit[[:space:]]+push[[:space:]]+--force\b|\bdrop[[:space:]]+database\b'; then
+    if cgr_destructive_shell "$cmd"; then
       printf '{"permission":"deny","agent_message":"Destructive shell blocked by cursor-goal minimal policy."}\n'
       return 0
     fi

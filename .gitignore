@@ -4,5 +4,9 @@ packages/cursor-goal-runtime/node_modules/
 *.log
 .DS_Store
 artifacts/
+*.zip
+reverse-engineered-cursor/
+reconstructed-source/
+**/cursor-reconstruction/
 .codex-backups/
 .claude/

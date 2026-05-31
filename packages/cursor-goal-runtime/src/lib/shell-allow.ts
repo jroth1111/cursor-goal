@@ -1,12 +1,29 @@
-const DESTRUCTIVE_SHELL =
-  /\b(rm\s+-rf|git\s+push\s+--force|drop\s+database)\b/i;
+function hasDropDatabase(cmd: string): boolean {
+  return /\bdrop\s+database\b/i.test(cmd);
+}
+
+function hasForcedGitPush(cmd: string): boolean {
+  return (
+    /\bgit\b[\s\S]*\bpush\b/i.test(cmd) &&
+    /(^|[\s;&|])(-f\b|--force([=\s]|$)|--force-with-lease([=\s]|$))/i.test(cmd)
+  );
+}
+
+function hasRecursiveForceRm(cmd: string): boolean {
+  if (!/(^|[\s;&|])rm([\s;&|]|$)/i.test(cmd)) return false;
+  const combined =
+    /(^|[\s;&|])-[a-z]*r[a-z]*f[a-z]*(?=$|[\s;&|])|(^|[\s;&|])-[a-z]*f[a-z]*r[a-z]*(?=$|[\s;&|])/i;
+  const recursive = /(^|[\s;&|])(-[a-z]*r[a-z]*|--recursive)(?=$|[\s;&|])/i;
+  const force = /(^|[\s;&|])(-[a-z]*f[a-z]*|--force)(?=$|[\s;&|])/i;
+  return combined.test(cmd) || (recursive.test(cmd) && force.test(cmd));
+}
 
 export function shellCommandAllowed(
   cmd: string,
 ): boolean {
   const trimmed = cmd.trim();
   if (!trimmed) return true;
-  return !DESTRUCTIVE_SHELL.test(trimmed);
+  return !(hasDropDatabase(trimmed) || hasForcedGitPush(trimmed) || hasRecursiveForceRm(trimmed));
 }
 
 export type ShellGateResult =

@@ -318,6 +318,10 @@ export type RecordBlockedStopOptions = {
     data: AgentDispositionFile;
     mdBody?: string;
   };
+  dispositionForLoop?: (
+    agentLoop: number,
+    repoTotal: number,
+  ) => { data: AgentDispositionFile; mdBody?: string } | undefined;
 };
 
 /** Atomically increment repo + agent counters, persist handoff, optional disposition (one lock). */
@@ -327,7 +331,7 @@ export async function recordBlockedStop(
   fromCount: number,
   state: RuntimeStateFile,
   options?: RecordBlockedStopOptions,
-): Promise<{ agentLoop: number; repoTotal: number }> {
+): Promise<{ agentLoop: number; repoTotal: number; dispositionWritten: boolean }> {
   return withGoalDirLock(root, async () => {
     const currentAgentLoop = await readAgentLoopCount(root, agentId);
     const agentLoop = Math.max(fromCount, currentAgentLoop) + 1;
@@ -350,7 +354,23 @@ export async function recordBlockedStop(
         options.disposition.mdBody,
       );
     }
-    return { agentLoop, repoTotal };
+    let dispositionWritten = !!options?.disposition;
+    if (!dispositionWritten && options?.dispositionForLoop) {
+      const disposition = options.dispositionForLoop(agentLoop, repoTotal);
+      if (disposition) {
+        await writeAgentDispositionUnlocked(
+          root,
+          agentId,
+          {
+            ...disposition.data,
+            loop_count: Math.max(disposition.data.loop_count, agentLoop),
+          },
+          disposition.mdBody,
+        );
+        dispositionWritten = true;
+      }
+    }
+    return { agentLoop, repoTotal, dispositionWritten };
   });
 }
 

@@ -6,18 +6,28 @@ function normalizePath(filePath: string): string {
   return filePath.replace(/\\/g, "/");
 }
 
+function relativePathForScope(filePath: string, root?: string): string {
+  const norm = normalizePath(filePath);
+  if (!root) return norm;
+  const rootNorm = normalizePath(path.resolve(root));
+  if (norm === rootNorm) return ".";
+  if (norm.startsWith(`${rootNorm}/`)) return norm.slice(rootNorm.length + 1);
+  return norm;
+}
+
 export function pathInUnitScope(
   filePath: string,
   unitScope: string[],
   unitId: string,
 ): boolean {
   const norm = normalizePath(filePath);
-  if (norm.includes(`evidence/units/${unitId}`)) return true;
+  if (isUnitEvidencePath(norm, unitId)) return true;
   if (unitScope.length === 0) return true;
   return unitScope.some((p) => {
     if (p === "**") return true;
-    const prefix = p.endsWith("/") ? p : `${p.replace(/\/?$/, "")}/`;
-    return norm === p.replace(/\/$/, "") || norm.startsWith(prefix) || norm.startsWith(p);
+    const base = normalizePath(p).replace(/\/+$/, "");
+    if (base === "." || base === "") return true;
+    return norm === base || norm.startsWith(`${base}/`);
   });
 }
 
@@ -35,7 +45,8 @@ export async function checkSubagentWriteGate(
     };
   }
 
-  if (isUnitEvidencePath(filePath, unitId)) {
+  const scopePath = relativePathForScope(filePath, root);
+  if (isUnitEvidencePath(scopePath, unitId)) {
     return { allowed: true };
   }
 
@@ -48,7 +59,7 @@ export async function checkSubagentWriteGate(
     };
   }
 
-  if (pathInUnitScope(filePath, unit.scope, unit.id)) {
+  if (pathInUnitScope(scopePath, unit.scope, unit.id)) {
     return { allowed: true };
   }
 

@@ -81,7 +81,7 @@ function slugId(raw: string): string {
 export function autoSliceWorkUnits(scope: string[], globalChecks: string[]): WorkUnitDraft[] {
   return scope.map((p) => {
     const path = unquote(p);
-    const id = slugId(path.replace(/[/\\]/g, "-"));
+    const id = slugId(path.replace(/[/\\]/g, "-")) || "root";
     return {
       id,
       title: `Work in ${path}`,

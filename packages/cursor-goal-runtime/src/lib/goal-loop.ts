@@ -56,7 +56,12 @@ async function seedFromLegacyRuntimeState(root: string): Promise<number> {
 export async function readRepoBlockedStopTotal(root?: string): Promise<number> {
   const r = root ?? projectRoot();
   const file = await readGoalLoopFile(r);
-  if (file) return file.total_blocked_stops;
+  if (
+    typeof file?.total_blocked_stops === "number" &&
+    file.total_blocked_stops >= 0
+  ) {
+    return file.total_blocked_stops;
+  }
   return seedFromLegacyRuntimeState(r);
 }
 
@@ -64,7 +69,11 @@ export async function readRepoBlockedStopTotal(root?: string): Promise<number> {
 export async function incrementRepoBlockedStopTotalUnlocked(root: string): Promise<number> {
   const limit = await readLoopLimit(root);
   const existing = await readGoalLoopFile(root);
-  const base = existing?.total_blocked_stops ?? (await seedFromLegacyRuntimeState(root));
+  const base =
+    typeof existing?.total_blocked_stops === "number" &&
+    existing.total_blocked_stops >= 0
+      ? existing.total_blocked_stops
+      : await seedFromLegacyRuntimeState(root);
   const next = base + 1;
   await writeGoalLoopFile(root, {
     total_blocked_stops: next,

@@ -25,8 +25,7 @@ import { levelScope } from "./l4-scope.js";
 import { levelForbiddenProxy } from "./l5-forbidden-proxy.js";
 import { levelFreshProofBlocked, levelFreshProofOnRelease } from "./l6-fresh-proof.js";
 import {
-  buildDispositionWrite,
-  isLoopBudgetDisposition,
+  dispositionForLoop,
   resolveLoopBudgetMessage,
 } from "./l7-loop-budget.js";
 import { levelWorkUnitsBlocked } from "./l-work-units.js";
@@ -168,22 +167,18 @@ export async function runStopPipeline(input: StopInput): Promise<VerifyResult> {
   });
   const budgetCtx = { ...ctx, loopCount: nextLoop };
   const followup = await resolveLoopBudgetMessage(budgetCtx, runtimeState);
-  const atDisposition = isLoopBudgetDisposition(budgetCtx);
-  const dispositionWrite = atDisposition
-    ? buildDispositionWrite(budgetCtx, followup)
-    : undefined;
-  const { agentLoop, repoTotal } = await recordBlockedStop(
+  const { agentLoop, repoTotal, dispositionWritten } = await recordBlockedStop(
     root,
     agentId,
     ctx.loopCount,
     runtimeState,
-    dispositionWrite
-      ? { disposition: { data: dispositionWrite.data, mdBody: dispositionWrite.mdBody } }
-      : undefined,
+    {
+      dispositionForLoop: (loop) => dispositionForLoop(budgetCtx, followup, loop),
+    },
   );
   ctx.loopCount = agentLoop;
 
-  if (atDisposition) {
+  if (dispositionWritten) {
     const persistedState = { ...runtimeState, loop_count: agentLoop };
     return {
       kind: "disposition",

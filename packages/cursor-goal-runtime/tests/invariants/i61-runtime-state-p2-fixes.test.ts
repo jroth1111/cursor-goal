@@ -1,11 +1,15 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { existsSync } from "node:fs";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 import { countSubmitBlockedAgents } from "../../src/lib/agent-runtime-state.js";
-import { goalLoopPath, readRepoBlockedStopTotal } from "../../src/lib/goal-loop.js";
+import {
+  goalLoopPath,
+  incrementRepoBlockedStopTotal,
+  readRepoBlockedStopTotal,
+} from "../../src/lib/goal-loop.js";
 import { writeAgentDisposition } from "../../src/lib/disposition.js";
 import { buildOperatorSnapshot } from "../../src/lib/operator.js";
 import {
@@ -107,6 +111,36 @@ describe("I61 runtime-state P2 fixes", () => {
     expect(existsSync(runtimeStatePath(p.dir))).toBe(true);
     const summary = await readRepoRuntimeSummary(p.dir);
     expect(summary?.total_blocked_stops).toBe(0);
+  });
+
+  it("ignores malformed goal-loop totals and falls back to legacy runtime-state", async () => {
+    const p = await mkGitProject("i61-malformed-goal-loop");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await mkdir(path.join(p.dir, ".cursor/goal"), { recursive: true });
+    await writeFile(
+      goalLoopPath(p.dir),
+      JSON.stringify({ total_blocked_stops: "oops", loop_limit: 40 }),
+      "utf8",
+    );
+    await writeFile(
+      runtimeStatePath(p.dir),
+      JSON.stringify({
+        mode: "runtime",
+        loop_count: 7,
+        loop_limit: 40,
+        phase: "VERIFY",
+        blocked: true,
+        blockers: [],
+        next_action: null,
+        last_check_fail: null,
+        updated_at: new Date().toISOString(),
+      }),
+      "utf8",
+    );
+
+    expect(await readRepoBlockedStopTotal(p.dir)).toBe(7);
+    expect(await incrementRepoBlockedStopTotal(p.dir)).toBe(8);
   });
 
   it("readRepoRuntimeSummary overlays stale blocked_agent_count from disk", async () => {

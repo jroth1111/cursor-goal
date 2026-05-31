@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { writeFile, unlink } from "node:fs/promises";
+import { readFile, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { existsSync } from "node:fs";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
@@ -147,5 +147,17 @@ describe("I60 runtime-state cleanup", () => {
       m.readJson<{ status?: string; agents_in_disposition?: string[] }>(legacy),
     );
     expect(raw?.agents_in_disposition).toBeUndefined();
+  });
+
+  it("writeJson creates parent directories for session lifecycle markers", async () => {
+    const p = await mkGitProject("i60-write-json-parent");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    const { writeJson } = await import("../../src/lib/paths.js");
+    const marker = path.join(p.dir, ".cursor/goal/passports/SESSION_END.json");
+
+    await writeJson(marker, { status: "SESSION_END" });
+
+    expect(JSON.parse(await readFile(marker, "utf8")).status).toBe("SESSION_END");
   });
 });

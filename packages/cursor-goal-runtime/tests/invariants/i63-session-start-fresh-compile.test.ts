@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { existsSync } from "node:fs";
-import { rm, writeFile } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
@@ -98,5 +98,34 @@ A
 
     expectHookOk(r);
     expect(existsSync(path.join(p.dir, ".cursor/goal/work-units.json"))).toBe(true);
+  });
+
+  it("does not compile GOAL.md when default mode is chat", async () => {
+    const p = await mkGitProject("i63-chat-no-compile");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      "## Goal\nx\n## Scope\n- `pkg/a/`\n## Checks\n- `true`\n",
+      "utf8",
+    );
+    await mkdir(path.join(p.dir, ".cursor/goal"), { recursive: true });
+    await writeFile(
+      path.join(p.dir, ".cursor/goal/config.json"),
+      JSON.stringify({ default_mode: "chat" }),
+      "utf8",
+    );
+
+    const hook = path.resolve(import.meta.dirname, "../../dist/hook-sessionStart.mjs");
+    const r = spawnSync("node", [hook], {
+      cwd: p.dir,
+      input: JSON.stringify({ conversation_id: "chat-agent" }),
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+    });
+
+    expectHookOk(r);
+    expect(existsSync(path.join(p.dir, ".cursor/goal/work-units.json"))).toBe(false);
   });
 });
