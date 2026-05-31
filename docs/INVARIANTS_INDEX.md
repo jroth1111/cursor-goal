@@ -8,7 +8,7 @@ These IDs are intentionally unused in the registry (do not recycle without docum
 
 I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 
-## New operator surfaces (I78–I86, I94–I103)
+## New operator surfaces (I78–I86, I94–I104)
 
 | ID | Summary |
 |----|---------|
@@ -29,3 +29,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I101 | `scripts/uninstall-global.sh` rejects unknown arguments before mutation |
 | I102 | `cursor-goal pause` creates `.cursor/goal/` before writing `PAUSED` |
 | I103 | `cursor-goal phase <phase>` rejects unknown direct-set phase values |
+| I104 | Stop trace appends create `.cursor/goal/` before writing diagnostics |

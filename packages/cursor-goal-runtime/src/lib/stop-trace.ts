@@ -1,4 +1,4 @@
-import { appendFile } from "node:fs/promises";
+import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { goalDir } from "./paths.js";
 
@@ -16,7 +16,9 @@ export function stopTracePath(root: string): string {
 
 export async function appendStopTrace(root: string, entry: StopTraceEntry): Promise<void> {
   const line = `${JSON.stringify(entry)}\n`;
-  await appendFile(stopTracePath(root), line, "utf8").catch(() => undefined);
+  const file = stopTracePath(root);
+  await mkdir(path.dirname(file), { recursive: true }).catch(() => undefined);
+  await appendFile(file, line, "utf8").catch(() => undefined);
 }
 
 export async function readStopTraceTail(root: string, n = 20): Promise<StopTraceEntry[]> {

@@ -651,6 +651,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i103-phase-direct-set-validation.test.ts"
+    },
+    {
+      "id": "I104",
+      "description": "Stop trace appends create the goal directory before writing",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i104-stop-trace-path.test.ts"
     }
   ]
 }
