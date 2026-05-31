@@ -76,3 +76,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I148 | Structured work_unit_id fields outrank free-form tool payload text |
 | I149 | Dispatch rejects duplicate single-value options before side effects |
 | I150 | Work unit parsing ignores template prose and commented examples |
+| I151 | Compile rejects explicit work unit ids that cannot satisfy artifact schemas |

@@ -112,7 +112,6 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
       if (idM) {
         if (current) units.push(current);
         const uid = slugId(idM[1].trim());
-        if (!uid) continue;
         current = {
           id: uid,
           title: idM[1].trim(),
@@ -163,7 +162,6 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
     const heading = lines[0]?.trim() ?? "";
     if (!heading) continue;
     const id = slugId(heading);
-    if (!id) continue;
     let title = heading;
     const scope: string[] = [];
     const acceptance: string[] = [];

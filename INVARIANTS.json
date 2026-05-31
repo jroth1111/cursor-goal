@@ -980,6 +980,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i150-work-unit-markdown-noise.test.ts"
+    },
+    {
+      "id": "I151",
+      "description": "Compile rejects explicit work unit ids that cannot satisfy artifact schemas",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i151-invalid-work-unit-id-compile.test.ts"
     }
   ]
 }
