@@ -140,6 +140,7 @@ Only claim what invariant tests prove.
 | I151 | Compile rejects explicit work unit ids that cannot satisfy artifact schemas | — | yes | — | i151-invalid-work-unit-id-compile | tested |
 | I152 | Logs tail zero returns no stop-trace entries | — | yes | — | i152-logs-zero-tail | tested |
 | I153 | Read-only operator commands reject duplicate conversation selectors | — | yes | — | i153-operator-duplicate-conversation | tested |
+| I154 | Prompt triage honors explicit read-only opt-outs over delivery words | — | yes | — | i154-readonly-triage-optout | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

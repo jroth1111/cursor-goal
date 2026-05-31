@@ -1001,6 +1001,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i153-operator-duplicate-conversation.test.ts"
+    },
+    {
+      "id": "I154",
+      "description": "Prompt triage honors explicit read-only opt-outs over delivery words",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i154-readonly-triage-optout.test.ts"
     }
   ]
 }

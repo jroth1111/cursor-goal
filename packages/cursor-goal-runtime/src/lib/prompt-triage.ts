@@ -19,6 +19,7 @@ export type PromptClassification = {
 
 const ANTI_CHAT =
   /\b(how|why|what is|what's|explain|compare|review only|read-only|read only|don't edit|do not edit|without editing)\b/i;
+const READ_ONLY_OPT_OUT = /\b(review only|read-only|read only|don't edit|do not edit|without editing)\b/i;
 const ANTI_GOVERNANCE = /\b(no goal|no governance|ungoverned|un governed)\b/i;
 const DELIVERY =
   /\b(implement|fix|add|migrate|refactor|ship|build|wire up|until .+ pass|must pass|before merge)\b/i;
@@ -49,6 +50,10 @@ export function classifyPrompt(prompt: string): PromptClassification {
   if (ANTI_CHAT.test(text)) {
     chatScore += 2;
     reasons.push("question-shape");
+  }
+  if (READ_ONLY_OPT_OUT.test(text)) {
+    chatScore += 3;
+    reasons.push("read-only-opt-out");
   }
   if (ANTI_GOVERNANCE.test(text)) {
     chatScore += 3;
@@ -127,6 +132,10 @@ export async function resolveEffectiveMode(
 
   if (classified.forceGoverned) {
     return { mode: "governed" };
+  }
+
+  if (classified.reasons.includes("read-only-opt-out") || classified.reasons.includes("opt-out")) {
+    return { mode: "chat" };
   }
 
   if (classified.chatScore >= 2 && classified.deliveryScore === 0) {

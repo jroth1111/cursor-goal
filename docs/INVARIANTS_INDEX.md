@@ -79,3 +79,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I151 | Compile rejects explicit work unit ids that cannot satisfy artifact schemas |
 | I152 | Logs tail zero returns no stop-trace entries |
 | I153 | Read-only operator commands reject duplicate conversation selectors |
+| I154 | Prompt triage honors explicit read-only opt-outs over delivery words |
