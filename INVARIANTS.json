@@ -67,7 +67,7 @@
     {
       "id": "I10",
       "description": "Minimal bash stop parity with runtime on basic fixtures (I01-I08 smoke only)",
-      "layers": ["conformance"],
+      "layers": ["core", "runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/conformance/core-runtime-parity.test.ts"
     },
@@ -812,6 +812,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i126-gitignore-noise-dirs.test.ts"
+    },
+    {
+      "id": "I127",
+      "description": "Capability Core, Runtime, and Supervisor layer claims match INVARIANTS.json",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i127-capability-layer-claims.test.ts"
     }
   ]
 }

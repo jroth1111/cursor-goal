@@ -41,7 +41,7 @@ const testedRows = [
     /^\|\s*(I\d+)\s*\|[^|]*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*([^|]+?)\s*\|\s*tested\s*\|/gm,
   ),
 ];
-for (const [, id, , , supervisor, testRef] of testedRows) {
+for (const [, id, core, runtime, supervisor, testRef] of testedRows) {
   const inv = invariantById.get(id);
   const stem = testRef.trim();
   if (!inv) {
@@ -57,6 +57,12 @@ for (const [, id, , , supervisor, testRef] of testedRows) {
     errors.push(
       `${id}: CAPABILITY tested row references "${stem}" but INVARIANTS.json declares "${declaredStem}"`,
     );
+  }
+  if (hasLayerClaim(core) !== inv.layers?.includes("core")) {
+    errors.push(`${id}: CAPABILITY Core column does not match INVARIANTS.json layers`);
+  }
+  if (hasLayerClaim(runtime) !== inv.layers?.includes("runtime")) {
+    errors.push(`${id}: CAPABILITY Runtime column does not match INVARIANTS.json layers`);
   }
   if (hasLayerClaim(supervisor) !== inv.layers?.includes("supervisor")) {
     errors.push(`${id}: CAPABILITY Supervisor column does not match INVARIANTS.json layers`);

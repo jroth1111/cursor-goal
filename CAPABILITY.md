@@ -29,7 +29,7 @@ Only claim what invariant tests prove.
 | I24 | Subagent unit scope WriteGate | — | yes | — | i24-subagent-unit-scope | tested |
 | I26 | Prioritized next action in stop followup | — | yes | — | i26-prioritized-next-action | tested |
 | I29 | Goal loop counter increments (not Cursor index) | — | yes | — | i29-persisted-loop-count | tested |
-| I52 | Stuck cursor loop_count: monotonic GOAL loop display | yes | yes | — | i52-goal-loop-count-display | tested |
+| I52 | Stuck cursor loop_count: monotonic GOAL loop display | — | yes | — | i52-goal-loop-count-display | tested |
 | I53 | INTAKE/DISCOVERY allow primary writes; compile → DISCOVERY | yes | yes | — | i53-intake-write-block | tested |
 | I54 | DISPOSITION at cursor budget; display shows goal loop 1/N | yes | yes | — | i54-disposition-display-split | tested |
 | I30 | Auto-advance IMPLEMENT→VERIFY | — | yes | — | i30-auto-verify-phase | tested |
@@ -37,7 +37,7 @@ Only claim what invariant tests prove.
 | I32 | cursor-goal next operator command | — | yes | — | i32-cursor-goal-next | tested |
 | I33 | runtime-state.json on blocked stop | — | yes | — | i33-runtime-state-handoff | tested |
 | I34 | last_check_fail in runtime-state.json | — | yes | — | i34-check-fail-embedded | tested |
-| I35 | Hooks do not inject Task prompts | yes | yes | — | i35-no-hook-injection | tested |
+| I35 | Hooks do not inject Task prompts | — | yes | — | i35-no-hook-injection | tested |
 | I36 | dispatch-queue.json at compile | — | yes | — | i36-dispatch-queue-compile | tested |
 | I37 | Supervisor auto-dispatch open units | — | — | yes | i37-supervisor-auto-dispatch | tested |
 | I38 | Runtime-missing hooks fail open with minimal safety fallback | yes | — | — | i38-runtime-required | tested |
@@ -48,7 +48,7 @@ Only claim what invariant tests prove.
 | I43 | Scope-based default unit acceptance | — | yes | — | i43-unit-acceptance-default | tested |
 | I44 | cursor-goal next --json snapshot | — | yes | — | i44-next-json | tested |
 | I46 | cursor-goal dispatch CLI | — | yes | — | i46-dispatch-cli | tested |
-| I47 | sessionStart auto-init GOAL in git repo | — | yes | — | i47-session-auto-init | tested |
+| I47 | sessionStart auto-init GOAL in git repo | yes | yes | — | i47-session-auto-init | tested |
 | I48 | Global runtime resolution (~/.cursor/cursor-goal-runtime) | yes | — | — | i48-global-runtime-resolve | tested |
 | I49 | install-global.sh dry-run manifest + hooks merge | yes | — | — | i49-install-global-dry-run | tested |
 | I51 | Governance triage chat/nudge/governed on beforeSubmitPrompt | — | yes | — | i51-governance-triage | tested |
@@ -113,6 +113,7 @@ Only claim what invariant tests prove.
 | I124 | Capability verifier rejects stale rows and mismatched test links | — | yes | — | i124-capability-test-link | tested |
 | I125 | Capability matrix uses Supervisor layer columns instead of legacy Pi claims | — | yes | — | i125-capability-supervisor-column | tested |
 | I126 | .gitignore covers generated, cache, virtualenv, editor, and local secret artifacts | — | yes | — | i126-gitignore-noise-dirs | tested |
+| I127 | Capability Core, Runtime, and Supervisor layer claims match INVARIANTS.json | — | yes | — | i127-capability-layer-claims | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

@@ -52,3 +52,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I124 | Capability verifier rejects stale rows and mismatched test links |
 | I125 | Capability matrix uses Supervisor layer columns instead of legacy Pi claims |
 | I126 | .gitignore covers generated, cache, virtualenv, editor, and local secret artifacts |
+| I127 | Capability Core, Runtime, and Supervisor layer claims match INVARIANTS.json |
