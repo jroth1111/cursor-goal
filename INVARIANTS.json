@@ -889,6 +889,13 @@
       "layers": ["supervisor"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i137-supervisor-prompt-option-boundary.test.ts"
+    },
+    {
+      "id": "I138",
+      "description": "Supervisor rejects missing prompt values before deriving launch options",
+      "layers": ["supervisor"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i138-supervisor-prompt-value.test.ts"
     }
   ]
 }

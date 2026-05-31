@@ -53,6 +53,9 @@ export function parseSupervisorArgs(argv) {
   const promptIdx = args.indexOf("--prompt");
   const optionArgs = promptIdx >= 0 ? args.slice(0, promptIdx) : args;
   const promptArgs = promptIdx >= 0 ? args.slice(promptIdx + 1) : [];
+  if (promptIdx >= 0 && promptArgs.join(" ").trim() === "") {
+    throw new Error("Missing value for --prompt");
+  }
   return {
     dryRun: optionArgs.includes("--dry-run"),
     interactive: optionArgs.includes("--interactive"),
