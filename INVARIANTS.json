@@ -987,6 +987,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i151-invalid-work-unit-id-compile.test.ts"
+    },
+    {
+      "id": "I152",
+      "description": "Logs tail zero returns no stop-trace entries",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i152-logs-zero-tail.test.ts"
     }
   ]
 }

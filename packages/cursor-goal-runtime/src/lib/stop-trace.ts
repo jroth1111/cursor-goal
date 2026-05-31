@@ -25,6 +25,7 @@ export async function readStopTraceTail(root: string, n = 20): Promise<StopTrace
   const { readFile } = await import("node:fs/promises");
   const { existsSync } = await import("node:fs");
   const file = stopTracePath(root);
+  if (n <= 0) return [];
   if (!existsSync(file)) return [];
   const raw = await readFile(file, "utf8");
   const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
