@@ -791,6 +791,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i123-root-check-claims.test.ts"
+    },
+    {
+      "id": "I124",
+      "description": "Capability verifier rejects stale rows and mismatched test links",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i124-capability-test-link.test.ts"
     }
   ]
 }
