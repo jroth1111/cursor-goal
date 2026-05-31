@@ -12,4 +12,17 @@ describe("I81 unit task prompt parity", () => {
     };
     expect(supervisorBuild(unit)).toBe(buildUnitTaskPrompt(unit as never));
   });
+
+  it("includes deliverable.md path when verified_by is set", () => {
+    const unit = {
+      id: "auth-middleware",
+      title: "Auth middleware",
+      scope: ["src/auth/"],
+      acceptance: ["npm test -- src/auth"],
+      verified_by: "verifier",
+    };
+    const prompt = buildUnitTaskPrompt(unit as never);
+    expect(prompt).toMatch(/outputs\/auth-middleware\/deliverable\.md/);
+    expect(supervisorBuild(unit)).toBe(prompt);
+  });
 });

@@ -6,6 +6,13 @@ export function buildUnitTaskPrompt(unit: WorkUnitCompiled): string {
     unit.acceptance.length > 0
       ? unit.acceptance.map((c) => `- ${c}`).join("\n")
       : "- `true`";
+  const deliverableLines = unit.verified_by
+    ? [
+        "",
+        `Write deliverable to .cursor/goal/outputs/${unit.id}/deliverable.md (see SUBAGENT_PROMPT.md)`,
+      ]
+    : [];
+
   return [
     `work_unit_id: ${unit.id}`,
     "",
@@ -13,6 +20,7 @@ export function buildUnitTaskPrompt(unit: WorkUnitCompiled): string {
     `Allowed scope: ${scope}`,
     "Do not write .cursor/goal except evidence/units/" + unit.id + ".jsonl",
     "See .cursor/goal/templates/SUBAGENT_PROMPT.md",
+    ...deliverableLines,
     "",
     "Acceptance:",
     acceptance,

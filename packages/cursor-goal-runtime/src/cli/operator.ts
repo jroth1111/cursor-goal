@@ -14,6 +14,7 @@ import { buildExplainReport, formatExplainReport } from "../lib/explain-stop.js"
 import {
   formatDispatchVerifyCli,
   recordVerifierFromFile,
+  runDispatchVerifySpawn,
 } from "../lib/dispatch-verify.js";
 import { readStopTraceTail } from "../lib/stop-trace.js";
 import { runGlobalUpgrade } from "../lib/upgrade.js";
@@ -52,6 +53,7 @@ export async function handleDispatch(rest: string[]): Promise<void> {
   const dryRun = rest.includes("--dry-run");
   const run = rest.includes("--run");
   const verify = rest.includes("--verify");
+  const verifySpawn = rest.includes("--spawn");
   const unitIdx = rest.indexOf("--unit");
   const unitId = unitIdx >= 0 ? rest[unitIdx + 1] : undefined;
   const recordIdx = rest.indexOf("--record-response");
@@ -63,6 +65,20 @@ export async function handleDispatch(rest: string[]): Promise<void> {
     const r = await recordVerifierFromFile(recordUnit, fromFile);
     console.log(JSON.stringify(r, null, 2));
     process.exit(r.passed ? 0 : 1);
+  }
+
+  if (verify && verifySpawn) {
+    try {
+      const r = await runDispatchVerifySpawn(projectRoot(), { unitId, dryRun });
+      if (dryRun) {
+        process.exit(0);
+      }
+      console.log(JSON.stringify(r, null, 2));
+      process.exit(r.passed ? 0 : 1);
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : String(e));
+      process.exit(1);
+    }
   }
 
   if (verify) {

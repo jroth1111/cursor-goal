@@ -2,9 +2,9 @@ import { describe, it, expect, afterEach } from "vitest";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
+import { execCoreHookBare } from "../hooks/exec-hook.js";
 import { spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
-import path from "node:path";
 import os from "node:os";
 
 describe("I86 strict governance", () => {
@@ -65,5 +65,27 @@ describe("I86 strict governance", () => {
     const stdout = JSON.parse((r.stdout ?? "").trim() || "{}") as Record<string, unknown>;
     expect(stdout.continue).toBe(false);
     expect(String(stdout.agent_message ?? "")).toMatch(/STRICT/i);
+  });
+
+  it("core bash beforeSubmitPrompt blocks when strict and runtime missing", async () => {
+    const p = await mkGitProject("i86-core");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      "## Goal\nx\n## Checks\n- `true`\n",
+      "utf8",
+    );
+    const prev = process.env.CURSOR_GOAL_STRICT;
+    process.env.CURSOR_GOAL_STRICT = "1";
+    delete process.env.CURSOR_GOAL_RUNTIME;
+    try {
+      const r = execCoreHookBare(p.dir, "beforeSubmitPrompt", { prompt: "go" });
+      expect(r.stdout.continue).toBe(false);
+      expect(String(r.stdout.agent_message ?? "")).toMatch(/STRICT/i);
+    } finally {
+      if (prev === undefined) delete process.env.CURSOR_GOAL_STRICT;
+      else process.env.CURSOR_GOAL_STRICT = prev;
+    }
   });
 });

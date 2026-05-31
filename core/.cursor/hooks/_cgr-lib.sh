@@ -41,6 +41,31 @@ cgr_resolve_runtime() {
   printf '\n'
 }
 
+cgr_strict_enabled() {
+  case "${CURSOR_GOAL_STRICT:-}" in
+    1|true|yes|TRUE|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+cgr_apply_strict_before_submit() {
+  local step="$1"
+  local out="$2"
+  if [[ "$step" != "beforeSubmitPrompt" ]] || ! cgr_strict_enabled; then
+    printf '%s\n' "$out"
+    return 0
+  fi
+  if command -v jq >/dev/null 2>&1; then
+    local patched
+    patched="$(printf '%s' "$out" | jq '.continue = false | .agent_message = ((.agent_message // "") + "; CURSOR_GOAL_STRICT=1: runtime missing — run npm run build")' 2>/dev/null || true)"
+    if [[ -n "$patched" ]]; then
+      printf '%s\n' "$patched"
+      return 0
+    fi
+  fi
+  printf '{"continue":false,"agent_message":"CURSOR_GOAL_STRICT=1: cursor-goal runtime not built. Run: npm run build"}\n'
+}
+
 cgr_no_runtime_message() {
   printf '%s' "cursor-goal runtime not built. Using fail-open/minimal safety fallback. Run: npm run build"
 }
@@ -56,7 +81,14 @@ cgr_no_runtime_response() {
     preToolUse|beforeShellExecution)
       printf '{"permission":"allow","agent_message":"%s"}\n' "$msg"
       ;;
-    beforeSubmitPrompt|sessionStart)
+    beforeSubmitPrompt)
+      if cgr_strict_enabled; then
+        printf '{"continue":false,"agent_message":"CURSOR_GOAL_STRICT=1: %s"}\n' "$msg"
+      else
+        printf '{"continue":true,"agent_message":"%s"}\n' "$msg"
+      fi
+      ;;
+    sessionStart)
       printf '{"continue":true,"agent_message":"%s"}\n' "$msg"
       ;;
     stop)
@@ -202,7 +234,8 @@ cgr_minimal_response() {
     fi
     out="$(cgr_no_runtime_response "$step")"
   fi
-  cgr_attach_agent_message "$out" "$note"
+  out="$(cgr_attach_agent_message "$out" "$note")"
+  cgr_apply_strict_before_submit "$step" "$out"
 }
 
 cgr_dispatch() {

@@ -168,13 +168,14 @@ export async function runStopPipeline(
             ? "L-other"
             : null;
 
-  await appendStopTrace(ctx.root, {
-    at: new Date().toISOString(),
-    level_failed: levelFailed,
-    failures: [...ctx.failures],
-    pipeline_result: blocked ? "continue" : "release",
-    dry_run: dryRun,
-  }).catch(() => undefined);
+  if (!dryRun) {
+    await appendStopTrace(ctx.root, {
+      at: new Date().toISOString(),
+      level_failed: levelFailed,
+      failures: [...ctx.failures],
+      pipeline_result: blocked ? "continue" : "release",
+    }).catch(() => undefined);
+  }
 
   if (!blocked) {
     if (dryRun) return { kind: "release" };

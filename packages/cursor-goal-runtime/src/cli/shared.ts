@@ -12,13 +12,13 @@ export function printUsage(): void {
   console.log(`cursor-goal — governance runtime for cursor-goal
 
 Usage:
-  cursor-goal init [--detect] [--compile]
+  cursor-goal init [--interactive] [--detect] [--compile]
   cursor-goal compile [--watch]
   cursor-goal verify
   cursor-goal explain [--json]
   cursor-goal next [--json|--verbose]
   cursor-goal goal lint
-  cursor-goal dispatch [--verify] [--unit <id>] [--record-response <id> --from <file>] [--dry-run|--run]
+  cursor-goal dispatch [--verify] [--spawn] [--unit <id>] [--record-response <id> --from <file>] [--dry-run|--run]
   cursor-goal logs [N]
   cursor-goal upgrade
   cursor-goal doctor [--json|--fix]

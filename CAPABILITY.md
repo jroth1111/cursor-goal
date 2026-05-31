@@ -79,7 +79,9 @@ Only claim what invariant tests prove.
 | I83 | VERDICT parsing for adversarial verifier | — | yes | — | i83-verdict-parse | tested |
 | I84 | RELEASE requires VERDICT PASS for verified_by units | — | yes | — | i84-adversarial-release-gate | tested |
 | I85 | cursor-goal dispatch --verify CLI | — | yes | — | i85-dispatch-verify-cli | tested |
-| I86 | CURSOR_GOAL_STRICT blocks governed prompts without runtime | — | yes | — | i86-strict-governance | tested |
+| I86 | CURSOR_GOAL_STRICT blocks governed prompts without runtime (runtime + core bash) | yes | yes | — | i86-strict-governance | tested |
+| I94 | cursor-goal init --interactive writes non-placeholder GOAL.md | — | yes | — | i94-init-interactive | tested |
+| I95 | cursor-goal dispatch --verify --spawn dry-run prints agent command | — | yes | — | i95-dispatch-verify-spawn | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

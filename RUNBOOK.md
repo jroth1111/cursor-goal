@@ -42,7 +42,7 @@ cursor-goal mode set governed # persist default_mode in config.json
 ```bash
 bash core/install.sh --local-hooks
 npm run build
-cursor-goal init
+cursor-goal init              # or: cursor-goal init --interactive
 cursor-goal doctor
 ```
 
@@ -70,11 +70,15 @@ When global runtime exists, plain `install.sh` skips hook copy and only seeds te
    cursor-goal verify
    cursor-goal goal lint
    cursor-goal dispatch --verify --unit <id>   # adversarial prompt (I85)
+   cursor-goal dispatch --verify --spawn       # run cursor-agent verifier (exit 1 if missing)
+   cursor-goal dispatch --verify --spawn --dry-run  # print agent argv + prompt (I95)
    cursor-goal logs 20           # tail stop-trace.jsonl
    cursor-goal upgrade           # refresh global runtime install
    ```
 
-Optional: set `CURSOR_GOAL_LEGACY_EVIDENCE=1` only when migrating old unit evidence files. Use `cursor-goal init` (seeds GOAL only) or `cursor-goal init --detect` to add project-native checks; `init --compile` opts into immediate compile.
+Optional: set `CURSOR_GOAL_LEGACY_EVIDENCE=1` only when migrating old unit evidence files. Use `cursor-goal init` (seeds GOAL only), `cursor-goal init --interactive` (guided GOAL.md — I94), or `cursor-goal init --detect` to add project-native checks; `init --compile` opts into immediate compile.
+
+`CURSOR_GOAL_STRICT=1` blocks governed `beforeSubmitPrompt` when the runtime package is missing (runtime hook and core bash — I86). Subagents with `verified_by` must write `.cursor/goal/outputs/<unit-id>/deliverable.md` (prompt includes path — I81).
 
 ## Work units + subagents
 

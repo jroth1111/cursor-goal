@@ -9,6 +9,7 @@ import { runChecks } from "./run-checks.js";
 import { readLoopLimit } from "./loop-limit.js";
 import { readRepoBlockedStopTotal } from "./goal-loop.js";
 import { readAgentLoopCount } from "./agent-runtime-state.js";
+import { readStopTraceTail, type StopTraceEntry } from "./stop-trace.js";
 import { levelWorkUnitsBlocked } from "../verifier/l-work-units.js";
 import { levelTrajectoryBlocked } from "../verifier/l-trajectory.js";
 import { levelFreshProofBlocked } from "../verifier/l6-fresh-proof.js";
@@ -24,6 +25,7 @@ export type ExplainReport = {
   next_action: string;
   pipeline_result: "release" | "continue" | "disposition" | "idle";
   agent_handoff_blocked: boolean;
+  last_stop_trace: StopTraceEntry | null;
 };
 
 function levelFromFailures(failures: string[]): string | null {
@@ -70,6 +72,8 @@ export async function buildExplainReport(
   const pipeline = await runStopPipeline(input, { dryRun: true });
   const mergedFailures = [...new Set([...ctx.failures, ...(pipeline.kind === "disposition" ? pipeline.failed : [])])];
   const { submitBlocked } = await readAgentHandoffRead(root, agentId);
+  const traceTail = await readStopTraceTail(root, 1);
+  const lastStopTrace = traceTail.length ? (traceTail[traceTail.length - 1] ?? null) : null;
 
   return {
     level_failed: levelFromFailures(mergedFailures),
@@ -85,6 +89,7 @@ export async function buildExplainReport(
     next_action: await buildOperatorNextAction(root, { conversation_id: agentId }),
     pipeline_result: pipeline.kind,
     agent_handoff_blocked: submitBlocked,
+    last_stop_trace: lastStopTrace,
   };
 }
 
@@ -105,6 +110,18 @@ export function formatExplainReport(report: ExplainReport): string {
     `Phase blocked: ${report.phase_blocked}`,
     `Agent submit blocked: ${report.agent_handoff_blocked}`,
     "",
+    ...(report.last_stop_trace
+      ? [
+          "Last stop:",
+          `- at: ${report.last_stop_trace.at}`,
+          `- pipeline: ${report.last_stop_trace.pipeline_result}`,
+          `- level: ${report.last_stop_trace.level_failed ?? "none"}`,
+          ...(report.last_stop_trace.failures.length
+            ? ["- failures:", ...report.last_stop_trace.failures.map((f) => `  - ${f}`)]
+            : ["- failures: none"]),
+          "",
+        ]
+      : ["Last stop: (no stop-trace.jsonl entries)", ""]),
     "Next action:",
     report.next_action,
   ];

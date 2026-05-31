@@ -578,9 +578,23 @@
     {
       "id": "I86",
       "description": "CURSOR_GOAL_STRICT blocks governed prompts when runtime is missing",
-      "layers": ["runtime"],
+      "layers": ["runtime", "core"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i86-strict-governance.test.ts"
+    },
+    {
+      "id": "I94",
+      "description": "cursor-goal init --interactive writes non-placeholder GOAL.md",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i94-init-interactive.test.ts"
+    },
+    {
+      "id": "I95",
+      "description": "cursor-goal dispatch --verify --spawn dry-run prints agent command",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i95-dispatch-verify-spawn.test.ts"
     }
   ]
 }

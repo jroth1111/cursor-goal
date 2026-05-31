@@ -10,6 +10,7 @@ import { lintGoalMd } from "../lib/goal-lint.js";
 import { goalTemplatePath } from "../lib/template.js";
 import { applyDetectedChecks } from "../lib/goal-detect.js";
 import { startCompileWatch } from "../lib/compile-watch.js";
+import { writeInteractiveGoal } from "../lib/init-interactive.js";
 
 const unitsUsage = "Usage: cursor-goal units list | cursor-goal units done <id>";
 
@@ -27,6 +28,24 @@ export async function seedGoal(): Promise<void> {
 export async function handleInit(rest: string[]): Promise<void> {
   const doCompile = rest.includes("--compile");
   const doDetect = rest.includes("--detect");
+  const forceInteractive = rest.includes("--interactive");
+
+  if (forceInteractive) {
+    const dest = await writeInteractiveGoal(projectRoot());
+    console.log(`Created ${dest}`);
+    if (doDetect) {
+      const detected = await applyDetectedChecks(projectRoot());
+      console.log(`Detected checks from ${detected.source}: ${detected.commands.join(", ")}`);
+    }
+    if (doCompile) {
+      await compileGoalV2();
+      console.log("Initialized GOAL.md and compiled artifacts");
+    } else {
+      console.log("Edit GOAL.md as needed, then run: cursor-goal compile");
+    }
+    return;
+  }
+
   await seedGoal();
   if (doDetect) {
     const detected = await applyDetectedChecks(projectRoot());
