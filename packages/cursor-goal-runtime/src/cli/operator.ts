@@ -158,6 +158,10 @@ export async function handleDispatch(rest: string[]): Promise<void> {
   const fromFile = optionValue(rest, "--from");
   rejectUnsupportedDispatchArgs(rest);
 
+  if (dryRun && run) {
+    console.error("dispatch --dry-run cannot be combined with --run");
+    process.exit(1);
+  }
   if (unitId && !verify) {
     console.error("dispatch --unit requires --verify");
     process.exit(1);

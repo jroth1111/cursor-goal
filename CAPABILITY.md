@@ -122,6 +122,7 @@ Only claim what invariant tests prove.
 | I133 | Dispatch rejects conflicting mode combinations before ignoring selected flags | — | yes | — | i133-dispatch-mode-combination-strictness | tested |
 | I134 | Dispatch validates every value option occurrence before executing selected actions | — | yes | — | i134-dispatch-value-option-occurrences | tested |
 | I135 | Next rejects conflicting output modes before selecting one mode | — | yes | — | i135-next-output-mode-strictness | tested |
+| I136 | Dispatch rejects conflicting run modes before selecting dry-run behavior | — | yes | — | i136-dispatch-run-mode-strictness | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

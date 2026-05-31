@@ -875,6 +875,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i135-next-output-mode-strictness.test.ts"
+    },
+    {
+      "id": "I136",
+      "description": "Dispatch rejects conflicting run modes before selecting dry-run behavior",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i136-dispatch-run-mode-strictness.test.ts"
     }
   ]
 }
