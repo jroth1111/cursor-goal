@@ -24,6 +24,16 @@ describe("I83 verdict parse", () => {
     expect(r.inconclusive).toBe(true);
   });
 
+  it("does not treat incidental verdict mentions as final verdict lines", () => {
+    const passMention = parseVerifierResponse("I cannot conclude VERDICT: PASS from this evidence.");
+    expect(passMention.inconclusive).toBe(true);
+    expect(passMention.passed).toBe(false);
+
+    const failMention = parseVerifierResponse("The prompt says to write VERDICT: FAIL when evidence is bad.");
+    expect(failMention.inconclusive).toBe(true);
+    expect(failMention.passed).toBe(false);
+  });
+
   it("recordVerifierResponse sets reprompt_used when allowReprompt and inconclusive", async () => {
     const p = await mkGitProject("i83-reprompt");
     cleanup = p.cleanup;

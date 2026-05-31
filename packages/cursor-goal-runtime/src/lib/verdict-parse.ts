@@ -16,17 +16,29 @@ const VERDICT_REPROMPT_TEXT = [
 
 export { VERDICT_REPROMPT_TEXT };
 
-function extractInlineReason(line: string): string {
-  const match = line.match(/^.*VERDICT\s*:?\s*INCONCLUSIVE\b\s*[—\-:.]?\s*(.*)$/i);
-  return match?.[1]?.trim() ?? "";
+type VerdictKind = "PASS" | "FAIL" | "INCONCLUSIVE";
+
+type VerdictLine = {
+  kind: VerdictKind;
+  reason: string;
+};
+
+function parseVerdictLine(line: string): VerdictLine | undefined {
+  const match = line.match(/^VERDICT\s*:\s*(PASS|FAIL|INCONCLUSIVE)\b\s*(?:[\u2014\-:.]\s*(.*))?$/i);
+  if (!match?.[1]) return undefined;
+  return {
+    kind: match[1].toUpperCase() as VerdictKind,
+    reason: match[2]?.trim() ?? "",
+  };
 }
 
 function legacyVerdictScan(content: string): ParsedVerdict {
   const lines = content.split("\n");
   for (let i = lines.length - 1; i >= 0; i--) {
     const trimmed = (lines[i] ?? "").trim();
-    const up = trimmed.toUpperCase();
-    if (up.includes("VERDICT: PASS") || up.includes("VERDICT:PASS")) {
+    const verdict = parseVerdictLine(trimmed);
+    if (!verdict) continue;
+    if (verdict.kind === "PASS") {
       return {
         passed: true,
         inconclusive: false,
@@ -34,7 +46,7 @@ function legacyVerdictScan(content: string): ParsedVerdict {
         parseMethod: "legacy-keyword",
       };
     }
-    if (up.includes("VERDICT: FAIL") || up.includes("VERDICT:FAIL")) {
+    if (verdict.kind === "FAIL") {
       return {
         passed: false,
         inconclusive: false,
@@ -42,8 +54,8 @@ function legacyVerdictScan(content: string): ParsedVerdict {
         parseMethod: "legacy-keyword",
       };
     }
-    if (up.includes("VERDICT: INCONCLUSIVE") || up.includes("VERDICT:INCONCLUSIVE")) {
-      let reason = extractInlineReason(trimmed);
+    if (verdict.kind === "INCONCLUSIVE") {
+      let reason = verdict.reason;
       if (!reason) {
         for (let j = i + 1; j < lines.length; j++) {
           const next = (lines[j] ?? "").trim();
