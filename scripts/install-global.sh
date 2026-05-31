@@ -95,6 +95,9 @@ fi
 echo "Installing cursor-goal globally → $CURSOR_HOME"
 
 mkdir -p "$GLOBAL_HOOKS" "$CURSOR_HOME/cursor-goal" "$LOCAL_BIN"
+find "$GLOBAL_HOOKS" -maxdepth 1 -type f \
+  \( -name 'goal-*.sh' -o -name '_cgr-lib.sh' -o -name 'handlers-minimal.sh' -o -name 'verify-minimal.sh' \) \
+  -delete
 
 # Runtime staging
 rm -rf "$GLOBAL_RUNTIME"

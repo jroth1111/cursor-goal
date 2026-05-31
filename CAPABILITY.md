@@ -107,6 +107,7 @@ Only claim what invariant tests prove.
 | I118 | Supervisor rejects unsupported flags before deriving launch options | — | — | yes | i118-supervisor-strict-args | tested |
 | I119 | Supervisor rejects invalid wall-clock values before deriving timeout behavior | — | — | yes | i119-supervisor-wall-value | tested |
 | I120 | Global install removes stale schema and template files before copying current artifacts | yes | — | — | i120-install-global-sync | tested |
+| I121 | Global install removes stale cursor-goal hook entries and files while preserving user hooks | yes | — | — | i121-install-global-hook-sync | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

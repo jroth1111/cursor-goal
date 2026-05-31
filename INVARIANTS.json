@@ -770,6 +770,13 @@
       "layers": ["core"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i120-install-global-sync.test.ts"
+    },
+    {
+      "id": "I121",
+      "description": "Global install removes stale cursor-goal hook entries and files while preserving user hooks",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i121-install-global-hook-sync.test.ts"
     }
   ]
 }

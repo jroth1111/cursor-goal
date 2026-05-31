@@ -28,6 +28,18 @@ merge_hooks_json() {
   merged="$(jq -s '
     def flatten_hooks:
       if (.hooks.hooks? | type) == "object" then .hooks | flatten_hooks else . end;
+    def strip_cursor_goal_hooks:
+      with_entries(
+        if (.value | type) == "array" then
+          .value = [
+            .value[]?
+            | select(((.command // "") | test("(^|/)goal-[^/]*$")) | not)
+          ]
+          | select((.value | length) > 0)
+        else
+          .
+        end
+      );
     def merge_event_maps($base; $add):
       reduce ($add | keys[]) as $k ($base;
         if (has($k) and (.[$k] | type) == "array" and ($add[$k] | type) == "array") then
@@ -40,7 +52,7 @@ merge_hooks_json() {
     ($raw | flatten_hooks) as $existing |
     {
       version: ($existing.version // $example.version // 1),
-      hooks: merge_event_maps($existing.hooks // {}; $example.hooks // {})
+      hooks: merge_event_maps(($existing.hooks // {} | strip_cursor_goal_hooks); $example.hooks // {})
     }
   ' "$dest_file" "$example")"
   echo "$merged" > "$dest_file"
