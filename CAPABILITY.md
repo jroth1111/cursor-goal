@@ -119,6 +119,7 @@ Only claim what invariant tests prove.
 | I130 | Read-only subcommands reject stray arguments before normal output | — | yes | — | i130-subcommand-strict-args | tested |
 | I131 | Conversation-scoped operator options are documented and rejected when ignored | — | yes | — | i131-conversation-option-usage | tested |
 | I132 | Dispatch rejects mode-incompatible verification flags before normal output | — | yes | — | i132-dispatch-mode-arg-strictness | tested |
+| I133 | Dispatch rejects conflicting mode combinations before ignoring selected flags | — | yes | — | i133-dispatch-mode-combination-strictness | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

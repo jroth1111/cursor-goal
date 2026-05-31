@@ -854,6 +854,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i132-dispatch-mode-arg-strictness.test.ts"
+    },
+    {
+      "id": "I133",
+      "description": "Dispatch rejects conflicting mode combinations before ignoring selected flags",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i133-dispatch-mode-combination-strictness.test.ts"
     }
   ]
 }

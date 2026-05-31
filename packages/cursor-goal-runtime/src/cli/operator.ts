@@ -157,6 +157,14 @@ export async function handleDispatch(rest: string[]): Promise<void> {
     console.error("dispatch --spawn requires --verify");
     process.exit(1);
   }
+  if (verify && dryRun && !verifySpawn) {
+    console.error("dispatch --dry-run with --verify requires --spawn");
+    process.exit(1);
+  }
+  if (verify && run) {
+    console.error("dispatch --run cannot be combined with --verify");
+    process.exit(1);
+  }
 
   if (recordUnit && !fromFile) {
     console.error("dispatch --record-response <id> requires --from <file>");
