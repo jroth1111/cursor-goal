@@ -155,7 +155,8 @@ export async function handleLogs(rest: string[]): Promise<void> {
   process.exit(0);
 }
 
-export async function handleUpgrade(): Promise<void> {
+export async function handleUpgrade(rest: string[]): Promise<void> {
+  rejectUnexpectedArgs(rest);
   const r = runGlobalUpgrade();
   process.stdout.write(r.stdout);
   process.stderr.write(r.stderr);

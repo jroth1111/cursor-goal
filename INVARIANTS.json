@@ -742,6 +742,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i116-verify-strict-args.test.ts"
+    },
+    {
+      "id": "I117",
+      "description": "cursor-goal upgrade rejects unsupported args before invoking the installer",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i117-upgrade-strict-args.test.ts"
     }
   ]
 }

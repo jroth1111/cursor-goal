@@ -45,7 +45,7 @@ export async function runCli(argv: string[]): Promise<void> {
       await handleLogs(rest);
       break;
     case "upgrade":
-      await handleUpgrade();
+      await handleUpgrade(rest);
       break;
     case "explain":
       await handleExplain(rest);

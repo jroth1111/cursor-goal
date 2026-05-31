@@ -103,6 +103,7 @@ Only claim what invariant tests prove.
 | I114 | cursor-goal doctor rejects unsupported args before applying fixes | — | yes | — | i114-doctor-strict-args | tested |
 | I115 | cursor-goal dispatch rejects unsupported args before writing verifier state | — | yes | — | i115-dispatch-unsupported-args | tested |
 | I116 | cursor-goal verify rejects unsupported args before writing release state | — | yes | — | i116-verify-strict-args | tested |
+| I117 | cursor-goal upgrade rejects unsupported args before invoking the installer | — | yes | — | i117-upgrade-strict-args | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |
