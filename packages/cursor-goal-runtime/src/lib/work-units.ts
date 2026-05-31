@@ -124,15 +124,18 @@ export function isSubagentContext(input: Record<string, unknown>): boolean {
 }
 
 export function pathTouchesGoalGovernance(filePath: string): boolean {
-  const norm = filePath.replace(/\\/g, "/");
-  if (!norm.includes(".cursor/goal")) return false;
-  if (norm.includes("evidence/units/")) return false;
-  return true;
+  const norm = path.posix.normalize(filePath.replace(/\\/g, "/"));
+  return (
+    norm === ".cursor/goal" ||
+    norm.startsWith(".cursor/goal/") ||
+    norm.endsWith("/.cursor/goal") ||
+    norm.includes("/.cursor/goal/")
+  );
 }
 
 export function isUnitEvidencePath(filePath: string, unitId: string): boolean {
   if (!cleanWorkUnitId(unitId)) return false;
-  const norm = filePath.replace(/\\/g, "/");
+  const norm = path.posix.normalize(filePath.replace(/\\/g, "/"));
   return new RegExp(`(^|/)evidence/units/${unitId}\\.jsonl$`, "i").test(norm);
 }
 

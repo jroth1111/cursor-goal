@@ -945,6 +945,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i145-invalid-work-unit-id-path.test.ts"
+    },
+    {
+      "id": "I146",
+      "description": "Subagent governance path checks normalize evidence paths before allowing writes",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i146-normalized-governance-path.test.ts"
     }
   ]
 }

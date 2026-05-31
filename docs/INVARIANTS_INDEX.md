@@ -71,3 +71,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I143 | Doctor compares global install manifest git_sha with the source repo HEAD |
 | I144 | Core install honors CURSOR_HOME when detecting a global runtime |
 | I145 | Hooks reject invalid direct work_unit_id values before writing unit evidence paths |
+| I146 | Subagent governance path checks normalize evidence paths before allowing writes |
