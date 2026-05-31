@@ -602,6 +602,13 @@
       "layers": ["core"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i96-core-install-flags.test.ts"
+    },
+    {
+      "id": "I97",
+      "description": "runChecks creates proof-runs evidence directory before appending results",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i97-run-checks-evidence-dir.test.ts"
     }
   ]
 }

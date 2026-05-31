@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { appendFile } from "node:fs/promises";
+import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { goalDir } from "./paths.js";
 import { gitTreeId } from "./git-state.js";
@@ -24,6 +24,8 @@ export async function runChecks(root: string, commands: string[]): Promise<Check
   const tree = gitTreeId(root);
   const timeoutMs = checkTimeoutMs();
   const results: CheckResult[] = [];
+  const proofRunsPath = path.join(goalDir(root), "evidence", "proof-runs.jsonl");
+  await mkdir(path.dirname(proofRunsPath), { recursive: true });
   for (const cmd of commands) {
     let ok = false;
     let output = "";
@@ -50,7 +52,7 @@ export async function runChecks(root: string, commands: string[]): Promise<Check
     const row = { cmd, ok, tree, ...(output ? { output } : {}) };
     results.push(row);
     await appendFile(
-      path.join(goalDir(root), "evidence", "proof-runs.jsonl"),
+      proofRunsPath,
       JSON.stringify({ at: new Date().toISOString(), cmd, ok, tree, output: output || undefined }) +
         "\n",
       "utf8",

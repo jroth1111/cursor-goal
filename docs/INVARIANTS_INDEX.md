@@ -8,7 +8,7 @@ These IDs are intentionally unused in the registry (do not recycle without docum
 
 I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 
-## New operator surfaces (I78–I86, I94–I96)
+## New operator surfaces (I78–I86, I94–I97)
 
 | ID | Summary |
 |----|---------|
@@ -22,3 +22,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I94 | `cursor-goal init --interactive` |
 | I95 | `cursor-goal dispatch --verify --spawn` (fail-fast without agent; `--dry-run` for CI) |
 | I96 | `core/install.sh --local-hooks` flag parsing |
+| I97 | `runChecks` proof-runs evidence directory creation |
