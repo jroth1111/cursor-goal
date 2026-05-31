@@ -47,6 +47,7 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I119 | Supervisor rejects invalid wall-clock values before deriving timeout behavior |
 | I120 | Global install removes stale schema and template files before copying current artifacts |
 | I121 | Global install removes stale cursor-goal hook entries and files while preserving user hooks |
+| I159 | Global install hook merges preserve non-hook top-level config fields |
 | I122 | Capability verifier fails when a registered invariant is missing from CAPABILITY.md |
 | I123 | Root npm run check includes repository claim verifiers |
 | I124 | Capability verifier rejects stale rows and mismatched test links |

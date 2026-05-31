@@ -108,6 +108,7 @@ Only claim what invariant tests prove.
 | I119 | Supervisor rejects invalid wall-clock values before deriving timeout behavior | — | — | yes | i119-supervisor-wall-value | tested |
 | I120 | Global install removes stale schema and template files before copying current artifacts | yes | — | — | i120-install-global-sync | tested |
 | I121 | Global install removes stale cursor-goal hook entries and files while preserving user hooks | yes | — | — | i121-install-global-hook-sync | tested |
+| I159 | Global install hook merges preserve non-hook top-level config fields | yes | — | — | i159-install-hook-metadata | tested |
 | I122 | Capability verifier fails when a registered invariant is missing from CAPABILITY.md | — | yes | — | i122-capability-missing-row | tested |
 | I123 | Root npm run check includes repository claim verifiers | — | yes | — | i123-root-check-claims | tested |
 | I124 | Capability verifier rejects stale rows and mismatched test links | — | yes | — | i124-capability-test-link | tested |

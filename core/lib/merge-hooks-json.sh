@@ -50,7 +50,7 @@ merge_hooks_json() {
       );
     .[0] as $raw | .[1] as $example |
     ($raw | flatten_hooks) as $existing |
-    {
+    $existing + {
       version: ($existing.version // $example.version // 1),
       hooks: merge_event_maps(($existing.hooks // {} | strip_cursor_goal_hooks); $example.hooks // {})
     }

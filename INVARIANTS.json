@@ -1036,6 +1036,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i158-scope-dot-segments.test.ts"
+    },
+    {
+      "id": "I159",
+      "description": "Global install hook merges preserve non-hook top-level config fields",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i159-install-hook-metadata.test.ts"
     }
   ]
 }
