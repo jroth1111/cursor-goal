@@ -2,9 +2,8 @@ import { readStdinJson } from "../lib/stdin.js";
 import { hookJson, runStopVerifier } from "../lib/verify.js";
 import type { StopInput } from "../verifier/index.js";
 
-const input = await readStdinJson<StopInput>();
-
 try {
+  const input = await readStdinJson<StopInput>();
   const result = await runStopVerifier(input);
 
   switch (result.kind) {

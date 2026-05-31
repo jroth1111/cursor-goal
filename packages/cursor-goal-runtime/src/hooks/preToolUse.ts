@@ -16,6 +16,7 @@ import {
   resolveSubagentUnitId,
 } from "../lib/subagent-write-gate.js";
 
+async function main(): Promise<void> {
 const input = await readStdinJson<{
   tool_name?: string;
   tool_input?: Record<string, unknown>;
@@ -115,3 +116,14 @@ if (tool === "Task" || tool === "task" || tool === "Subagent") {
 }
 
 hookJson({ permission: "allow" });
+}
+
+try {
+  await main();
+} catch (e) {
+  const msg = e instanceof Error ? e.message : String(e);
+  hookJson({
+    permission: "allow",
+    agent_message: `preToolUse warning: ${msg}; continuing fail-open`,
+  });
+}

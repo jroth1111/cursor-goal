@@ -46,6 +46,30 @@ Unit A
     return p;
   }
 
+  function execRuntimeHookRaw(projectDir: string, hookName: string, input: string): HookExecResult {
+    const hook = path.resolve(import.meta.dirname, `../../dist/hook-${hookName}.mjs`);
+    const r = spawnSync("node", [hook], {
+      cwd: projectDir,
+      input,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CURSOR_PROJECT_DIR: projectDir,
+        CURSOR_GOAL_RUNTIME: path.resolve(import.meta.dirname, "../../"),
+      },
+    });
+    const raw = (r.stdout ?? "").trim();
+    let stdout: Record<string, unknown> = {};
+    if (raw) {
+      try {
+        stdout = JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        stdout = {};
+      }
+    }
+    return { stdout, exitCode: r.status ?? 1, raw };
+  }
+
   it("primary-agent Shell, Write, and Task hooks are not manual approval walls", async () => {
     const p = await governedProject("i67-primary");
 
@@ -165,6 +189,24 @@ Unit A
     });
     expect(session.exitCode).toBe(0);
     expect(String(session.stdout.agent_message ?? "")).toMatch(/continuing fail-open|cursor-goal/i);
+  });
+
+  it("runtime hooks fail open on malformed hook stdin", async () => {
+    const p = await governedProject("i67-malformed-stdin");
+
+    const shell = execRuntimeHookRaw(p.dir, "beforeShellExecution", "{");
+    expect(shell.exitCode).toBe(0);
+    expect(shell.stdout.permission).toBe("allow");
+    expect(String(shell.stdout.agent_message ?? "")).toMatch(/warning|fail-open/i);
+
+    const tool = execRuntimeHookRaw(p.dir, "preToolUse", "{");
+    expect(tool.exitCode).toBe(0);
+    expect(tool.stdout.permission).toBe("allow");
+    expect(String(tool.stdout.agent_message ?? "")).toMatch(/warning|fail-open/i);
+
+    const stop = execRuntimeHookRaw(p.dir, "stop", "{");
+    expect(stop.exitCode).toBe(0);
+    expect(String(stop.stdout.followup_message ?? "")).toMatch(/warning|fail-open|verifier error/i);
   });
 
   it("minimal fallback is also fail-open for primary-agent work", async () => {
