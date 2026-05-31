@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cursor-goal/intent.json",
+  "type": "object",
+  "required": ["goal", "compiled_at"],
+  "additionalProperties": true,
+  "properties": {
+    "goal": { "type": "string" },
+    "non_goals": { "type": "array", "items": { "type": "string" } },
+    "checks": { "type": "array", "items": { "type": "string" } },
+    "forbidden_proxies": { "type": "array", "items": { "type": "string" } },
+    "compiled_at": { "type": "string" }
+  }
+}

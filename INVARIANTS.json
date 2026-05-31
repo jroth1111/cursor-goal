@@ -1,0 +1,474 @@
+{
+  "version": 1,
+  "invariants": [
+    {
+      "id": "I01",
+      "description": "Empty ## Checks must not emit RELEASE.json",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i01-empty-checks.test.ts"
+    },
+    {
+      "id": "I02",
+      "description": "Missing trajectory.json implies DISCOVERY; primary-agent Write/Edit remain advisory",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i02-discovery-writes.test.ts"
+    },
+    {
+      "id": "I03",
+      "description": "No ## Scope implies scope.json enforce false, not [\".\"]",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i03-scope-default.test.ts"
+    },
+    {
+      "id": "I04",
+      "description": "Passing checks after edits releases and syncs proof tree",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i04-fresh-proof.test.ts"
+    },
+    {
+      "id": "I05",
+      "description": "Forbidden-proxy blocks RELEASE when checks are test-only",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i05-forbidden-proxy.test.ts"
+    },
+    {
+      "id": "I06",
+      "description": "subagentStop never writes RELEASE.json",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i06-subagent-no-release.test.ts"
+    },
+    {
+      "id": "I07",
+      "description": "stop with failing checks returns followup_message",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i07-stop-followup.test.ts"
+    },
+    {
+      "id": "I08",
+      "description": "max(goal blocked, cursor stop index) near limit produces DISPOSITION.json",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i08-disposition-budget.test.ts"
+    },
+    {
+      "id": "I09",
+      "description": "Supervisor passes --prompt to agent argv",
+      "layers": ["supervisor"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i09-supervisor-prompt.test.ts"
+    },
+    {
+      "id": "I10",
+      "description": "Minimal bash stop parity with runtime on basic fixtures (I01-I08 smoke only)",
+      "layers": ["conformance"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/conformance/core-runtime-parity.test.ts"
+    },
+    {
+      "id": "I11",
+      "description": "postToolUse Write/Edit updates edit marker",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i11-edit-marker.test.ts"
+    },
+    {
+      "id": "I13",
+      "description": "Compiled artifacts pass JSON Schema",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i13-schema-compile.test.ts"
+    },
+    {
+      "id": "I14",
+      "description": "Non-empty scope implies work-units.json with at least one unit",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i14-work-units-required.test.ts"
+    },
+    {
+      "id": "I15",
+      "description": "IMPLEMENT-phase writes are advisory even when discovery is incomplete",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i15-discovery-before-implement.test.ts"
+    },
+    {
+      "id": "I16",
+      "description": "Subagent cannot write .cursor/goal except evidence/units/<id>.*",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i16-subagent-goal-write.test.ts"
+    },
+    {
+      "id": "I17",
+      "description": "Parent RELEASE requires all work units done or disposition waiver",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i17-parent-units-done.test.ts"
+    },
+    {
+      "id": "I18",
+      "description": "At most one in_progress subagent per work unit id",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i18-one-subagent-per-unit.test.ts"
+    },
+    {
+      "id": "I19",
+      "description": "Stale GOAL.md blocks governed prompt until compile succeeds",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i19-compile-gate.test.ts"
+    },
+    {
+      "id": "I20",
+      "description": "subagentStop with passing unit acceptance marks unit done",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i20-unit-acceptance-done.test.ts"
+    },
+    {
+      "id": "I21",
+      "description": "Missing trajectory.json blocks RELEASE as DISCOVERY",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i21-missing-trajectory.test.ts"
+    },
+    {
+      "id": "I22",
+      "description": "Parent Write/Edit scope is advisory at preToolUse",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i22-parent-write-gate.test.ts"
+    },
+    {
+      "id": "I23",
+      "description": "Normal shell commands are allowed; destructive shell remains denied",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i23-shell-patterns.test.ts"
+    },
+    {
+      "id": "I24",
+      "description": "Subagent Write/Edit denied outside assigned work unit scope at preToolUse",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i24-subagent-unit-scope.test.ts"
+    },
+    {
+      "id": "I33",
+      "description": "Blocked stop writes runtime-state.json with next_action; cleared on RELEASE",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i33-runtime-state-handoff.test.ts"
+    },
+    {
+      "id": "I26",
+      "description": "Stop playbook leads with one prioritized Next action section",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i26-prioritized-next-action.test.ts"
+    },
+    {
+      "id": "I34",
+      "description": "last_check_fail embedded in runtime-state.json on check failure",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i34-check-fail-embedded.test.ts"
+    },
+    {
+      "id": "I35",
+      "description": "sessionStart and beforeSubmitPrompt do not inject Task prompts",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i35-no-hook-injection.test.ts"
+    },
+    {
+      "id": "I29",
+      "description": "Goal blocked counter increments; Cursor stop index must not own display",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i29-persisted-loop-count.test.ts"
+    },
+    {
+      "id": "I30",
+      "description": "All units done in IMPLEMENT auto-advances trajectory to VERIFY",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i30-auto-verify-phase.test.ts"
+    },
+    {
+      "id": "I31",
+      "description": "Unit acceptance defaults to true, not full GOAL checks",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i31-unit-scoped-acceptance.test.ts"
+    },
+    {
+      "id": "I32",
+      "description": "cursor-goal next prints prioritized operator next action",
+      "layers": ["runtime"],
+      "release_blocking": false,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i32-cursor-goal-next.test.ts"
+    },
+    {
+      "id": "I36",
+      "description": "Compile emits valid dispatch-queue.json in work unit order",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i36-dispatch-queue-compile.test.ts"
+    },
+    {
+      "id": "I37",
+      "description": "Supervisor auto-dispatches when any work unit is open",
+      "layers": ["supervisor"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i37-supervisor-auto-dispatch.test.ts"
+    },
+    {
+      "id": "I38",
+      "description": "Hooks fail open without built runtime via minimal safety fallback; destructive shell remains denied",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i38-runtime-required.test.ts"
+    },
+    {
+      "id": "I39",
+      "description": "next_action ranks dispatch_unit above phase when both block",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i39-next-action-ranking.test.ts"
+    },
+    {
+      "id": "I40",
+      "description": "Stop followup lists secondary blockers when multiple exist",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i40-secondary-blockers.test.ts"
+    },
+    {
+      "id": "I41",
+      "description": "Stale-proof gate blocks release when tree drifts during verify",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i41-stale-proof.test.ts"
+    },
+    {
+      "id": "I42",
+      "description": "Compile invalidates runtime-state; operator next recomputes",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i42-compile-invalidate.test.ts"
+    },
+    {
+      "id": "I43",
+      "description": "Default unit acceptance requires scope path or evidence",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i43-unit-acceptance-default.test.ts"
+    },
+    {
+      "id": "I44",
+      "description": "cursor-goal next --json emits operator snapshot",
+      "layers": ["runtime"],
+      "release_blocking": false,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i44-next-json.test.ts"
+    },
+    {
+      "id": "I46",
+      "description": "cursor-goal dispatch prints queue-head Task prompt",
+      "layers": ["runtime"],
+      "release_blocking": false,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i46-dispatch-cli.test.ts"
+    },
+    {
+      "id": "I47",
+      "description": "sessionStart auto-inits GOAL in fresh git repo",
+      "layers": ["runtime", "core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i47-session-auto-init.test.ts"
+    },
+    {
+      "id": "I48",
+      "description": "cgr_resolve_runtime finds ~/.cursor/cursor-goal-runtime",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i48-global-runtime-resolve.test.ts"
+    },
+    {
+      "id": "I49",
+      "description": "install-global.sh dry-run produces manifest + hooks.json merge",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i49-install-global-dry-run.test.ts"
+    },
+    {
+      "id": "I51",
+      "description": "Governance triage chat/nudge/governed on beforeSubmitPrompt",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i51-governance-triage.test.ts"
+    },
+    {
+      "id": "I52",
+      "description": "Stop followup shows monotonic goal loop when cursor loop_count is stuck",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i52-goal-loop-count-display.test.ts"
+    },
+    {
+      "id": "I53",
+      "description": "INTAKE and DISCOVERY allow primary-agent Write/Edit; fresh compile seeds DISCOVERY",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i53-intake-write-block.test.ts"
+    },
+    {
+      "id": "I54",
+      "description": "DISPOSITION uses max(goal,cursor) budget; display shows goal attempt with agent stop hint",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i54-disposition-display-split.test.ts"
+    },
+    {
+      "id": "I56",
+      "description": "Parallel repo blocked-stop increments are atomic (goal-loop.json lock)",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i56-multi-agent-state.test.ts"
+    },
+    {
+      "id": "I57",
+      "description": "beforeSubmitPrompt warns only the conversation with blocked agent state",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i56-multi-agent-state.test.ts"
+    },
+    {
+      "id": "I58",
+      "description": "Disposition warns only stopping agent; other conversations may submit",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i56-multi-agent-state.test.ts"
+    },
+    {
+      "id": "I61",
+      "description": "Repo blocked_agent_count and compile invalidation include disposition; goal-loop resets on compile",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i61-runtime-state-p2-fixes.test.ts"
+    },
+    {
+      "id": "I62",
+      "description": "Per-agent handoff read and operator snapshot reflect disposition submit-block",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i61-runtime-state-p2-fixes.test.ts"
+    },
+    {
+      "id": "I63",
+      "description": "sessionStart compiles only stale/missing GOAL artifacts and preserves fresh runtime state",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i63-session-start-fresh-compile.test.ts"
+    },
+    {
+      "id": "I64",
+      "description": "GOAL/repo alignment audit blocks npm checks without package.json and reports template placeholders",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i64-goal-alignment.test.ts"
+    },
+    {
+      "id": "I65",
+      "description": "cursor-goal units done is help-safe and rejects missing or blocked unit evidence",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i65-units-cli-safety.test.ts"
+    },
+    {
+      "id": "I66",
+      "description": "Operator next action does not redispatch a unit whose latest evidence is blocked",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i66-blocked-unit-next-action.test.ts"
+    },
+    {
+      "id": "I67",
+      "description": "Hook permissiveness contract: primary-agent Shell/Write/Task fail open; destructive shell and subagent governance writes still deny",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i67-hook-permissive-contract.test.ts"
+    },
+    {
+      "id": "I68",
+      "description": "Consolidated fail-open contract: primary Shell/Write/Edit/Task and no-runtime paths fail open; destructive shell and subagent isolation still deny",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i68-failopen-contract.test.ts"
+    },
+    {
+      "id": "I69",
+      "description": "Minimal verifier releases goal-dir lock on failures and reset clears agents without process substitution",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i69-minimal-lock-hygiene.test.ts"
+    },
+    {
+      "id": "I70",
+      "description": "runChecks supports opt-in per-check timeout via CURSOR_GOAL_CHECK_TIMEOUT_MS",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i70-check-timeout.test.ts"
+    },
+    {
+      "id": "I72",
+      "description": "dispatch-queue head_index updates respect the goal-dir lock",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i72-dispatch-queue-lock.test.ts"
+    },
+    {
+      "id": "I73",
+      "description": "Compile invalidation clears stale RELEASE and SESSION_END lifecycle passports",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i73-runtime-state-passport-invalidation.test.ts"
+    },
+    {
+      "id": "I74",
+      "description": "Minimal RELEASE passport is written only after successful reset and uses valid JSON",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i74-minimal-release-passport-atomicity.test.ts"
+    },
+    {
+      "id": "I75",
+      "description": "Same-agent blocked stops increment the per-agent loop count under the goal-dir lock",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i75-agent-loop-atomicity.test.ts"
+    },
+    {
+      "id": "I76",
+      "description": "RELEASE terminal state prepares passports before reset and clears stale SESSION_END markers",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i76-release-session-lifecycle.test.ts"
+    },
+    {
+      "id": "I77",
+      "description": "cursor-goal has a standalone package root, cursor-goal package scope, no external intent-kernel integration, and no legacy runtime aliases",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i77-standalone-boundary.test.ts"
+    }
+  ]
+}

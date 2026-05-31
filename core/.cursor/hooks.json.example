@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [{ "command": ".cursor/hooks/goal-session-start.sh" }],
+    "beforeSubmitPrompt": [{ "command": ".cursor/hooks/goal-prompt.sh" }],
+    "preToolUse": [{ "command": ".cursor/hooks/goal-pre-tool.sh" }],
+    "beforeShellExecution": [{ "command": ".cursor/hooks/goal-shell.sh" }],
+    "postToolUse": [{ "command": ".cursor/hooks/goal-post-tool.sh" }],
+    "stop": [
+      {
+        "command": ".cursor/hooks/goal-stop.sh",
+        "loop_limit": 40,
+        "timeout": 120
+      }
+    ],
+    "subagentStop": [{ "command": ".cursor/hooks/goal-subagent-stop.sh" }],
+    "sessionEnd": [{ "command": ".cursor/hooks/goal-session-end.sh" }]
+  }
+}

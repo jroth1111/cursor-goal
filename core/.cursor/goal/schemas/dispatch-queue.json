@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cursor-goal/dispatch-queue.json",
+  "type": "object",
+  "required": ["items", "head_index"],
+  "additionalProperties": false,
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["order", "unit_id", "title", "scope", "acceptance"],
+        "additionalProperties": false,
+        "properties": {
+          "order": { "type": "integer", "minimum": 0 },
+          "unit_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+          "title": { "type": "string" },
+          "scope": { "type": "array", "items": { "type": "string" } },
+          "acceptance": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "head_index": { "type": "integer", "minimum": 0 }
+  }
+}

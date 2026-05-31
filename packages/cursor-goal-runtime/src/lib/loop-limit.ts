@@ -1,0 +1,22 @@
+import path from "node:path";
+import { goalDir, projectRoot, readJson } from "./paths.js";
+import { readLoopLimitFromHooksJson } from "./git-state.js";
+
+const DEFAULT_LOOP_LIMIT = 40;
+
+export async function readLoopLimit(root = projectRoot()): Promise<number> {
+  const fromHooks = readLoopLimitFromHooksJson(root);
+  const manifest = await readJson<{ loop_limit?: number }>(
+    path.join(goalDir(root), "manifest.json"),
+  );
+  return fromHooks ?? manifest?.loop_limit ?? DEFAULT_LOOP_LIMIT;
+}
+
+export async function syncLoopLimitToManifest(root = projectRoot()): Promise<number> {
+  const limit = await readLoopLimit(root);
+  const { writeJson } = await import("./paths.js");
+  const manifestPath = path.join(goalDir(root), "manifest.json");
+  const existing = (await readJson<Record<string, unknown>>(manifestPath)) ?? {};
+  await writeJson(manifestPath, { ...existing, loop_limit: limit });
+  return limit;
+}

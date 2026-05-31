@@ -1,0 +1,7 @@
+node_modules/
+packages/cursor-goal-runtime/dist/
+packages/cursor-goal-runtime/node_modules/
+*.log
+.DS_Store
+artifacts/
+.codex-backups/

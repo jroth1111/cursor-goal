@@ -1,0 +1,8 @@
+evidence/
+passports/
+PAUSED
+session.meta.json
+trajectory.json
+discovery.json
+target-snapshot.json
+pi-store.events.json
