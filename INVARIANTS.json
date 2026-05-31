@@ -826,6 +826,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i128-readonly-operator-strict-args.test.ts"
+    },
+    {
+      "id": "I129",
+      "description": "Unknown top-level CLI commands fail while help usage remains successful",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i129-top-level-command-strictness.test.ts"
     }
   ]
 }

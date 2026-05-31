@@ -78,6 +78,11 @@ export async function runCli(argv: string[]): Promise<void> {
       await handleMode(rest);
       break;
     default:
+      if (cmd && cmd !== "--help" && cmd !== "-h" && cmd !== "help") {
+        console.error(`Unknown command: ${cmd}`);
+        printUsage();
+        process.exit(1);
+      }
       printUsage();
   }
 }
