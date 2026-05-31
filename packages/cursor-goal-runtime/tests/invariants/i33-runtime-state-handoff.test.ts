@@ -5,9 +5,9 @@ import { existsSync } from "node:fs";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 import { runStopVerifier } from "../../src/lib/verify.js";
-import { markUnitDone } from "../../src/lib/work-units.js";
 import { readAgentRuntimeState } from "../../src/lib/agent-runtime-state.js";
 import { runtimeStatePath } from "../../src/lib/runtime-state.js";
+import { markUnitDoneWithEvidence } from "../helpers/release-ready.js";
 
 describe("I33 runtime-state.json handoff on blocked stop", () => {
   let cleanup: () => Promise<void>;
@@ -76,7 +76,7 @@ Module A
     await runStopVerifier({ status: "completed", loop_count: 0 });
     expect((await readAgentRuntimeState(p.dir, "default"))?.next_action).toBeTruthy();
 
-    await markUnitDone("mod-a", p.dir);
+    await markUnitDoneWithEvidence("mod-a", p.dir);
     const fin = await runStopVerifier({ status: "completed", loop_count: 1 });
     expect(fin.kind).toBe("release");
     const state = await readAgentRuntimeState(p.dir, "default");

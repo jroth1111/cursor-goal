@@ -4,7 +4,7 @@ import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 import { runStopVerifier } from "../../src/lib/verify.js";
-import { seedReleaseReady } from "../helpers/release-ready.js";
+import { seedReleaseReady, writePassingUnitEvidence } from "../helpers/release-ready.js";
 import { recordVerifierResponse } from "../../src/lib/dispatch-verify.js";
 
 describe("I84 adversarial release gate", () => {
@@ -47,6 +47,7 @@ Unit
     const wu = JSON.parse(await readFile(wuPath, "utf8"));
     wu.units[0].status = "done";
     await writeFile(wuPath, JSON.stringify(wu, null, 2), "utf8");
+    await writePassingUnitEvidence(p.dir, "u1");
     await recordVerifierResponse(p.dir, "u1", "VERDICT: PASS");
 
     const fin = await runStopVerifier({ status: "completed", loop_count: 0 });

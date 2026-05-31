@@ -4,7 +4,7 @@ import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 import { runStopVerifier } from "../../src/lib/verify.js";
-import { markUnitDone } from "../../src/lib/work-units.js";
+import { markUnitDoneWithEvidence } from "../helpers/release-ready.js";
 
 describe("I17 parent RELEASE requires units done", () => {
   let cleanup: () => Promise<void>;
@@ -45,7 +45,7 @@ describe("I17 parent RELEASE requires units done", () => {
         "utf8",
       ),
     );
-    for (const u of wu.units) await markUnitDone(u.id, p.dir);
+    for (const u of wu.units) await markUnitDoneWithEvidence(u.id, p.dir);
 
     const released = await runStopVerifier({ status: "completed", loop_count: 1 });
     expect(released.kind).toBe("release");

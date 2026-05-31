@@ -4,8 +4,8 @@ import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 import { runStopVerifier } from "../../src/lib/verify.js";
-import { markUnitDone } from "../../src/lib/work-units.js";
 import { readTrajectory } from "../../src/trajectory/fsm.js";
+import { markUnitDoneWithEvidence } from "../helpers/release-ready.js";
 
 describe("I30 auto VERIFY phase", () => {
   let cleanup: () => Promise<void>;
@@ -44,7 +44,7 @@ A
       JSON.stringify({ completed: true, notes: "ok" }),
       "utf8",
     );
-    await markUnitDone("mod-a", p.dir);
+    await markUnitDoneWithEvidence("mod-a", p.dir);
 
     const r = await runStopVerifier({ status: "completed", loop_count: 0 });
     expect(r.kind).toBe("release");

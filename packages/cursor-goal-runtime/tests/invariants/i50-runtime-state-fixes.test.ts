@@ -9,10 +9,9 @@ import { execCoreHook } from "../hooks/exec-hook.js";
 import { readTrajectory } from "../../src/trajectory/fsm.js";
 import { isRuntimeStateStale } from "../../src/lib/dispatch-cli.js";
 import { readRuntimeState, writeRuntimeStateFile } from "../../src/lib/runtime-state.js";
-import { markUnitDone } from "../../src/lib/work-units.js";
 import { readDispatchQueue, resolveQueueHead } from "../../src/lib/dispatch-queue.js";
 import { runStopVerifier } from "../../src/lib/verify.js";
-import { seedReleaseReady } from "../helpers/release-ready.js";
+import { markUnitDoneWithEvidence, seedReleaseReady } from "../helpers/release-ready.js";
 
 describe("I50 runtime-state recommended fixes", () => {
   let cleanup: () => Promise<void>;
@@ -85,7 +84,7 @@ A
     await runStopVerifier({ status: "completed", loop_count: 0 });
     expect(await isRuntimeStateStale(p.dir)).toBe(false);
 
-    await markUnitDone("mod-a", p.dir);
+    await markUnitDoneWithEvidence("mod-a", p.dir);
     expect(await isRuntimeStateStale(p.dir)).toBe(true);
   });
 
@@ -178,7 +177,7 @@ B
       "utf8",
     );
     await compileGoalV2(p.dir);
-    await markUnitDone("mod-a", p.dir);
+    await markUnitDoneWithEvidence("mod-a", p.dir);
 
     const head = await resolveQueueHead(p.dir);
     expect(head?.item.unit_id).toBe("mod-b");

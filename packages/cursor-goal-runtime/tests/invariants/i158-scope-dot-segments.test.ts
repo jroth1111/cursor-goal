@@ -4,8 +4,7 @@ import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 import { runStopVerifier } from "../../src/lib/verify.js";
-import { markUnitDone } from "../../src/lib/work-units.js";
-import { seedReleaseReady } from "../helpers/release-ready.js";
+import { markUnitDoneWithEvidence, seedReleaseReady } from "../helpers/release-ready.js";
 
 describe("I158 scope dot-segment normalization", () => {
   let cleanup: () => Promise<void>;
@@ -39,7 +38,7 @@ Allowed unit
     );
 
     await compileGoalV2(p.dir);
-    await markUnitDone("unit-a", p.dir);
+    await markUnitDoneWithEvidence("unit-a", p.dir);
     await seedReleaseReady(p.dir);
     await writeFile(path.join(p.dir, "allowed/file.ts"), "export const ok = true;\n", "utf8");
 
@@ -79,7 +78,7 @@ Root unit
     );
 
     await compileGoalV2(p.dir);
-    await markUnitDone("root-unit", p.dir);
+    await markUnitDoneWithEvidence("root-unit", p.dir);
     await seedReleaseReady(p.dir);
     await writeFile(path.join(p.dir, "root-file.ts"), "export const ok = true;\n", "utf8");
 

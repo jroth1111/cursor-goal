@@ -5,6 +5,7 @@ import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 import { runStopPipeline } from "../../src/verifier/pipeline.js";
 import { readTrajectory } from "../../src/trajectory/fsm.js";
+import { writePassingUnitEvidence } from "../helpers/release-ready.js";
 
 describe("I157 dry-run auto-advance", () => {
   let cleanup: () => Promise<void>;
@@ -52,6 +53,7 @@ Unit A
     const wu = JSON.parse(await readFile(wuPath, "utf8"));
     wu.units[0].status = "done";
     await writeFile(wuPath, JSON.stringify(wu, null, 2), "utf8");
+    await writePassingUnitEvidence(p.dir, "unit-a");
 
     const result = await runStopPipeline({ status: "completed", loop_count: 0 }, { dryRun: true });
 

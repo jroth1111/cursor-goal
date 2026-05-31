@@ -135,7 +135,9 @@ export async function runStopPipeline(
   ctx.advisoryWarnings = await levelProofPlanAdvisory(ctx);
 
   ctx.unitsBlocked = await levelWorkUnitsBlocked(ctx);
-  const advanced = await maybeAutoAdvanceToVerify(ctx.root, { dryRun });
+  const advanced = ctx.unitsBlocked
+    ? null
+    : await maybeAutoAdvanceToVerify(ctx.root, { dryRun });
   const traj = await levelTrajectoryBlocked(ctx);
   ctx.phaseBlocked = advanced === "VERIFY" ? false : traj.blocked;
   ctx.phase = advanced ?? traj.phase;

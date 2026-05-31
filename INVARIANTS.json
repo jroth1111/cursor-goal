@@ -1141,6 +1141,13 @@
       "layers": ["runtime", "supervisor"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i173-unit-evidence-path-boundary.test.ts"
+    },
+    {
+      "id": "I174",
+      "description": "Done work-unit status requires acceptable unit evidence before parent release",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i174-done-units-require-evidence.test.ts"
     }
   ]
 }

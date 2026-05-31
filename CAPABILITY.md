@@ -163,6 +163,7 @@ Only claim what invariant tests prove.
 | I171 | Supervisor refuses to launch while any per-agent disposition is active | — | — | yes | i171-supervisor-disposition-gate | tested |
 | I172 | Runtime and minimal hooks read loop_limit from legacy nested hooks.hooks configs | yes | yes | — | i172-nested-hooks-loop-limit | tested |
 | I173 | Work-unit evidence paths cannot escape the canonical evidence directory | — | yes | yes | i173-unit-evidence-path-boundary | tested |
+| I174 | Done work-unit status requires acceptable unit evidence before parent release | — | yes | — | i174-done-units-require-evidence | tested |
 | I90 | cursor-goal init seeds GOAL without compiling by default | — | yes | — | i90-init-no-compile | tested |
 | I91 | cursor-goal init --detect writes project-native checks | — | yes | — | i91-init-detect | tested |
 | I92 | Default unit acceptance requires evidence file not path existence | — | yes | — | i92-acceptance-defaults | tested |

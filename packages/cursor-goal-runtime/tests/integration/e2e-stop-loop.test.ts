@@ -6,8 +6,8 @@ import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 import { execCoreHook } from "../hooks/exec-hook.js";
 import { runStopVerifier } from "../../src/lib/verify.js";
-import { markUnitDone } from "../../src/lib/work-units.js";
 import { runtimeStatePath } from "../../src/lib/runtime-state.js";
+import { markUnitDoneWithEvidence } from "../helpers/release-ready.js";
 
 describe("E2E stop-loop smoke", () => {
   let cleanup: () => Promise<void>;
@@ -83,7 +83,7 @@ Module A
       "utf8",
     );
     await compileGoalV2(p.dir);
-    await markUnitDone("mod-a", p.dir);
+    await markUnitDoneWithEvidence("mod-a", p.dir);
 
     const fin = await runStopVerifier({ status: "completed", loop_count: 12 });
     expect(fin.kind).toBe("release");
