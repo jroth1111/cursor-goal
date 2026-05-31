@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { goalMd } from "./paths.js";
 
 export type WorkUnitDraft = {
@@ -24,7 +25,7 @@ export async function parseGoalMd(root?: string): Promise<ParsedGoal> {
   const goalText = sectionParagraph(text, "Goal") || "Complete work per GOAL.md";
   const nonGoals = sectionBullets(text, "Non-goals");
   const checks = sectionBullets(text, "Checks");
-  const scope = sectionBullets(text, "Scope");
+  const scope = sectionBullets(text, "Scope").map(normalizeScopePath);
   const forbiddenProxies = sectionBullets(text, "Forbidden proxies");
   const explicit = parseWorkUnitsSection(text).filter(
     (u) => u.scope.length > 0 || u.title.length > 1,
@@ -69,6 +70,13 @@ function sectionBullets(text: string, heading: string): string[] {
 
 function unquote(s: string): string {
   return s.replace(/^`/, "").replace(/`$/, "").trim();
+}
+
+function normalizeScopePath(s: string): string {
+  const value = unquote(s).replace(/\\/g, "/");
+  if (!value || value === "**") return value;
+  const normalized = path.posix.normalize(value);
+  return normalized === "./" ? "." : normalized;
 }
 
 function stripHtmlComments(s: string): string {
@@ -128,7 +136,7 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
       }
       const scopeM = t.match(/^-\s*scope:\s*(.+)$/i);
       if (scopeM) {
-        current.scope.push(unquote(scopeM[1]));
+        current.scope.push(normalizeScopePath(scopeM[1]));
         continue;
       }
       const accM = t.match(/^-\s*acceptance:\s*(.+)$/i);
@@ -147,7 +155,7 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
         continue;
       }
       if (t.startsWith("-") && !t.includes(":")) {
-        current.scope.push(unquote(t.slice(1).trim()));
+        current.scope.push(normalizeScopePath(t.slice(1).trim()));
       }
     }
     if (current) units.push(current);
@@ -191,10 +199,10 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
       }
       const scopeM = body.match(/^scope:\s*(.+)$/i);
       if (scopeM) {
-        scope.push(unquote(scopeM[1]));
+        scope.push(normalizeScopePath(scopeM[1]));
         continue;
       }
-      scope.push(unquote(body));
+      scope.push(normalizeScopePath(body));
     }
     units.push({ id, title, scope, acceptance, verified_by, verify_prompt });
   }

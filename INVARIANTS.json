@@ -1029,6 +1029,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i157-dry-run-auto-advance.test.ts"
+    },
+    {
+      "id": "I158",
+      "description": "Scope dot-segment paths are normalized before verifier enforcement",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i158-scope-dot-segments.test.ts"
     }
   ]
 }
