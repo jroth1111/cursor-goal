@@ -3,9 +3,28 @@
 set -euo pipefail
 
 PURGE_RUNTIME=0
+
+usage() {
+  echo "Usage: bash scripts/uninstall-global.sh [--purge-runtime]"
+}
+
 for arg in "$@"; do
   case "$arg" in
     --purge-runtime) PURGE_RUNTIME=1 ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    --*)
+      echo "Unknown option: $arg" >&2
+      usage >&2
+      exit 1
+      ;;
+    *)
+      echo "Unexpected argument: $arg" >&2
+      usage >&2
+      exit 1
+      ;;
   esac
 done
 

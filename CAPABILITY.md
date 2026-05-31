@@ -87,6 +87,7 @@ Only claim what invariant tests prove.
 | I98 | Compiled work unit ids are unique | — | yes | — | i98-unique-work-unit-ids | tested |
 | I99 | Compile watch avoids nested goal-dir locks | — | yes | — | i99-compile-watch-lock | tested |
 | I100 | Global uninstall preserves non-cursor-goal hook entries | yes | — | — | i100-uninstall-preserves-user-hooks | tested |
+| I101 | Global uninstall rejects unknown arguments before mutation | yes | — | — | i101-uninstall-global-flags | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |
