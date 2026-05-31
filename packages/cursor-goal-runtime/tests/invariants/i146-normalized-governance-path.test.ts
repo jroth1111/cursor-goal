@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { compileGoalV2 } from "../../src/compile/compile-v2.js";
-import { execCoreHook } from "../hooks/exec-hook.js";
+import { execCoreHook, execCoreHookBare } from "../hooks/exec-hook.js";
 
 describe("I146 normalized governance paths", () => {
   let cleanup: () => Promise<void>;
@@ -46,5 +46,21 @@ Broad unit
 
     expect(r.stdout.permission).toBe("deny");
     expect(String(r.stdout.agent_message ?? "")).toMatch(/governance|evidence\/units/i);
+  });
+
+  it("denies minimal fallback subagent writes that normalize into governance space", async () => {
+    const p = await mkGitProject("i146-minimal-governance-normalize");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+
+    const r = execCoreHookBare(p.dir, "preToolUse", {
+      tool_name: "Write",
+      file_path: ".cursor//goal/manifest.json",
+      is_subagent: true,
+      work_unit_id: "u1",
+    });
+
+    expect(r.stdout.permission).toBe("deny");
+    expect(String(r.stdout.agent_message ?? "")).toMatch(/Subagent|governance|goal/i);
   });
 });

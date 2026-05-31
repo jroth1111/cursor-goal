@@ -123,6 +123,10 @@ case "$STEP" in
     TOOL="$(echo "$INPUT" | jq -r '.tool_name // empty')"
     FILE="$(echo "$INPUT" | jq -r '.file_path // .tool_input.path // .tool_input.file_path // empty')"
     IS_SUB="$(echo "$INPUT" | jq -r '.is_subagent // false')"
+    NORM_FILE=""
+    if [[ -n "$FILE" ]]; then
+      NORM_FILE="$(normalize_file_path "$FILE")"
+    fi
     if [[ "$TOOL" == "Shell" || "$TOOL" == "Bash" ]]; then
       CMD="$(echo "$INPUT" | jq -r '.command // .tool_input.command // empty')"
       if destructive_shell "$CMD"; then
@@ -131,7 +135,7 @@ case "$STEP" in
         exit 0
       fi
     fi
-    if [[ "$IS_SUB" == "true" ]] && echo "$FILE" | grep -qE '\.cursor/goal'; then
+    if [[ "$IS_SUB" == "true" ]] && [[ "$NORM_FILE" == ".cursor/goal" || "$NORM_FILE" == .cursor/goal/* || "$NORM_FILE" == */.cursor/goal || "$NORM_FILE" == */.cursor/goal/* ]]; then
       WUID="$(echo "$INPUT" | jq -r '.work_unit_id // .tool_input.work_unit_id // empty')"
       [[ -z "$WUID" ]] && WUID="$(unit_id_from_path "$FILE")"
       if unit_evidence_path "$FILE" "$WUID"; then
