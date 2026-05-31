@@ -172,6 +172,9 @@ export async function handleUnits(rest: string[]): Promise<void> {
     console.log(unitsUsage);
     return;
   }
+  if (rest[0] === "done") {
+    rejectUnexpectedArg(rest[2]);
+  }
   const wu = await readWorkUnits();
   if (!wu) {
     console.log("No work-units.json — run cursor-goal compile");

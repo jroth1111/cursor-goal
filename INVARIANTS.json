@@ -707,6 +707,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i111-phase-strict-args.test.ts"
+    },
+    {
+      "id": "I112",
+      "description": "cursor-goal units done rejects stray args before marking units done",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i112-units-strict-args.test.ts"
     }
   ]
 }
