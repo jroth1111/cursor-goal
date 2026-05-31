@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import { existsSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
@@ -24,6 +24,10 @@ describe("I121 global install hook sync", () => {
     await mkdir(fakeBin, { recursive: true });
     await writeFile(path.join(fakeCursorHome, "hooks/goal-old.sh"), "#!/bin/sh\n", "utf8");
     await writeFile(path.join(fakeCursorHome, "hooks/user-stop.sh"), "#!/bin/sh\n", "utf8");
+    await symlink(
+      path.join(fakeCursorHome, "hooks/user-stop.sh"),
+      path.join(fakeCursorHome, "hooks/goal-stale-link.sh"),
+    );
     await writeFile(
       path.join(fakeCursorHome, "hooks.json"),
       `${JSON.stringify(
@@ -69,5 +73,6 @@ describe("I121 global install hook sync", () => {
     expect(existsSync(path.join(fakeCursorHome, "hooks/user-stop.sh"))).toBe(true);
     expect(existsSync(path.join(fakeCursorHome, "hooks/goal-stop.sh"))).toBe(true);
     expect(existsSync(path.join(fakeCursorHome, "hooks/goal-old.sh"))).toBe(false);
+    expect(existsSync(path.join(fakeCursorHome, "hooks/goal-stale-link.sh"))).toBe(false);
   });
 });

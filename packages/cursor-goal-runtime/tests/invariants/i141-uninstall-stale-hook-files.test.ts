@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, symlink, writeFile } from "node:fs/promises";
 import { existsSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
@@ -21,6 +21,10 @@ describe("I141 uninstall stale hook files", () => {
     await writeFile(path.join(fakeCursorHome, "hooks/goal-stop.sh"), "#!/usr/bin/env bash\n", "utf8");
     await writeFile(path.join(fakeCursorHome, "hooks/goal-old.sh"), "#!/usr/bin/env bash\n", "utf8");
     await writeFile(path.join(fakeCursorHome, "hooks/user-stop.sh"), "#!/usr/bin/env bash\n", "utf8");
+    await symlink(
+      path.join(fakeCursorHome, "hooks/user-stop.sh"),
+      path.join(fakeCursorHome, "hooks/goal-stale-link.sh"),
+    );
 
     const script = path.resolve(import.meta.dirname, "../../../../scripts/uninstall-global.sh");
     const repoRoot = path.resolve(import.meta.dirname, "../../../../../");
@@ -33,6 +37,7 @@ describe("I141 uninstall stale hook files", () => {
     expect(r.status, r.stderr || r.stdout).toBe(0);
     expect(existsSync(path.join(fakeCursorHome, "hooks/goal-stop.sh"))).toBe(false);
     expect(existsSync(path.join(fakeCursorHome, "hooks/goal-old.sh"))).toBe(false);
+    expect(existsSync(path.join(fakeCursorHome, "hooks/goal-stale-link.sh"))).toBe(false);
     expect(existsSync(path.join(fakeCursorHome, "hooks/user-stop.sh"))).toBe(true);
   });
 });

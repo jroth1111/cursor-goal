@@ -34,7 +34,7 @@ LOCAL_BIN="${HOME}/.local/bin"
 echo "Uninstalling cursor-goal global hooks from $CURSOR_HOME"
 
 if [[ -d "$CURSOR_HOME/hooks" ]]; then
-  find "$CURSOR_HOME/hooks" -maxdepth 1 -type f \
+  find "$CURSOR_HOME/hooks" -maxdepth 1 \( -type f -o -type l \) \
     \( -name 'goal-*.sh' -o -name '_cgr-lib.sh' -o -name 'handlers-minimal.sh' -o -name 'verify-minimal.sh' \) \
     -delete
 fi
