@@ -62,3 +62,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I134 | Dispatch validates every value option occurrence before executing selected actions |
 | I135 | Next rejects conflicting output modes before selecting one mode |
 | I136 | Dispatch rejects conflicting run modes before selecting dry-run behavior |
+| I137 | Supervisor parses options only before the prompt boundary |

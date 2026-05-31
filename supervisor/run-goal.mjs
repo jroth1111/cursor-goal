@@ -51,16 +51,17 @@ export function parseSupervisorArgs(argv) {
   const args = argv.slice(2);
   rejectUnsupportedSupervisorArgs(args);
   const promptIdx = args.indexOf("--prompt");
+  const optionArgs = promptIdx >= 0 ? args.slice(0, promptIdx) : args;
+  const promptArgs = promptIdx >= 0 ? args.slice(promptIdx + 1) : [];
   return {
-    dryRun: args.includes("--dry-run"),
-    interactive: args.includes("--interactive"),
-    dispatchUnits: args.includes("--dispatch-units"),
-    parentOnly: args.includes("--parent-only"),
-    unitsOnly: args.includes("--units-only"),
-    wallMin: wallValue(args, "--wall-min", 120),
-    wallSec: wallValue(args, "--wall-sec", 0),
-    prompt:
-      promptIdx >= 0 ? args.slice(promptIdx + 1).join(" ") : "Work toward GOAL.md until RELEASE.",
+    dryRun: optionArgs.includes("--dry-run"),
+    interactive: optionArgs.includes("--interactive"),
+    dispatchUnits: optionArgs.includes("--dispatch-units"),
+    parentOnly: optionArgs.includes("--parent-only"),
+    unitsOnly: optionArgs.includes("--units-only"),
+    wallMin: wallValue(optionArgs, "--wall-min", 120),
+    wallSec: wallValue(optionArgs, "--wall-sec", 0),
+    prompt: promptIdx >= 0 ? promptArgs.join(" ") : "Work toward GOAL.md until RELEASE.",
   };
 }
 

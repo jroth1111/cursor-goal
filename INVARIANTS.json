@@ -882,6 +882,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i136-dispatch-run-mode-strictness.test.ts"
+    },
+    {
+      "id": "I137",
+      "description": "Supervisor parses options only before the prompt boundary",
+      "layers": ["supervisor"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i137-supervisor-prompt-option-boundary.test.ts"
     }
   ]
 }
