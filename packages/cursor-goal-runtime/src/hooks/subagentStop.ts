@@ -15,6 +15,7 @@ import {
 import { runUnitAcceptance } from "../lib/unit-acceptance.js";
 import { subagentStatusOk, subagentStatusBlockedReason } from "../lib/subagent-status.js";
 
+async function main(): Promise<void> {
 const input = await readStdinJson<Record<string, unknown>>();
 const root = projectRoot();
 await ensureGoalDirs(root);
@@ -96,3 +97,11 @@ if (unitId) {
 }
 
 hookJson({});
+}
+
+try {
+  await main();
+} catch (e) {
+  const msg = e instanceof Error ? e.message : String(e);
+  hookJson({ agent_message: `subagentStop warning: ${msg}; continuing fail-open` });
+}

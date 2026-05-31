@@ -1106,6 +1106,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i168-default-chat-mode.test.ts"
+    },
+    {
+      "id": "I169",
+      "description": "subagentStop returns fail-open JSON when generated work-unit state is malformed",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i169-subagent-stop-malformed-work-units.test.ts"
     }
   ]
 }
