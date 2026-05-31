@@ -861,6 +861,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i133-dispatch-mode-combination-strictness.test.ts"
+    },
+    {
+      "id": "I134",
+      "description": "Dispatch validates every value option occurrence before executing selected actions",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i134-dispatch-value-option-occurrences.test.ts"
     }
   ]
 }

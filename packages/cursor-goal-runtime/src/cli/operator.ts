@@ -88,6 +88,11 @@ function rejectUnsupportedDispatchArgs(rest: string[]): void {
     const arg = rest[i];
     if (dispatchFlags.has(arg)) continue;
     if (dispatchValueOptions.has(arg)) {
+      const value = rest[i + 1];
+      if (!value || value.startsWith("-")) {
+        console.error(`Missing value for ${arg}`);
+        process.exit(1);
+      }
       i += 1;
       continue;
     }
