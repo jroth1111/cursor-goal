@@ -1,9 +1,8 @@
 import { existsSync } from "node:fs";
 import { copyFile, mkdir } from "node:fs/promises";
-import path from "node:path";
 import { compileGoalV2 } from "../compile/compile-v2.js";
-import { goalDir, goalMd, projectRoot, writeJson } from "../lib/paths.js";
-import { advancePhase, completeDiscovery } from "../trajectory/fsm.js";
+import { goalDir, goalMd, projectRoot } from "../lib/paths.js";
+import { advancePhase, completeDiscovery, writeTrajectory, type Phase } from "../trajectory/fsm.js";
 import { findUnitById, readWorkUnits, markUnitDone, pendingUnits } from "../lib/work-units.js";
 import { checkUnitCompletionEvidence } from "../lib/unit-evidence.js";
 import { lintGoalMd } from "../lib/goal-lint.js";
@@ -13,6 +12,18 @@ import { startCompileWatch } from "../lib/compile-watch.js";
 import { writeInteractiveGoal } from "../lib/init-interactive.js";
 
 const unitsUsage = "Usage: cursor-goal units list | cursor-goal units done <id>";
+const validDirectSetPhases = new Set<Phase>([
+  "INTAKE",
+  "DISCOVERY",
+  "PLAN",
+  "IMPLEMENT",
+  "VERIFY",
+  "DONE",
+]);
+
+function parseDirectSetPhase(value: string): Phase | null {
+  return validDirectSetPhases.has(value as Phase) ? (value as Phase) : null;
+}
 
 export async function seedGoal(): Promise<void> {
   const root = projectRoot();
@@ -91,8 +102,13 @@ export async function handlePhase(rest: string[]): Promise<void> {
     }
     console.log(`phase=${to}`);
   } else {
-    const phase = sub ?? "IMPLEMENT";
-    await writeJson(path.join(goalDir(), "trajectory.json"), { phase });
+    const raw = sub ?? "IMPLEMENT";
+    const phase = parseDirectSetPhase(raw);
+    if (!phase) {
+      console.error(`Invalid phase: ${raw}`);
+      process.exit(1);
+    }
+    await writeTrajectory({ phase });
     console.log(`phase=${phase} (direct set)`);
   }
 }

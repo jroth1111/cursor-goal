@@ -644,6 +644,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i102-pause-fresh-repo.test.ts"
+    },
+    {
+      "id": "I103",
+      "description": "cursor-goal phase direct-set rejects unknown phases",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i103-phase-direct-set-validation.test.ts"
     }
   ]
 }
