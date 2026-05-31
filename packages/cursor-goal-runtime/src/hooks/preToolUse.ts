@@ -49,6 +49,21 @@ if (tool === "Shell" || tool === "Bash") {
 if (filePath && pathTouchesGoalGovernance(filePath) && subagent) {
   const unitId = resolveSubagentUnitId(input as Record<string, unknown>, filePath);
   if (unitId && isUnitEvidencePath(filePath, unitId)) {
+    let gate: Awaited<ReturnType<typeof checkSubagentWriteGate>>;
+    try {
+      gate = await checkSubagentWriteGate(filePath, unitId, root);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      hookJson({
+        permission: "deny",
+        agent_message: `Subagent WriteGate: cannot verify unit scope (${msg})`,
+      });
+      process.exit(0);
+    }
+    if (!gate.allowed) {
+      hookJson({ permission: "deny", agent_message: gate.reason });
+      process.exit(0);
+    }
     hookJson({ permission: "allow" });
     process.exit(0);
   }

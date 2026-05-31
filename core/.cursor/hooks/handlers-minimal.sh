@@ -131,6 +131,11 @@ case "$STEP" in
       WUID="$(echo "$INPUT" | jq -r '.work_unit_id // .tool_input.work_unit_id // empty')"
       [[ -z "$WUID" ]] && WUID="$(unit_id_from_path "$FILE")"
       if unit_evidence_path "$FILE" "$WUID"; then
+        if ! path_inside_project "$FILE"; then
+          jq -n --arg m "Subagent WriteGate: $FILE outside project root" \
+            '{permission:"deny",agent_message:$m}'
+          exit 0
+        fi
         echo '{"permission":"allow"}'
         exit 0
       fi

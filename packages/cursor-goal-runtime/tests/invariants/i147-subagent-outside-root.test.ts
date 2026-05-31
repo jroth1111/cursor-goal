@@ -54,9 +54,45 @@ Broad unit
     expect(String(r.stdout.agent_message ?? "")).toMatch(/outside project root/i);
   });
 
+  it("denies runtime subagent evidence writes outside the project root", async () => {
+    const p = await seed();
+    const outside = path.join(
+      path.dirname(p.dir),
+      ".cursor/goal/evidence/units/broad.jsonl",
+    );
+
+    const r = execCoreHook(p.dir, "preToolUse", {
+      tool_name: "Write",
+      file_path: outside,
+      is_subagent: true,
+      work_unit_id: "broad",
+    });
+
+    expect(r.stdout.permission).toBe("deny");
+    expect(String(r.stdout.agent_message ?? "")).toMatch(/outside project root/i);
+  });
+
   it("denies minimal hook subagent writes to absolute paths outside the project root", async () => {
     const p = await seed();
     const outside = path.join(path.dirname(p.dir), "outside-root-target.txt");
+
+    const r = execCoreHookBare(p.dir, "preToolUse", {
+      tool_name: "Write",
+      file_path: outside,
+      is_subagent: true,
+      work_unit_id: "broad",
+    });
+
+    expect(r.stdout.permission).toBe("deny");
+    expect(String(r.stdout.agent_message ?? "")).toMatch(/outside project root/i);
+  });
+
+  it("denies minimal hook subagent evidence writes outside the project root", async () => {
+    const p = await seed();
+    const outside = path.join(
+      path.dirname(p.dir),
+      ".cursor/goal/evidence/units/broad.jsonl",
+    );
 
     const r = execCoreHookBare(p.dir, "preToolUse", {
       tool_name: "Write",

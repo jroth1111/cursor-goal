@@ -188,6 +188,32 @@ try {
   fi
 }
 
+cgr_normalize_path() {
+  local raw="$1"
+  if command -v node >/dev/null 2>&1; then
+    node -e '
+const path = require("node:path");
+const raw = process.argv[1] || "";
+process.stdout.write(path.posix.normalize(raw.replace(/\\/g, "/")));
+' "$raw" 2>/dev/null || printf '%s' "${raw//\\//}"
+    return 0
+  fi
+  printf '%s' "${raw//\\//}"
+}
+
+cgr_path_inside_project() {
+  local file="$1"
+  local root norm root_norm
+  root="$(_cgr_project_root)"
+  norm="$(cgr_normalize_path "$file")"
+  root_norm="$(cgr_normalize_path "$root")"
+  if [[ "$norm" == /* ]]; then
+    [[ "$norm" == "$root_norm" || "$norm" == "$root_norm/"* ]]
+    return
+  fi
+  [[ "$norm" != ".." && "$norm" != ../* ]]
+}
+
 cgr_destructive_shell() {
   local cmd="$1"
   if command -v perl >/dev/null 2>&1; then
@@ -226,6 +252,10 @@ cgr_subagent_governance_safety() {
 
   wuid="$(cgr_json_string_field "$input" "work_unit_id")"
   if [[ "$wuid" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ && "$norm" =~ (^|/)evidence/units/${wuid}\.jsonl$ ]]; then
+    if ! cgr_path_inside_project "$file"; then
+      printf '{"permission":"deny","agent_message":"Subagent WriteGate: path outside project root"}\n'
+      return 0
+    fi
     return 1
   fi
 
