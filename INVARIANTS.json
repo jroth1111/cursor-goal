@@ -847,6 +847,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i131-conversation-option-usage.test.ts"
+    },
+    {
+      "id": "I132",
+      "description": "Dispatch rejects mode-incompatible verification flags before normal output",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i132-dispatch-mode-arg-strictness.test.ts"
     }
   ]
 }

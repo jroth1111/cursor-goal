@@ -149,6 +149,15 @@ export async function handleDispatch(rest: string[]): Promise<void> {
   const fromFile = optionValue(rest, "--from");
   rejectUnsupportedDispatchArgs(rest);
 
+  if (unitId && !verify) {
+    console.error("dispatch --unit requires --verify");
+    process.exit(1);
+  }
+  if (verifySpawn && !verify) {
+    console.error("dispatch --spawn requires --verify");
+    process.exit(1);
+  }
+
   if (recordUnit && !fromFile) {
     console.error("dispatch --record-response <id> requires --from <file>");
     process.exit(1);
