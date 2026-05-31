@@ -833,6 +833,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i129-top-level-command-strictness.test.ts"
+    },
+    {
+      "id": "I130",
+      "description": "Read-only subcommands reject stray arguments before normal output",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i130-subcommand-strict-args.test.ts"
     }
   ]
 }

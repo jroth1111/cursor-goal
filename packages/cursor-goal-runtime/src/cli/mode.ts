@@ -10,7 +10,6 @@ import {
   type GovernanceMode,
 } from "../lib/governance-config.js";
 import { formatModeStatus, readLastTriageEntry } from "../lib/prompt-triage.js";
-import { operatorOptionsFromArgv } from "./shared.js";
 import { seedGoal } from "./goal.js";
 
 const modeUsage = "Usage: cursor-goal mode [chat|governed|auto|set auto|chat|governed|why]";
@@ -18,6 +17,14 @@ const modeUsage = "Usage: cursor-goal mode [chat|governed|auto|set auto|chat|gov
 function rejectModeUsage(): never {
   console.error(modeUsage);
   process.exit(1);
+}
+
+function modeWhyConversationId(rest: string[]): string | undefined {
+  if (rest.length === 1) return undefined;
+  if (rest.length === 3 && rest[1] === "--conversation" && rest[2] && !rest[2].startsWith("-")) {
+    return rest[2];
+  }
+  rejectModeUsage();
 }
 
 export async function handleMode(rest: string[]): Promise<void> {
@@ -63,7 +70,7 @@ export async function handleMode(rest: string[]): Promise<void> {
     return;
   }
   if (sub === "why") {
-    const entry = await readLastTriageEntry(root, operatorOptionsFromArgv(rest)?.conversation_id);
+    const entry = await readLastTriageEntry(root, modeWhyConversationId(rest));
     if (!entry) {
       console.log("No triage log entry for this conversation");
       process.exit(1);

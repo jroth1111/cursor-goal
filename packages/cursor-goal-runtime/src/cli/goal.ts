@@ -123,6 +123,7 @@ export async function handleCompile(rest: string[]): Promise<void> {
 export async function handleGoal(rest: string[]): Promise<void> {
   const sub = rest[0];
   if (sub === "lint") {
+    rejectUnexpectedArg(rest[1]);
     const issues = await lintGoalMd(projectRoot());
     for (const i of issues) console.log(`${i.level}: ${i.message}`);
     process.exit(issues.some((i) => i.level === "error") ? 1 : 0);
@@ -182,6 +183,8 @@ export async function handleUnits(rest: string[]): Promise<void> {
   }
   if (rest[0] === "done") {
     rejectUnexpectedArg(rest[2]);
+  } else if (rest[0] === "list") {
+    rejectUnexpectedArg(rest[1]);
   }
   const wu = await readWorkUnits();
   if (!wu) {
@@ -213,6 +216,7 @@ export async function handleUnits(rest: string[]): Promise<void> {
     const open = pendingUnits(wu.units);
     if (open.length) console.log(`\n${open.length} unit(s) not done`);
   } else {
-    console.log(unitsUsage);
+    console.error(unitsUsage);
+    process.exit(1);
   }
 }
