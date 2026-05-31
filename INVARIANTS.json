@@ -868,6 +868,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i134-dispatch-value-option-occurrences.test.ts"
+    },
+    {
+      "id": "I135",
+      "description": "Next rejects conflicting output modes before selecting one mode",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i135-next-output-mode-strictness.test.ts"
     }
   ]
 }

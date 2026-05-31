@@ -123,6 +123,10 @@ function parseLogsTailArg(rest: string[]): number {
 export async function handleNext(rest: string[]): Promise<void> {
   rejectUnsupportedOperatorArgs(rest, nextOptions);
   const verbose = rest.includes("--verbose");
+  if (rest.includes("--json") && verbose) {
+    console.error("next --json cannot be combined with --verbose");
+    process.exit(1);
+  }
   if (rest.includes("--json")) {
     const snap = await buildOperatorSnapshot(projectRoot(), operatorOptionsFromArgv(rest));
     if ("error" in snap) {

@@ -60,3 +60,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I132 | Dispatch rejects mode-incompatible verification flags before normal output |
 | I133 | Dispatch rejects conflicting mode combinations before ignoring selected flags |
 | I134 | Dispatch validates every value option occurrence before executing selected actions |
+| I135 | Next rejects conflicting output modes before selecting one mode |
