@@ -2,8 +2,8 @@
 
 Only claim what invariant tests prove.
 
-| Invariant | Description | Core | Runtime | Pi | Test | Status |
-|-----------|-------------|------|---------|-----|------|--------|
+| Invariant | Description | Core | Runtime | Supervisor | Test | Status |
+|-----------|-------------|------|---------|------------|------|--------|
 | I01 | Empty checks no RELEASE | yes | yes | — | i01-empty-checks | tested |
 | I02 | DISCOVERY Write/Edit advisory | yes | yes | — | i02-discovery-writes | tested |
 | I03 | Scope default not `.` | — | yes | — | i03-scope-default | tested |
@@ -11,8 +11,8 @@ Only claim what invariant tests prove.
 | I05 | Forbidden proxy | — | yes | — | i05-forbidden-proxy | tested |
 | I06 | subagentStop no RELEASE | yes | yes | — | i06-subagent-no-release | tested |
 | I07 | stop followup on fail | yes | yes | — | i07-stop-followup | tested |
-| I08 | DISPOSITION on max(goal, cursor) budget | yes | yes | yes | i08-disposition-budget | tested |
-| I09 | Supervisor prompt argv | — | — | — | i09-supervisor-prompt | tested |
+| I08 | DISPOSITION on max(goal, cursor) budget | yes | yes | — | i08-disposition-budget | tested |
+| I09 | Supervisor prompt argv | — | — | yes | i09-supervisor-prompt | tested |
 | I10 | Minimal/runtime stop parity (incl. stuck loop_count) | yes | yes | — | core-runtime-parity | tested |
 | I11 | Edit marker on Write/Edit | yes | yes | — | i11-edit-marker | tested |
 | I13 | Schema-valid compile | — | yes | — | i13-schema-compile | tested |
@@ -28,8 +28,8 @@ Only claim what invariant tests prove.
 | I23 | Normal shell allowed; destructive shell denied | — | yes | — | i23-shell-patterns | tested |
 | I24 | Subagent unit scope WriteGate | — | yes | — | i24-subagent-unit-scope | tested |
 | I26 | Prioritized next action in stop followup | — | yes | — | i26-prioritized-next-action | tested |
-| I29 | Goal loop counter increments (not Cursor index) | — | yes | yes | i29-persisted-loop-count | tested |
-| I52 | Stuck cursor loop_count: monotonic GOAL loop display | yes | yes | yes | i52-goal-loop-count-display | tested |
+| I29 | Goal loop counter increments (not Cursor index) | — | yes | — | i29-persisted-loop-count | tested |
+| I52 | Stuck cursor loop_count: monotonic GOAL loop display | yes | yes | — | i52-goal-loop-count-display | tested |
 | I53 | INTAKE/DISCOVERY allow primary writes; compile → DISCOVERY | yes | yes | — | i53-intake-write-block | tested |
 | I54 | DISPOSITION at cursor budget; display shows goal loop 1/N | yes | yes | — | i54-disposition-display-split | tested |
 | I30 | Auto-advance IMPLEMENT→VERIFY | — | yes | — | i30-auto-verify-phase | tested |
@@ -39,7 +39,7 @@ Only claim what invariant tests prove.
 | I34 | last_check_fail in runtime-state.json | — | yes | — | i34-check-fail-embedded | tested |
 | I35 | Hooks do not inject Task prompts | yes | yes | — | i35-no-hook-injection | tested |
 | I36 | dispatch-queue.json at compile | — | yes | — | i36-dispatch-queue-compile | tested |
-| I37 | Supervisor auto-dispatch open units | — | — | — | i37-supervisor-auto-dispatch | tested |
+| I37 | Supervisor auto-dispatch open units | — | — | yes | i37-supervisor-auto-dispatch | tested |
 | I38 | Runtime-missing hooks fail open with minimal safety fallback | yes | — | — | i38-runtime-required | tested |
 | I39 | next_action ranks units above phase | — | yes | — | i39-next-action-ranking | tested |
 | I40 | Secondary blockers in stop followup | — | yes | — | i40-secondary-blockers | tested |
@@ -61,8 +61,8 @@ Only claim what invariant tests prove.
 | I64 | GOAL/repo alignment blocks npm-without-package and reports template placeholders | — | yes | — | i64-goal-alignment | tested |
 | I65 | `cursor-goal units done` is help-safe and rejects missing/blocked evidence | — | yes | — | i65-units-cli-safety | tested |
 | I66 | `cursor-goal next` blocks instead of redispatching latest blocked unit evidence | — | yes | — | i66-blocked-unit-next-action | tested |
-| I67 | Hook permissiveness contract | yes | yes | yes | i67-hook-permissive-contract | tested |
-| I68 | Consolidated fail-open hook contract | yes | yes | yes | i68-failopen-contract | tested |
+| I67 | Hook permissiveness contract | yes | yes | — | i67-hook-permissive-contract | tested |
+| I68 | Consolidated fail-open hook contract | yes | yes | — | i68-failopen-contract | tested |
 | I69 | Minimal verifier lock hygiene | yes | — | — | i69-minimal-lock-hygiene | tested |
 | I70 | Optional per-check timeout | — | yes | — | i70-check-timeout | tested |
 | I72 | dispatch-queue head_index lock discipline | — | yes | — | i72-dispatch-queue-lock | tested |
@@ -74,7 +74,7 @@ Only claim what invariant tests prove.
 | I78 | cursor-goal explain reports failing L-level, checks, next action | — | yes | — | i78-explain-stop | tested |
 | I79 | cursor-goal goal lint catches placeholder GOAL.md and alignment errors | — | yes | — | i79-goal-lint | tested |
 | I80 | Prompt triage writes and reads triage-log.jsonl per conversation | — | yes | — | i80-triage-log | tested |
-| I81 | Supervisor unit prompt matches runtime buildUnitTaskPrompt | — | yes | — | i81-unit-prompt-parity | tested |
+| I81 | Supervisor unit prompt matches runtime buildUnitTaskPrompt | — | yes | yes | i81-unit-prompt-parity | tested |
 | I82 | verified_by units require deliverable.md before RELEASE | — | yes | — | i82-deliverable-required | tested |
 | I83 | VERDICT parsing for adversarial verifier | — | yes | — | i83-verdict-parse | tested |
 | I84 | RELEASE requires VERDICT PASS for verified_by units | — | yes | — | i84-adversarial-release-gate | tested |
@@ -111,6 +111,7 @@ Only claim what invariant tests prove.
 | I122 | Capability verifier fails when a registered invariant is missing from CAPABILITY.md | — | yes | — | i122-capability-missing-row | tested |
 | I123 | Root npm run check includes repository claim verifiers | — | yes | — | i123-root-check-claims | tested |
 | I124 | Capability verifier rejects stale rows and mismatched test links | — | yes | — | i124-capability-test-link | tested |
+| I125 | Capability matrix uses Supervisor layer columns instead of legacy Pi claims | — | yes | — | i125-capability-supervisor-column | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

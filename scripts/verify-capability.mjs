@@ -14,6 +14,19 @@ function normalizeTestStem(testPath) {
   return path.basename(testPath.trim(), ".test.ts");
 }
 
+function hasLayerClaim(value) {
+  const normalized = value.trim();
+  return normalized !== "" && normalized !== "—" && normalized !== "-";
+}
+
+const header = capability.split(/\r?\n/).find((line) => line.startsWith("| Invariant |"));
+if (!header || !/\|\s*Core\s*\|\s*Runtime\s*\|\s*Supervisor\s*\|/.test(header)) {
+  errors.push("CAPABILITY.md matrix must use Core, Runtime, and Supervisor layer columns");
+}
+if (header && /\|\s*Pi\s*\|/.test(header)) {
+  errors.push("CAPABILITY.md matrix must not expose legacy Pi layer column");
+}
+
 for (const inv of invariantEntries) {
   const testPath = inv.test;
   if (!testPath) continue;
@@ -23,8 +36,12 @@ for (const inv of invariantEntries) {
   }
 }
 
-const testedRows = [...capability.matchAll(/\|\s*(I\d+)\s*\|[^|]*\|\s*[^|]*\|\s*[^|]*\|\s*[^|]*\|\s*([^|]+?)\s*\|\s*tested\s*\|/g)];
-for (const [, id, testRef] of testedRows) {
+const testedRows = [
+  ...capability.matchAll(
+    /^\|\s*(I\d+)\s*\|[^|]*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*([^|]+?)\s*\|\s*tested\s*\|/gm,
+  ),
+];
+for (const [, id, , , supervisor, testRef] of testedRows) {
   const inv = invariantById.get(id);
   const stem = testRef.trim();
   if (!inv) {
@@ -40,6 +57,9 @@ for (const [, id, testRef] of testedRows) {
     errors.push(
       `${id}: CAPABILITY tested row references "${stem}" but INVARIANTS.json declares "${declaredStem}"`,
     );
+  }
+  if (hasLayerClaim(supervisor) !== inv.layers?.includes("supervisor")) {
+    errors.push(`${id}: CAPABILITY Supervisor column does not match INVARIANTS.json layers`);
   }
   const candidates = [
     path.join(root, "packages/cursor-goal-runtime/tests/invariants", `${stem}.test.ts`),

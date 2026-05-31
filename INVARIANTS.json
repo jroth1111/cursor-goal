@@ -798,6 +798,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i124-capability-test-link.test.ts"
+    },
+    {
+      "id": "I125",
+      "description": "Capability matrix uses Supervisor layer columns instead of legacy Pi claims",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i125-capability-supervisor-column.test.ts"
     }
   ]
 }
