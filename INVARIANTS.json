@@ -658,6 +658,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i104-stop-trace-path.test.ts"
+    },
+    {
+      "id": "I105",
+      "description": "cursor-goal discovery complete reports the actual phase transition result",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i105-discovery-cli-phase-output.test.ts"
     }
   ]
 }

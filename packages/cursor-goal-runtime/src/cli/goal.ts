@@ -2,7 +2,13 @@ import { existsSync } from "node:fs";
 import { copyFile, mkdir } from "node:fs/promises";
 import { compileGoalV2 } from "../compile/compile-v2.js";
 import { goalDir, goalMd, projectRoot } from "../lib/paths.js";
-import { advancePhase, completeDiscovery, writeTrajectory, type Phase } from "../trajectory/fsm.js";
+import {
+  advancePhase,
+  completeDiscovery,
+  readTrajectory,
+  writeTrajectory,
+  type Phase,
+} from "../trajectory/fsm.js";
 import { findUnitById, readWorkUnits, markUnitDone, pendingUnits } from "../lib/work-units.js";
 import { checkUnitCompletionEvidence } from "../lib/unit-evidence.js";
 import { lintGoalMd } from "../lib/goal-lint.js";
@@ -125,12 +131,14 @@ export async function handleDiscovery(rest: string[]): Promise<void> {
     const planOnly = rest.includes("--plan-only");
     const notes =
       rest.filter((x) => x !== "--plan-only").slice(1).join(" ") || "discovery complete";
+    const before = await readTrajectory();
     await completeDiscovery(notes, undefined, { planOnly });
-    console.log(
-      planOnly
-        ? "discovery completed; phase advanced to PLAN"
-        : "discovery completed; phase advanced to IMPLEMENT",
-    );
+    const after = await readTrajectory();
+    if (before.phase !== after.phase) {
+      console.log(`discovery completed; phase advanced to ${after.phase}`);
+    } else {
+      console.log(`discovery completed; phase remains ${after.phase}`);
+    }
   } else {
     console.log("Usage: cursor-goal discovery complete [--plan-only] [notes]");
     process.exit(1);
