@@ -11,13 +11,33 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildUnitTaskPrompt } from "./unit-prompt.mjs";
 
+const supervisorBooleanOptions = new Set([
+  "--dry-run",
+  "--interactive",
+  "--dispatch-units",
+  "--parent-only",
+  "--units-only",
+]);
+
 export function buildAgentArgs(prompt, interactive = false) {
   if (interactive) return [];
   return ["--print", "--trust", "--force", prompt];
 }
 
+function rejectUnsupportedSupervisorArgs(args) {
+  const promptIdx = args.indexOf("--prompt");
+  const optionArgs = promptIdx >= 0 ? args.slice(0, promptIdx) : args;
+  for (const arg of optionArgs) {
+    if (supervisorBooleanOptions.has(arg)) continue;
+    if (/^--wall-(min|sec)=/.test(arg)) continue;
+    if (arg.startsWith("-")) throw new Error(`Unknown option: ${arg}`);
+    throw new Error(`Unexpected argument: ${arg}`);
+  }
+}
+
 export function parseSupervisorArgs(argv) {
   const args = argv.slice(2);
+  rejectUnsupportedSupervisorArgs(args);
   const promptIdx = args.indexOf("--prompt");
   return {
     dryRun: args.includes("--dry-run"),
@@ -273,7 +293,7 @@ const entry = process.argv[1] ? path.resolve(process.argv[1]) : "";
 const self = path.resolve(fileURLToPath(import.meta.url));
 if (entry === self) {
   main().catch((e) => {
-    console.error(e);
+    console.error(e instanceof Error ? e.message : e);
     process.exit(1);
   });
 }
