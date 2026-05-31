@@ -22,6 +22,7 @@ const FAILURE_STATUSES = new Set([
   "timeout",
   "aborted",
 ]);
+const MALFORMED_EVIDENCE = "__cursor_goal_malformed_latest";
 
 export function legacyEvidenceAllowed(): boolean {
   return process.env.CURSOR_GOAL_LEGACY_EVIDENCE === "1";
@@ -49,13 +50,16 @@ export async function readLatestUnitEvidence(
       if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
     } catch {
       if (legacyEvidenceAllowed()) return {};
-      continue;
+      return { [MALFORMED_EVIDENCE]: true };
     }
   }
   return null;
 }
 
 function evidenceBlockReason(unit: WorkUnitCompiled, record: UnitEvidenceRecord): string | null {
+  if (record[MALFORMED_EVIDENCE] === true) {
+    return `Latest evidence for "${unit.id}" is malformed`;
+  }
   const id = record.work_unit_id;
   if (typeof id === "string" && id !== unit.id) {
     return `Evidence work_unit_id "${id}" does not match unit "${unit.id}"`;
