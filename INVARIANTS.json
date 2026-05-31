@@ -805,6 +805,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i125-capability-supervisor-column.test.ts"
+    },
+    {
+      "id": "I126",
+      "description": ".gitignore covers generated, cache, virtualenv, editor, and local secret artifacts",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i126-gitignore-noise-dirs.test.ts"
     }
   ]
 }
