@@ -86,6 +86,24 @@ function sameNullableString(a: string | null | undefined, b: string | null | und
   return (a ?? null) === (b ?? null);
 }
 
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isMergeableWorkUnit(value: unknown): value is WorkUnitCompiled {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const unit = value as Partial<WorkUnitCompiled>;
+  return (
+    typeof unit.id === "string" &&
+    typeof unit.title === "string" &&
+    isStringArray(unit.scope) &&
+    isStringArray(unit.acceptance) &&
+    typeof unit.evidence_path === "string" &&
+    ["pending", "in_progress", "evidence_received", "done"].includes(unit.status ?? "") &&
+    (typeof unit.subagent_id === "string" || unit.subagent_id === null)
+  );
+}
+
 function sameWorkUnitDefinition(a: WorkUnitCompiled, b: WorkUnitCompiled): boolean {
   return (
     a.title === b.title &&
@@ -114,9 +132,9 @@ async function mergeWorkUnits(
   existingPath: string,
 ): Promise<WorkUnitCompiled[]> {
   if (!existsSync(existingPath)) return compiled;
-  const raw = await readJson<{ units?: WorkUnitCompiled[] }>(existingPath).catch(() => null);
-  if (!raw?.units) return compiled;
-  const byId = new Map(raw.units.map((u) => [u.id, u]));
+  const raw = await readJson<{ units?: unknown }>(existingPath).catch(() => null);
+  if (!Array.isArray(raw?.units)) return compiled;
+  const byId = new Map(raw.units.filter(isMergeableWorkUnit).map((u) => [u.id, u]));
   return compiled.map((u) => {
     const prev = byId.get(u.id);
     if (!prev) return u;

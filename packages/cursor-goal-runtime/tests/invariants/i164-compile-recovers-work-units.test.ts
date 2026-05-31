@@ -48,4 +48,38 @@ A
     expect(parsed.units?.map((u) => u.id)).toEqual(["unit-a"]);
     expect(parsed.units?.[0]?.status).toBe("pending");
   });
+
+  it("rebuilds work-units.json when the existing generated artifact has an invalid shape", async () => {
+    const p = await mkGitProject("i164-compile-recovers-work-units-shape");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      `## Goal
+x
+
+## Work units
+
+### unit-a
+A
+- \`src/\`
+
+## Checks
+- \`true\`
+`,
+      "utf8",
+    );
+    await compileGoalV2(p.dir);
+
+    const workUnits = path.join(p.dir, ".cursor/goal/work-units.json");
+    await writeFile(workUnits, JSON.stringify({ units: "not-an-array" }), "utf8");
+
+    await compileGoalV2(p.dir);
+
+    const parsed = JSON.parse(await readFile(workUnits, "utf8")) as {
+      units?: Array<{ id?: string; status?: string }>;
+    };
+    expect(parsed.units?.map((u) => u.id)).toEqual(["unit-a"]);
+    expect(parsed.units?.[0]?.status).toBe("pending");
+  });
 });
