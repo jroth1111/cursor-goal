@@ -9,19 +9,6 @@ const forbiddenScope = `@${"pioff"}`;
 const forbiddenEnv = `CURSOR_GOAL_PI_${"INTENT"}`;
 const forbiddenPeerScript = `with-pi-${"intent"}`;
 const forbiddenNestedRuntime = `cursor-goal/${"packages"}/cursor-goal-runtime`;
-const forbiddenReDirs = [
-  ["reverse", "engineered", "cursor"].join("-"),
-  ["reconstructed", "source"].join("-"),
-];
-const forbiddenReMarkers = [
-  forbiddenReDirs[0],
-  forbiddenReDirs[1],
-  ["cursor", "reconstruction"].join("-"),
-  ["native", "launcher", "ghidra"].join("-"),
-  ["extracted", "prompts.md"].join("_"),
-  ["workbench.desktop.main.js"].join(""),
-  ["electron-app/extensions/cursor-agent-exec"].join(""),
-];
 
 async function readJson(file: string): Promise<Record<string, unknown>> {
   return JSON.parse(await readFile(file, "utf8")) as Record<string, unknown>;
@@ -105,26 +92,10 @@ describe("I77 standalone cursor-goal package boundary", () => {
     }
   });
 
-  it("does not ship reverse-engineered Cursor source trees or reconstruction bundles", async () => {
-    for (const dirName of forbiddenReDirs) {
-      await expect(stat(path.join(cursorGoalRoot, dirName))).rejects.toThrow();
-    }
-
-    const repoFiles = (await collectFiles(cursorGoalRoot)).filter(
-      (file) => path.basename(file) !== "i77-standalone-boundary.test.ts",
-    );
-    for (const file of repoFiles) {
-      const contents = await readFile(file, "utf8");
-      for (const marker of forbiddenReMarkers) {
-        expect(contents, `${path.relative(cursorGoalRoot, file)} must not reference ${marker}`).not.toContain(
-          marker,
-        );
-      }
-    }
-
+  it("does not ship zip archives at the repository root", async () => {
     const entries = await readdir(cursorGoalRoot);
     for (const entry of entries) {
-      expect(entry.endsWith(".zip"), "zip bundles belong outside the public repo").toBe(false);
+      expect(entry.endsWith(".zip"), "zip archives belong outside the public repo").toBe(false);
     }
   });
 

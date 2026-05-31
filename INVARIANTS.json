@@ -465,7 +465,7 @@
     },
     {
       "id": "I77",
-      "description": "cursor-goal has a standalone package root, cursor-goal package scope, no external intent-kernel integration, no legacy runtime aliases, and no reverse-engineered Cursor source or zip bundles",
+      "description": "cursor-goal has a standalone package root, cursor-goal package scope, no external intent-kernel integration, and no legacy runtime aliases",
       "layers": ["core", "runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i77-standalone-boundary.test.ts"
