@@ -27,6 +27,7 @@ const validDirectSetPhases = new Set<Phase>([
   "DONE",
 ]);
 const initOptions = new Set(["--compile", "--detect", "--interactive", "--force"]);
+const compileOptions = new Set(["--watch"]);
 const discoveryCompleteOptions = new Set(["--plan-only"]);
 
 function parseDirectSetPhase(value: string): Phase | null {
@@ -95,6 +96,7 @@ export async function handleInit(rest: string[]): Promise<void> {
 }
 
 export async function handleCompile(rest: string[]): Promise<void> {
+  rejectUnknownOptions(rest, compileOptions);
   if (rest.includes("--watch")) {
     startCompileWatch(projectRoot());
     await new Promise(() => {});
