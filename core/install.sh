@@ -36,7 +36,7 @@ if [[ ! -d "$DEST" ]]; then
   exit 1
 fi
 
-GLOBAL_RT="${HOME}/.cursor/cursor-goal-runtime"
+GLOBAL_RT="${CURSOR_HOME:-$HOME/.cursor}/cursor-goal-runtime"
 SKIP_HOOKS=0
 if [[ "$LOCAL_HOOKS" -eq 0 ]] && [[ -f "$GLOBAL_RT/dist/hook-stop.mjs" ]]; then
   SKIP_HOOKS=1

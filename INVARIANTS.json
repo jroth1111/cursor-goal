@@ -931,6 +931,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i143-doctor-current-manifest.test.ts"
+    },
+    {
+      "id": "I144",
+      "description": "Core install honors CURSOR_HOME when detecting a global runtime",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i144-core-install-cursor-home.test.ts"
     }
   ]
 }
