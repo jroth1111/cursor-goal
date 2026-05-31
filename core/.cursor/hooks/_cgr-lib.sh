@@ -26,8 +26,9 @@ cgr_resolve_runtime() {
     fi
   fi
 
+  local cursor_home="${CURSOR_HOME:-${HOME}/.cursor}"
   local candidates=(
-    "${HOME}/.cursor/cursor-goal-runtime"
+    "$cursor_home/cursor-goal-runtime"
     "$root/packages/cursor-goal-runtime"
     "$root/node_modules/@cursor-goal/runtime"
   )
