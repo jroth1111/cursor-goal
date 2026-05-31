@@ -1064,6 +1064,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i162-doctor-json-fix.test.ts"
+    },
+    {
+      "id": "I163",
+      "description": "Minimal subagent governance isolation does not require jq",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i163-minimal-subagent-no-jq.test.ts"
     }
   ]
 }

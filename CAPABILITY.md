@@ -152,6 +152,7 @@ Only claim what invariant tests prove.
 | I160 | Session-end hook reports local marker write failures without crashing | — | yes | — | i160-session-end-fail-open | tested |
 | I161 | Subagent WriteGate denies when work-unit state is unreadable | yes | yes | — | i161-subagent-malformed-work-units | tested |
 | I162 | Doctor --json --fix emits one parseable JSON document | — | yes | — | i162-doctor-json-fix | tested |
+| I163 | Minimal subagent governance isolation does not require jq | yes | — | — | i163-minimal-subagent-no-jq | tested |
 | I90 | cursor-goal init seeds GOAL without compiling by default | — | yes | — | i90-init-no-compile | tested |
 | I91 | cursor-goal init --detect writes project-native checks | — | yes | — | i91-init-detect | tested |
 | I92 | Default unit acceptance requires evidence file not path existence | — | yes | — | i92-acceptance-defaults | tested |

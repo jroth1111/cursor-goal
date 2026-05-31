@@ -163,6 +163,31 @@ try {
   printf '%s' "$input" | sed -nE "s/.*\"$field\"[[:space:]]*:[[:space:]]*\"([^\"]*)\".*/\\1/p" | head -1
 }
 
+cgr_json_bool_field() {
+  local input="$1"
+  local field="$2"
+  if command -v node >/dev/null 2>&1; then
+    printf '%s' "$input" | node -e '
+const fs = require("node:fs");
+const field = process.argv[1];
+try {
+  const raw = fs.readFileSync(0, "utf8");
+  const data = raw ? JSON.parse(raw) : {};
+  const value = data?.[field] ?? data?.tool_input?.[field] ?? false;
+  process.stdout.write(value === true || value === "true" ? "true" : "false");
+} catch {
+  process.stdout.write("false");
+}
+' "$field" 2>/dev/null || true
+    return 0
+  fi
+  if printf '%s' "$input" | grep -qE "\"$field\"[[:space:]]*:[[:space:]]*true"; then
+    printf 'true'
+  else
+    printf 'false'
+  fi
+}
+
 cgr_destructive_shell() {
   local cmd="$1"
   if command -v perl >/dev/null 2>&1; then
@@ -182,6 +207,32 @@ cgr_destructive_shell() {
   printf '%s' "$cmd" | grep -qiE '\bdrop[[:space:]]+database\b|\bgit\b.*\bpush\b.*(--force([=[:space:]]|$)|--force-with-lease([=[:space:]]|$)|(^|[[:space:]])-f([[:space:]]|$)|(^|[[:space:];&|])\+[^[:space:];&|]+)|\brm\b.*(-[[:alpha:]]*r[[:alpha:]]*f|-[[:alpha:]]*f[[:alpha:]]*r|--recursive.*--force|--force.*--recursive)'
 }
 
+cgr_subagent_governance_safety() {
+  local input="$1"
+  local is_sub file wuid norm
+  is_sub="$(cgr_json_bool_field "$input" "is_subagent")"
+  [[ "$is_sub" == "true" ]] || return 1
+
+  file="$(cgr_json_string_field "$input" "file_path")"
+  if [[ -z "$file" ]]; then
+    file="$(cgr_json_string_field "$input" "path")"
+  fi
+  [[ -n "$file" ]] || return 1
+
+  norm="${file//\\//}"
+  if [[ "$norm" != ".cursor/goal" && "$norm" != .cursor/goal/* && "$norm" != */.cursor/goal && "$norm" != */.cursor/goal/* ]]; then
+    return 1
+  fi
+
+  wuid="$(cgr_json_string_field "$input" "work_unit_id")"
+  if [[ "$wuid" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ && "$norm" =~ (^|/)evidence/units/${wuid}\.jsonl$ ]]; then
+    return 1
+  fi
+
+  printf '{"permission":"deny","agent_message":"Subagents may not write .cursor/goal governance files without runtime safety checks."}\n'
+  return 0
+}
+
 cgr_safety_response() {
   local step="$1"
   local input="$2"
@@ -191,6 +242,11 @@ cgr_safety_response() {
   if [[ "$step" == "beforeShellExecution" || "$tool" == "Shell" || "$tool" == "Bash" ]]; then
     if cgr_destructive_shell "$cmd"; then
       printf '{"permission":"deny","agent_message":"Destructive shell blocked by cursor-goal minimal policy."}\n'
+      return 0
+    fi
+  fi
+  if [[ "$step" == "preToolUse" ]]; then
+    if cgr_subagent_governance_safety "$input"; then
       return 0
     fi
   fi
