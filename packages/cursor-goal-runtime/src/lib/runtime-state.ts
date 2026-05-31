@@ -156,7 +156,7 @@ function normalizeRepoRuntimeSummary(
     ([liveTotal, limit]) => ({
       mode: base?.mode ?? "runtime",
       total_blocked_stops: liveTotal,
-      loop_limit: base?.loop_limit ?? limit,
+      loop_limit: limit,
       phase: base?.phase ?? "DISCOVERY",
       blocked_agent_count: countSubmitBlockedAgents(root),
       updated_at: base?.updated_at ?? new Date().toISOString(),

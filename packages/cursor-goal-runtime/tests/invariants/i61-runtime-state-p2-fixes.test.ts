@@ -173,6 +173,35 @@ describe("I61 runtime-state P2 fixes", () => {
     expect(state?.blocked).toBe(true);
   });
 
+  it("readRepoRuntimeSummary overlays stale loop_limit from live config", async () => {
+    const p = await mkGitProject("i61-summary-live-limit");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await mkdir(path.join(p.dir, ".cursor/goal"), { recursive: true });
+    await writeFile(
+      path.join(p.dir, ".cursor/goal/manifest.json"),
+      JSON.stringify({ loop_limit: 7 }),
+      "utf8",
+    );
+    await writeFile(
+      runtimeStatePath(p.dir),
+      JSON.stringify({
+        mode: "runtime",
+        total_blocked_stops: 2,
+        loop_limit: 40,
+        phase: "VERIFY",
+        blocked_agent_count: 0,
+        updated_at: new Date().toISOString(),
+      }),
+      "utf8",
+    );
+
+    const summary = await readRepoRuntimeSummary(p.dir);
+    expect(summary?.loop_limit).toBe(7);
+    const state = await readRuntimeState(p.dir);
+    expect(state?.loop_limit).toBe(7);
+  });
+
   it("readRuntimeState with agentId reflects disposition-only submit block", async () => {
     const p = await mkGitProject("i61-agent-disp");
     cleanup = p.cleanup;
