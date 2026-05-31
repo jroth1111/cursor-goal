@@ -1,5 +1,6 @@
+import { existsSync } from "node:fs";
 import { compileGoalV2 } from "../compile/compile-v2.js";
-import { projectRoot } from "../lib/paths.js";
+import { goalMd, projectRoot } from "../lib/paths.js";
 import {
   clearSessionMode,
   readGovernanceConfig,
@@ -29,9 +30,14 @@ export async function handleMode(rest: string[]): Promise<void> {
   if (sub === "chat" || sub === "governed") {
     await writeSessionMode(root, sub, "cli");
     if (sub === "governed") {
+      const hadGoal = existsSync(goalMd(root));
       await seedGoal();
-      await compileGoalV2(root);
-      console.log("Session mode: governed (GOAL initialized if missing)");
+      if (hadGoal) {
+        await compileGoalV2(root);
+        console.log("Session mode: governed (GOAL compiled)");
+      } else {
+        console.log("Session mode: governed (GOAL initialized; edit GOAL.md, then run cursor-goal compile)");
+      }
     } else {
       console.log("Session mode: chat");
     }

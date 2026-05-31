@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { copyFile, mkdir } from "node:fs/promises";
+import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -82,5 +82,41 @@ describe("I47 sessionStart auto-inits GOAL in fresh git repo", () => {
     expect(existsSync(manifest)).toBe(false);
     expect(existsSync(workUnits)).toBe(false);
     expect(r.stdout).toMatch(/initialized GOAL\.md/i);
+  });
+
+  it("mode governed seeds GOAL.md without compiling a placeholder template", async () => {
+    const fakeHome = await setupHome();
+    const p = await mkGitProject("i47-mode-governed");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+
+    const cli = path.resolve(import.meta.dirname, "../../dist/cli.js");
+    const r = spawnSync("node", [cli, "mode", "governed"], {
+      cwd: p.dir,
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir, HOME: fakeHome },
+    });
+    expect(r.status, r.stderr || r.stdout).toBe(0);
+    expect(existsSync(path.join(p.dir, "GOAL.md"))).toBe(true);
+    expect(existsSync(path.join(p.dir, ".cursor/goal/manifest.json"))).toBe(false);
+    expect(r.stdout).toMatch(/compile/i);
+  });
+
+  it("mode governed compiles when GOAL.md already exists", async () => {
+    const fakeHome = await setupHome();
+    const p = await mkGitProject("i47-mode-governed-existing");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await writeFile(path.join(p.dir, "GOAL.md"), "## Goal\nx\n## Checks\n- `true`\n", "utf8");
+
+    const cli = path.resolve(import.meta.dirname, "../../dist/cli.js");
+    const r = spawnSync("node", [cli, "mode", "governed"], {
+      cwd: p.dir,
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir, HOME: fakeHome },
+    });
+    expect(r.status, r.stderr || r.stdout).toBe(0);
+    expect(existsSync(path.join(p.dir, ".cursor/goal/manifest.json"))).toBe(true);
+    expect(r.stdout).toMatch(/compiled/i);
   });
 });
