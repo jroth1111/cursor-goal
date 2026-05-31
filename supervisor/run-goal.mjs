@@ -267,7 +267,10 @@ export async function main(argv = process.argv) {
     return;
   }
 
-  if (!interactive) {
+  if (interactive) {
+    const code = await spawnAgent(agent, agentArgs, root, rt);
+    if (code !== 0) process.exit(code);
+  } else {
     const child = spawn(agent, agentArgs, {
       cwd: root,
       stdio: "inherit",

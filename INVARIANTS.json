@@ -1078,6 +1078,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i164-compile-recovers-work-units.test.ts"
+    },
+    {
+      "id": "I165",
+      "description": "Supervisor interactive mode launches cursor-agent",
+      "layers": ["supervisor"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i165-supervisor-interactive-launch.test.ts"
     }
   ]
 }
