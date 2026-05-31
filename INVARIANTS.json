@@ -1099,6 +1099,13 @@
       "layers": ["core", "runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i167-destructive-stop-checks.test.ts"
+    },
+    {
+      "id": "I168",
+      "description": "Default chat mode suppresses GOAL-governed prompt triage unless the conversation is blocked",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i168-default-chat-mode.test.ts"
     }
   ]
 }

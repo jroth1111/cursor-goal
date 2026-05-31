@@ -18,7 +18,10 @@ export async function isGovernanceActive(root: string, agentId?: string): Promis
   if (session?.mode === "governed") return true;
 
   const config = await readGovernanceConfig(root);
-  if (config.default_mode === "chat") return false;
+  if (config.default_mode === "chat") {
+    if (await blockedForGovernance(root, agentId)) return true;
+    return false;
+  }
   if (config.default_mode === "governed") return true;
 
   if (await hasGovernedContract(root)) return true;

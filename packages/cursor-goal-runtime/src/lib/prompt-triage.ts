@@ -110,9 +110,10 @@ export async function resolveEffectiveMode(
   const session = await readSessionMode(root);
   const classified = classifyPrompt(prompt);
   const agentId = resolveAgentId(conversationId);
+  const blocked = await isBlockedRuntime(root, agentId);
 
   if (session?.mode === "chat") {
-    if (await isBlockedRuntime(root, agentId)) {
+    if (blocked) {
       return { mode: "governed" };
     }
     return { mode: "chat" };
@@ -126,11 +127,19 @@ export async function resolveEffectiveMode(
     return { mode: "governed" };
   }
 
-  if ((await hasGovernedContract(root)) || (await isBlockedRuntime(root, agentId))) {
+  if (blocked) {
     return { mode: "governed" };
   }
 
   if (classified.forceGoverned) {
+    return { mode: "governed" };
+  }
+
+  if (config.default_mode === "chat") {
+    return { mode: "chat" };
+  }
+
+  if (await hasGovernedContract(root)) {
     return { mode: "governed" };
   }
 
@@ -139,10 +148,6 @@ export async function resolveEffectiveMode(
   }
 
   if (classified.chatScore >= 2 && classified.deliveryScore === 0) {
-    return { mode: "chat" };
-  }
-
-  if (config.default_mode === "chat") {
     return { mode: "chat" };
   }
 
