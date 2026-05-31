@@ -8,7 +8,7 @@ These IDs are intentionally unused in the registry (do not recycle without docum
 
 I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 
-## New operator surfaces (I78–I86, I94–I114)
+## New operator surfaces (I78–I86, I94–I115)
 
 | ID | Summary |
 |----|---------|
@@ -40,3 +40,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I112 | `cursor-goal units done` rejects stray args before marking units done |
 | I113 | `cursor-goal init` and `compile` reject stray positional args before writing state |
 | I114 | `cursor-goal doctor` rejects unsupported args before applying fixes |
+| I115 | `cursor-goal dispatch` rejects unsupported args before writing verifier state |

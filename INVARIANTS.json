@@ -728,6 +728,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i114-doctor-strict-args.test.ts"
+    },
+    {
+      "id": "I115",
+      "description": "cursor-goal dispatch rejects unsupported args before writing verifier state",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i115-dispatch-unsupported-args.test.ts"
     }
   ]
 }

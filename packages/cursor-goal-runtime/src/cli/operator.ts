@@ -21,6 +21,8 @@ import { runGlobalUpgrade } from "../lib/upgrade.js";
 import { operatorOptionsFromArgv } from "./shared.js";
 
 const doctorOptions = new Set(["--json", "--fix"]);
+const dispatchFlags = new Set(["--dry-run", "--run", "--verify", "--spawn"]);
+const dispatchValueOptions = new Set(["--unit", "--record-response", "--from"]);
 
 export async function handleVerify(): Promise<void> {
   const r = await runStopVerifier({ status: "completed", loop_count: 0 });
@@ -49,6 +51,19 @@ function rejectUnexpectedArgs(rest: string[]): void {
 function rejectUnsupportedOptionOnlyArgs(rest: string[], allowed: Set<string>): void {
   for (const arg of rest) {
     if (allowed.has(arg)) continue;
+    console.error(arg.startsWith("-") ? `Unknown option: ${arg}` : `Unexpected argument: ${arg}`);
+    process.exit(1);
+  }
+}
+
+function rejectUnsupportedDispatchArgs(rest: string[]): void {
+  for (let i = 0; i < rest.length; i += 1) {
+    const arg = rest[i];
+    if (dispatchFlags.has(arg)) continue;
+    if (dispatchValueOptions.has(arg)) {
+      i += 1;
+      continue;
+    }
     console.error(arg.startsWith("-") ? `Unknown option: ${arg}` : `Unexpected argument: ${arg}`);
     process.exit(1);
   }
@@ -85,6 +100,7 @@ export async function handleDispatch(rest: string[]): Promise<void> {
   const unitId = optionValue(rest, "--unit");
   const recordUnit = optionValue(rest, "--record-response");
   const fromFile = optionValue(rest, "--from");
+  rejectUnsupportedDispatchArgs(rest);
 
   if (recordUnit && !fromFile) {
     console.error("dispatch --record-response <id> requires --from <file>");
