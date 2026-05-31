@@ -37,7 +37,11 @@ function rejectUnsupportedSupervisorArgs(args) {
 
 function wallValue(args, option, defaultValue) {
   const prefix = `${option}=`;
-  const arg = args.find((a) => a.startsWith(prefix));
+  const matches = args.filter((a) => a.startsWith(prefix));
+  if (matches.length > 1) {
+    throw new Error(`Duplicate option: ${option}`);
+  }
+  const arg = matches[0];
   if (!arg) return defaultValue;
   const raw = arg.slice(prefix.length);
   const value = Number(raw);
