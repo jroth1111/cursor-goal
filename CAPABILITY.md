@@ -133,6 +133,7 @@ Only claim what invariant tests prove.
 | I144 | Core install honors CURSOR_HOME when detecting a global runtime | yes | — | — | i144-core-install-cursor-home | tested |
 | I145 | Hooks reject invalid direct work_unit_id values before writing unit evidence paths | — | yes | — | i145-invalid-work-unit-id-path | tested |
 | I146 | Subagent governance path checks normalize evidence paths before allowing writes | — | yes | — | i146-normalized-governance-path | tested |
+| I147 | Subagent work unit scopes cannot authorize writes outside the project root | yes | yes | — | i147-subagent-outside-root | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

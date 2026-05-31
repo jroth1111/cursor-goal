@@ -33,7 +33,7 @@ normalize_file_path() {
     def norm($path):
       ($path | gsub("/+"; "/")) as $compact |
       ($compact | startswith("/")) as $abs |
-      reduce ($compact | split("/"))[] as $part
+      ($compact | split("/") | reduce .[] as $part
         ([];
           if $part == "" or $part == "." then .
           elif $part == ".." then
@@ -41,7 +41,7 @@ normalize_file_path() {
             elif $abs then .
             else . + [".."] end
           else . + [$part] end
-        ) as $parts |
+        )) as $parts |
       (if $abs then "/" else "" end) + ($parts | join("/")) |
       if . == "" then (if $abs then "/" else "." end) else . end;
     norm($p)
@@ -60,6 +60,18 @@ relative_file_path() {
   else
     printf '%s' "$f"
   fi
+}
+
+path_inside_project() {
+  local f
+  local r
+  f="$(normalize_file_path "$1")"
+  r="$(normalize_file_path "$ROOT")"
+  if [[ "$f" == /* ]]; then
+    [[ "$f" == "$r" || "$f" == "$r/"* ]]
+    return
+  fi
+  [[ "$f" != ".." && "$f" != ../* ]]
 }
 
 unit_id_from_path() {
@@ -128,6 +140,11 @@ case "$STEP" in
     fi
     if [[ "$IS_SUB" == "true" ]] && [[ -n "$FILE" ]] && [[ "$TOOL" == "Write" || "$TOOL" == "Edit" || "$TOOL" == "MultiEdit" ]] && [[ -f "$GOAL_DIR/work-units.json" ]]; then
       WUID="$(echo "$INPUT" | jq -r '.work_unit_id // .tool_input.work_unit_id // empty')"
+      if ! path_inside_project "$FILE"; then
+        jq -n --arg m "Subagent WriteGate: $FILE outside project root" \
+          '{permission:"deny",agent_message:$m}'
+        exit 0
+      fi
       REL_FILE="$(relative_file_path "$FILE")"
       if [[ -z "$WUID" ]]; then
         WUID="$(unit_id_from_path "$REL_FILE")"

@@ -12,12 +12,16 @@ function normalizePath(filePath: string): string {
   return path.posix.normalize(filePath.replace(/\\/g, "/"));
 }
 
-function relativePathForScope(filePath: string, root?: string): string {
+function relativePathForScope(filePath: string, root?: string): string | null {
   const norm = normalizePath(filePath);
   if (!root) return norm;
   const rootNorm = normalizePath(path.resolve(root));
-  if (norm === rootNorm) return ".";
-  if (norm.startsWith(`${rootNorm}/`)) return norm.slice(rootNorm.length + 1);
+  if (path.posix.isAbsolute(norm)) {
+    if (norm === rootNorm) return ".";
+    if (norm.startsWith(`${rootNorm}/`)) return norm.slice(rootNorm.length + 1);
+    return null;
+  }
+  if (norm === ".." || norm.startsWith("../")) return null;
   return norm;
 }
 
@@ -52,6 +56,13 @@ export async function checkSubagentWriteGate(
   }
 
   const scopePath = relativePathForScope(filePath, root);
+  if (!scopePath) {
+    return {
+      allowed: false,
+      reason: `Subagent WriteGate: ${filePath} outside project root`,
+    };
+  }
+
   if (isUnitEvidencePath(scopePath, unitId)) {
     return { allowed: true };
   }

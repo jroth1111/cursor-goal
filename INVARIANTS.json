@@ -952,6 +952,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i146-normalized-governance-path.test.ts"
+    },
+    {
+      "id": "I147",
+      "description": "Subagent work unit scopes cannot authorize writes outside the project root",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i147-subagent-outside-root.test.ts"
     }
   ]
 }
