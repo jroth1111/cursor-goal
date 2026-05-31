@@ -84,6 +84,7 @@ Only claim what invariant tests prove.
 | I95 | cursor-goal dispatch --verify --spawn dry-run prints agent command | — | yes | — | i95-dispatch-verify-spawn | tested |
 | I96 | core/install.sh parses --local-hooks without a target path | yes | — | — | i96-core-install-flags | tested |
 | I97 | runChecks creates proof-runs evidence directory | — | yes | — | i97-run-checks-evidence-dir | tested |
+| I98 | Compiled work unit ids are unique | — | yes | — | i98-unique-work-unit-ids | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

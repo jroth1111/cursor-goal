@@ -609,6 +609,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i97-run-checks-evidence-dir.test.ts"
+    },
+    {
+      "id": "I98",
+      "description": "Compiled work unit ids are unique",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i98-unique-work-unit-ids.test.ts"
     }
   ]
 }

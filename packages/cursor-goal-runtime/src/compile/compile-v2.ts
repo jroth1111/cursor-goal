@@ -96,6 +96,19 @@ function sameWorkUnitDefinition(a: WorkUnitCompiled, b: WorkUnitCompiled): boole
   );
 }
 
+function assertUniqueWorkUnitIds(units: WorkUnitCompiled[]): void {
+  const seen = new Map<string, string>();
+  for (const unit of units) {
+    const priorTitle = seen.get(unit.id);
+    if (priorTitle !== undefined) {
+      throw new Error(
+        `duplicate work unit id "${unit.id}" from "${priorTitle}" and "${unit.title}"`,
+      );
+    }
+    seen.set(unit.id, unit.title);
+  }
+}
+
 async function mergeWorkUnits(
   compiled: WorkUnitCompiled[],
   existingPath: string,
@@ -151,6 +164,7 @@ export async function buildCompiledArtifacts(root: string): Promise<CompiledArti
     verified_by: u.verified_by ?? null,
     verify_prompt: u.verify_prompt ?? null,
   }));
+  assertUniqueWorkUnitIds(unitDrafts);
 
   const existingWu = path.join(goalDir(root), "work-units.json");
   const units = await mergeWorkUnits(unitDrafts, existingWu);
