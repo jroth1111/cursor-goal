@@ -1085,6 +1085,13 @@
       "layers": ["supervisor"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i165-supervisor-interactive-launch.test.ts"
+    },
+    {
+      "id": "I166",
+      "description": "Compile rebuilds malformed generated manifest and trajectory artifacts",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i166-compile-recovers-generated-state.test.ts"
     }
   ]
 }

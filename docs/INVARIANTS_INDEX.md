@@ -91,3 +91,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I163 | Minimal subagent governance isolation does not require jq |
 | I164 | Compile rebuilds malformed generated work-unit artifacts |
 | I165 | Supervisor interactive mode launches cursor-agent |
+| I166 | Compile rebuilds malformed generated manifest and trajectory artifacts |

@@ -155,6 +155,7 @@ Only claim what invariant tests prove.
 | I163 | Minimal subagent governance isolation does not require jq | yes | — | — | i163-minimal-subagent-no-jq | tested |
 | I164 | Compile rebuilds malformed generated work-unit artifacts | — | yes | — | i164-compile-recovers-work-units | tested |
 | I165 | Supervisor interactive mode launches cursor-agent | — | — | yes | i165-supervisor-interactive-launch | tested |
+| I166 | Compile rebuilds malformed generated manifest and trajectory artifacts | — | yes | — | i166-compile-recovers-generated-state | tested |
 | I90 | cursor-goal init seeds GOAL without compiling by default | — | yes | — | i90-init-no-compile | tested |
 | I91 | cursor-goal init --detect writes project-native checks | — | yes | — | i91-init-detect | tested |
 | I92 | Default unit acceptance requires evidence file not path existence | — | yes | — | i92-acceptance-defaults | tested |

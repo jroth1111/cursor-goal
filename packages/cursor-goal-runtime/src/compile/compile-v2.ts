@@ -170,7 +170,7 @@ export async function buildCompiledArtifacts(root: string): Promise<CompiledArti
   const units = await mergeWorkUnits(unitDrafts, existingWu);
 
   const trajPath = path.join(goalDir(root), "trajectory.json");
-  const existingTraj = await readJson<{ phase?: string }>(trajPath);
+  const existingTraj = await readJson<{ phase?: string }>(trajPath).catch(() => null);
   const phase = existingTraj?.phase ?? "DISCOVERY";
 
   return {
@@ -270,7 +270,9 @@ export async function compileGoalV2(root?: string): Promise<void> {
   if (!existsSync(trajPath)) {
     await atomicWriteJson(trajPath, artifacts.trajectory);
   } else {
-    const existingTraj = await readJson<{ phase?: string; discovery_completed_at?: string }>(trajPath);
+    const existingTraj = await readJson<{ phase?: string; discovery_completed_at?: string }>(
+      trajPath,
+    ).catch(() => null);
     await atomicWriteJson(trajPath, {
       ...existingTraj,
       phase: existingTraj?.phase ?? artifacts.trajectory.phase,

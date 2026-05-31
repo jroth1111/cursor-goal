@@ -8,7 +8,7 @@ export async function readLoopLimit(root = projectRoot()): Promise<number> {
   const fromHooks = readLoopLimitFromHooksJson(root);
   const manifest = await readJson<{ loop_limit?: number }>(
     path.join(goalDir(root), "manifest.json"),
-  );
+  ).catch(() => null);
   return fromHooks ?? manifest?.loop_limit ?? DEFAULT_LOOP_LIMIT;
 }
 
@@ -16,7 +16,7 @@ export async function syncLoopLimitToManifest(root = projectRoot()): Promise<num
   const limit = await readLoopLimit(root);
   const { writeJson } = await import("./paths.js");
   const manifestPath = path.join(goalDir(root), "manifest.json");
-  const existing = (await readJson<Record<string, unknown>>(manifestPath)) ?? {};
+  const existing = (await readJson<Record<string, unknown>>(manifestPath).catch(() => null)) ?? {};
   await writeJson(manifestPath, { ...existing, loop_limit: limit });
   return limit;
 }
