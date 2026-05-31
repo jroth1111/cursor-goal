@@ -903,6 +903,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i139-install-global-dry-run-runtime-optional.test.ts"
+    },
+    {
+      "id": "I140",
+      "description": "Global install dry-run reports without running the runtime build",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i140-install-global-dry-run-no-build.test.ts"
     }
   ]
 }
