@@ -763,6 +763,13 @@
       "layers": ["supervisor"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i119-supervisor-wall-value.test.ts"
+    },
+    {
+      "id": "I120",
+      "description": "Global install removes stale schema and template files before copying current artifacts",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i120-install-global-sync.test.ts"
     }
   ]
 }

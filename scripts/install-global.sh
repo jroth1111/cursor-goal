@@ -94,7 +94,7 @@ fi
 
 echo "Installing cursor-goal globally → $CURSOR_HOME"
 
-mkdir -p "$GLOBAL_HOOKS" "$GLOBAL_SCHEMAS" "$GLOBAL_TEMPLATES" "$CURSOR_HOME/cursor-goal" "$LOCAL_BIN"
+mkdir -p "$GLOBAL_HOOKS" "$CURSOR_HOME/cursor-goal" "$LOCAL_BIN"
 
 # Runtime staging
 rm -rf "$GLOBAL_RUNTIME"
@@ -111,8 +111,9 @@ cp "$RUNTIME_SRC/package.json" "$GLOBAL_RUNTIME/package.json"
 chmod +x "$GLOBAL_RUNTIME/dist/cli.js"
 
 # Schemas + templates
+rm -rf "$GLOBAL_SCHEMAS" "$GLOBAL_TEMPLATES"
+mkdir -p "$GLOBAL_SCHEMAS" "$GLOBAL_TEMPLATES"
 cp -R "$CORE_DIR/.cursor/goal/schemas/." "$GLOBAL_SCHEMAS/"
-mkdir -p "$GLOBAL_TEMPLATES"
 cp -R "$CORE_DIR/.cursor/goal/templates/." "$GLOBAL_TEMPLATES/"
 cp "$CORE_DIR/.cursor/goal/.gitignore" "$CURSOR_HOME/goal/.gitignore" 2>/dev/null || true
 
