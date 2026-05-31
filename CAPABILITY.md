@@ -149,6 +149,7 @@ Only claim what invariant tests prove.
 | I158 | Scope dot-segment paths are normalized before verifier enforcement | — | yes | — | i158-scope-dot-segments | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |
+| I160 | Session-end hook reports local marker write failures without crashing | — | yes | — | i160-session-end-fail-open | tested |
 | I90 | cursor-goal init seeds GOAL without compiling by default | — | yes | — | i90-init-no-compile | tested |
 | I91 | cursor-goal init --detect writes project-native checks | — | yes | — | i91-init-detect | tested |
 | I92 | Default unit acceptance requires evidence file not path existence | — | yes | — | i92-acceptance-defaults | tested |

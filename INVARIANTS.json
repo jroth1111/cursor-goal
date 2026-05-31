@@ -1043,6 +1043,13 @@
       "layers": ["core"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i159-install-hook-metadata.test.ts"
+    },
+    {
+      "id": "I160",
+      "description": "Session-end hook reports local marker write failures without crashing",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i160-session-end-fail-open.test.ts"
     }
   ]
 }

@@ -85,3 +85,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I155 | Global uninstall flattens legacy nested hooks before removing goal entries |
 | I157 | Dry-run stop pipeline simulates auto-advance without mutating trajectory |
 | I158 | Scope dot-segment paths are normalized before verifier enforcement |
+| I160 | Session-end hook reports local marker write failures without crashing |
