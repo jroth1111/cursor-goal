@@ -37,6 +37,13 @@ function optionValue(rest: string[], option: string): string | undefined {
   return value;
 }
 
+function rejectUnexpectedArgs(rest: string[]): void {
+  const arg = rest[0];
+  if (!arg) return;
+  console.error(arg.startsWith("-") ? `Unknown option: ${arg}` : `Unexpected argument: ${arg}`);
+  process.exit(1);
+}
+
 export async function handleNext(rest: string[]): Promise<void> {
   const verbose = rest.includes("--verbose");
   if (rest.includes("--json")) {
@@ -157,13 +164,15 @@ export async function handleDoctor(rest: string[]): Promise<void> {
   process.exit(issues.some((i) => i.level === "error") ? 1 : 0);
 }
 
-export async function handlePause(): Promise<void> {
+export async function handlePause(rest: string[]): Promise<void> {
+  rejectUnexpectedArgs(rest);
   await mkdir(goalDir(), { recursive: true });
   await writeFile(path.join(goalDir(), "PAUSED"), "", "utf8");
   console.log("Paused");
 }
 
-export async function handleResume(): Promise<void> {
+export async function handleResume(rest: string[]): Promise<void> {
+  rejectUnexpectedArgs(rest);
   const p = path.join(goalDir(), "PAUSED");
   if (existsSync(p)) await unlink(p);
   console.log("Resumed");

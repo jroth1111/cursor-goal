@@ -13,6 +13,13 @@ import { formatModeStatus, readLastTriageEntry } from "../lib/prompt-triage.js";
 import { operatorOptionsFromArgv } from "./shared.js";
 import { seedGoal } from "./goal.js";
 
+const modeUsage = "Usage: cursor-goal mode [chat|governed|auto|set auto|chat|governed|why]";
+
+function rejectModeUsage(): never {
+  console.error(modeUsage);
+  process.exit(1);
+}
+
 export async function handleMode(rest: string[]): Promise<void> {
   const root = projectRoot();
   const sub = rest[0];
@@ -23,11 +30,13 @@ export async function handleMode(rest: string[]): Promise<void> {
     return;
   }
   if (sub === "auto") {
+    if (rest.length !== 1) rejectModeUsage();
     await clearSessionMode(root);
     console.log("Session mode cleared; using config default_mode");
     return;
   }
   if (sub === "chat" || sub === "governed") {
+    if (rest.length !== 1) rejectModeUsage();
     await writeSessionMode(root, sub, "cli");
     if (sub === "governed") {
       const hadGoal = existsSync(goalMd(root));
@@ -44,10 +53,10 @@ export async function handleMode(rest: string[]): Promise<void> {
     return;
   }
   if (sub === "set" && rest[1]) {
+    if (rest.length !== 2) rejectModeUsage();
     const mode = rest[1] as GovernanceMode;
     if (mode !== "auto" && mode !== "chat" && mode !== "governed") {
-      console.error("Usage: cursor-goal mode set auto|chat|governed");
-      process.exit(1);
+      rejectModeUsage();
     }
     await writeGovernanceConfig(root, { default_mode: mode });
     console.log(`default_mode=${mode}`);
@@ -62,6 +71,5 @@ export async function handleMode(rest: string[]): Promise<void> {
     console.log(JSON.stringify(entry, null, 2));
     return;
   }
-  console.error("Usage: cursor-goal mode [chat|governed|auto|set auto|chat|governed]");
-  process.exit(1);
+  rejectModeUsage();
 }

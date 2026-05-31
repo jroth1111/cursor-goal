@@ -57,10 +57,10 @@ export async function runCli(argv: string[]): Promise<void> {
       await handleDoctor(rest);
       break;
     case "pause":
-      await handlePause();
+      await handlePause(rest);
       break;
     case "resume":
-      await handleResume();
+      await handleResume(rest);
       break;
     case "phase":
       await handlePhase(rest);

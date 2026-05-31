@@ -693,6 +693,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i109-dispatch-strict-args.test.ts"
+    },
+    {
+      "id": "I110",
+      "description": "State-mutating operator commands reject stray args before writing state",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i110-operator-mutator-strict-args.test.ts"
     }
   ]
 }
