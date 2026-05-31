@@ -66,6 +66,7 @@ function rejectUnsupportedOperatorArgs(
   allowedFlags: Set<string>,
   valueOptions = conversationValueOptions,
 ): void {
+  const seenValueOptions = new Set<string>();
   for (let i = 0; i < rest.length; i += 1) {
     const arg = rest[i];
     if (allowedFlags.has(arg)) continue;
@@ -75,6 +76,11 @@ function rejectUnsupportedOperatorArgs(
         console.error(`Missing value for ${arg}`);
         process.exit(1);
       }
+      if (seenValueOptions.has(arg)) {
+        console.error(`Duplicate option: ${arg}`);
+        process.exit(1);
+      }
+      seenValueOptions.add(arg);
       i += 1;
       continue;
     }

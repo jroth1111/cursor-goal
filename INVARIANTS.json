@@ -994,6 +994,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i152-logs-zero-tail.test.ts"
+    },
+    {
+      "id": "I153",
+      "description": "Read-only operator commands reject duplicate conversation selectors",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i153-operator-duplicate-conversation.test.ts"
     }
   ]
 }
