@@ -64,6 +64,7 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I136 | Dispatch rejects conflicting run modes before selecting dry-run behavior |
 | I137 | Supervisor parses options only before the prompt boundary |
 | I138 | Supervisor rejects missing prompt values before deriving launch options |
+| I156 | Supervisor rejects conflicting unit and parent run modes before launch |
 | I139 | Global install dry-run does not require built runtime artifacts |
 | I140 | Global install dry-run reports without running the runtime build |
 | I141 | Global uninstall removes stale generated hook files while preserving user hooks |

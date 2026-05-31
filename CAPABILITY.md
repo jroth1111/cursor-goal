@@ -125,6 +125,7 @@ Only claim what invariant tests prove.
 | I136 | Dispatch rejects conflicting run modes before selecting dry-run behavior | — | yes | — | i136-dispatch-run-mode-strictness | tested |
 | I137 | Supervisor parses options only before the prompt boundary | — | — | yes | i137-supervisor-prompt-option-boundary | tested |
 | I138 | Supervisor rejects missing prompt values before deriving launch options | — | — | yes | i138-supervisor-prompt-value | tested |
+| I156 | Supervisor rejects conflicting unit and parent run modes before launch | — | — | yes | i156-supervisor-mode-conflicts | tested |
 | I139 | Global install dry-run does not require built runtime artifacts | — | yes | — | i139-install-global-dry-run-runtime-optional | tested |
 | I140 | Global install dry-run reports without running the runtime build | — | yes | — | i140-install-global-dry-run-no-build | tested |
 | I141 | Global uninstall removes stale generated hook files while preserving user hooks | — | yes | — | i141-uninstall-stale-hook-files | tested |

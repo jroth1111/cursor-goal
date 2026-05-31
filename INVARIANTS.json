@@ -1015,6 +1015,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i155-uninstall-flattens-hooks.test.ts"
+    },
+    {
+      "id": "I156",
+      "description": "Supervisor rejects conflicting unit and parent run modes before launch",
+      "layers": ["supervisor"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i156-supervisor-mode-conflicts.test.ts"
     }
   ]
 }

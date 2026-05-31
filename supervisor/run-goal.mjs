@@ -47,6 +47,15 @@ function wallValue(args, option, defaultValue) {
   return value;
 }
 
+function rejectConflictingSupervisorModes(optionArgs) {
+  if (optionArgs.includes("--parent-only") && optionArgs.includes("--units-only")) {
+    throw new Error("--parent-only cannot be combined with --units-only");
+  }
+  if (optionArgs.includes("--parent-only") && optionArgs.includes("--dispatch-units")) {
+    throw new Error("--parent-only cannot be combined with --dispatch-units");
+  }
+}
+
 export function parseSupervisorArgs(argv) {
   const args = argv.slice(2);
   rejectUnsupportedSupervisorArgs(args);
@@ -56,6 +65,7 @@ export function parseSupervisorArgs(argv) {
   if (promptIdx >= 0 && promptArgs.join(" ").trim() === "") {
     throw new Error("Missing value for --prompt");
   }
+  rejectConflictingSupervisorModes(optionArgs);
   return {
     dryRun: optionArgs.includes("--dry-run"),
     interactive: optionArgs.includes("--interactive"),
