@@ -924,6 +924,13 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i142-upgrade-manifest-source.test.ts"
+    },
+    {
+      "id": "I143",
+      "description": "Doctor compares global install manifest git_sha with the source repo HEAD",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i143-doctor-current-manifest.test.ts"
     }
   ]
 }

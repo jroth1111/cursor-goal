@@ -129,6 +129,7 @@ Only claim what invariant tests prove.
 | I140 | Global install dry-run reports without running the runtime build | — | yes | — | i140-install-global-dry-run-no-build | tested |
 | I141 | Global uninstall removes stale generated hook files while preserving user hooks | — | yes | — | i141-uninstall-stale-hook-files | tested |
 | I142 | Global upgrade runs the installer from the install manifest source | — | yes | — | i142-upgrade-manifest-source | tested |
+| I143 | Doctor compares global install manifest git_sha with the source repo HEAD | — | yes | — | i143-doctor-current-manifest | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

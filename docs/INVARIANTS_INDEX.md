@@ -68,3 +68,4 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I140 | Global install dry-run reports without running the runtime build |
 | I141 | Global uninstall removes stale generated hook files while preserving user hooks |
 | I142 | Global upgrade runs the installer from the install manifest source |
+| I143 | Doctor compares global install manifest git_sha with the source repo HEAD |

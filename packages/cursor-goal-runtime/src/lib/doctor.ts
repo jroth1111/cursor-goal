@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { unlink } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { compileGoalV2 } from "../compile/compile-v2.js";
 import { goalDir, goalMd, projectRoot } from "./paths.js";
@@ -26,6 +27,17 @@ export function hasProjectHooks(root: string): boolean {
 
 export function hasGlobalHooks(): boolean {
   return existsSync(path.join(cursorHome(), "hooks/goal-stop.sh"));
+}
+
+function sourceHeadMatches(source: string, gitSha: string): boolean | null {
+  const normalizedSha = gitSha.trim();
+  if (normalizedSha.length < 7) return false;
+  const r = spawnSync("git", ["-C", source, "rev-parse", "HEAD"], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  if (r.status !== 0) return null;
+  return r.stdout.trim().startsWith(normalizedSha);
 }
 
 export async function runDoctor(root = projectRoot()): Promise<DoctorIssue[]> {
@@ -85,7 +97,10 @@ export async function runDoctor(root = projectRoot()): Promise<DoctorIssue[]> {
       const pkgPath = path.join(rt, "package.json");
       if (existsSync(pkgPath)) {
         const pkg = JSON.parse(await readFile(pkgPath, "utf8")) as { version?: string };
-        if (manifest.source && !rt.startsWith(manifest.source) && manifest.git_sha) {
+        const current = manifest.source && manifest.git_sha
+          ? sourceHeadMatches(manifest.source, manifest.git_sha)
+          : null;
+        if (current === false) {
           issues.push({
             level: "warn",
             message: `Global runtime may be stale (installed from ${manifest.git_sha}) — run: cursor-goal upgrade`,
