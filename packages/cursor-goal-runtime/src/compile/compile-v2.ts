@@ -78,6 +78,24 @@ function shellPatternsFromChecks(checks: string[]): string[] {
   return [...patterns];
 }
 
+function sameStringArray(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function sameNullableString(a: string | null | undefined, b: string | null | undefined): boolean {
+  return (a ?? null) === (b ?? null);
+}
+
+function sameWorkUnitDefinition(a: WorkUnitCompiled, b: WorkUnitCompiled): boolean {
+  return (
+    a.title === b.title &&
+    sameStringArray(a.scope, b.scope) &&
+    sameStringArray(a.acceptance, b.acceptance) &&
+    sameNullableString(a.verified_by, b.verified_by) &&
+    sameNullableString(a.verify_prompt, b.verify_prompt)
+  );
+}
+
 async function mergeWorkUnits(
   compiled: WorkUnitCompiled[],
   existingPath: string,
@@ -89,12 +107,11 @@ async function mergeWorkUnits(
   return compiled.map((u) => {
     const prev = byId.get(u.id);
     if (!prev) return u;
+    if (!sameWorkUnitDefinition(u, prev)) return u;
     return {
       ...u,
       status: prev.status,
       subagent_id: prev.subagent_id,
-      verified_by: u.verified_by ?? prev.verified_by ?? null,
-      verify_prompt: u.verify_prompt ?? prev.verify_prompt ?? null,
     };
   });
 }

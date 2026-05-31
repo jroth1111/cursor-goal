@@ -8,6 +8,7 @@ import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 import { runStopVerifier } from "../../src/lib/verify.js";
 import { runtimeStatePath } from "../../src/lib/runtime-state.js";
 import { seedReleaseReady } from "../helpers/release-ready.js";
+import { markUnitDone, readWorkUnits } from "../../src/lib/work-units.js";
 
 describe("I42 compile invalidates runtime-state", () => {
   let cleanup: () => Promise<void>;
@@ -67,5 +68,53 @@ B
     });
     expect(r.status).toBe(0);
     expect(r.stdout).toMatch(/mod-a|mod-b|work unit/i);
+  });
+
+  it("reopens a done work unit when its compiled definition changes", async () => {
+    const p = await mkGitProject("i42-unit-definition-change");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      `## Goal
+x
+## Work units
+### mod-a
+A
+- \`pkg/a/\`
+- acceptance: \`true\`
+## Checks
+- \`true\`
+`,
+      "utf8",
+    );
+    await compileGoalV2(p.dir);
+    await markUnitDone("mod-a", p.dir);
+    await compileGoalV2(p.dir);
+    expect((await readWorkUnits(p.dir))?.units.find((u) => u.id === "mod-a")?.status).toBe(
+      "done",
+    );
+
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      `## Goal
+x
+## Work units
+### mod-a
+A
+- \`pkg/a/\`
+- acceptance: \`false\`
+## Checks
+- \`true\`
+`,
+      "utf8",
+    );
+    await compileGoalV2(p.dir);
+
+    const wu = await readWorkUnits(p.dir);
+    const unit = wu?.units.find((u) => u.id === "mod-a");
+    expect(unit?.acceptance).toEqual(["false"]);
+    expect(unit?.status).toBe("pending");
+    expect(unit?.subagent_id).toBeNull();
   });
 });
