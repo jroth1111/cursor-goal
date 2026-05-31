@@ -5,6 +5,7 @@ import { ensureGoalDirs, goalDir, projectRoot } from "../lib/paths.js";
 import { hookJson } from "../lib/verify.js";
 import { readStdinJson } from "../lib/stdin.js";
 import {
+  cleanWorkUnitId,
   extractWorkUnitId,
   findUnitBySubagent,
   markUnitDone,
@@ -33,7 +34,7 @@ await appendFile(
 const promptBlob = JSON.stringify(input);
 let unitId =
   extractWorkUnitId(promptBlob) ??
-  (typeof input.work_unit_id === "string" ? input.work_unit_id : null);
+  cleanWorkUnitId(input.work_unit_id);
 
 const wu = await readWorkUnits(root);
 if (wu && !unitId) {

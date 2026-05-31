@@ -4,7 +4,7 @@ import { ensureGoalDirs, goalDir, projectRoot } from "../lib/paths.js";
 import { markEdit, gitTreeId } from "../lib/git-state.js";
 import { hookJson } from "../lib/verify.js";
 import { readStdinJson } from "../lib/stdin.js";
-import { extractWorkUnitId } from "../lib/work-units.js";
+import { cleanWorkUnitId, extractWorkUnitId } from "../lib/work-units.js";
 
 async function main(): Promise<void> {
   const input = await readStdinJson<{
@@ -21,9 +21,7 @@ async function main(): Promise<void> {
   const tool = input.tool_name ?? "";
   const workUnitId =
     extractWorkUnitId(JSON.stringify(input.tool_input ?? {})) ??
-    (typeof input.tool_input?.work_unit_id === "string"
-      ? input.tool_input.work_unit_id
-      : null);
+    cleanWorkUnitId(input.tool_input?.work_unit_id);
 
   const isEdit = tool === "Write" || tool === "Edit" || tool === "MultiEdit";
 

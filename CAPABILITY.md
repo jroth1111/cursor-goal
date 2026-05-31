@@ -131,6 +131,7 @@ Only claim what invariant tests prove.
 | I142 | Global upgrade runs the installer from the install manifest source | — | yes | — | i142-upgrade-manifest-source | tested |
 | I143 | Doctor compares global install manifest git_sha with the source repo HEAD | — | yes | — | i143-doctor-current-manifest | tested |
 | I144 | Core install honors CURSOR_HOME when detecting a global runtime | yes | — | — | i144-core-install-cursor-home | tested |
+| I145 | Hooks reject invalid direct work_unit_id values before writing unit evidence paths | — | yes | — | i145-invalid-work-unit-id-path | tested |
 | I87 | Content-addressed working tree fingerprint (excludes .cursor/goal/) | — | yes | — | i87-working-tree-fingerprint | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
 | I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |

@@ -1,5 +1,11 @@
 import path from "node:path";
-import { extractWorkUnitId, findUnitById, isUnitEvidencePath, readWorkUnits } from "./work-units.js";
+import {
+  cleanWorkUnitId,
+  extractWorkUnitId,
+  findUnitById,
+  isUnitEvidencePath,
+  readWorkUnits,
+} from "./work-units.js";
 import type { WriteGateResult } from "./write-gate.js";
 
 function normalizePath(filePath: string): string {
@@ -75,9 +81,9 @@ export function resolveSubagentUnitId(
 ): string | null {
   const fromInput =
     extractWorkUnitId(JSON.stringify(input.tool_input ?? {})) ??
-    (typeof input.work_unit_id === "string" ? input.work_unit_id : null) ??
+    cleanWorkUnitId(input.work_unit_id) ??
     extractWorkUnitId(JSON.stringify(input));
   if (fromInput) return fromInput;
   const unitFromPath = filePath.match(/evidence\/units\/([a-z0-9][a-z0-9_-]*)/i);
-  return unitFromPath?.[1] ?? null;
+  return cleanWorkUnitId(unitFromPath?.[1]);
 }

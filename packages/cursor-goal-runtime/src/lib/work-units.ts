@@ -7,6 +7,14 @@ import type { WorkUnitCompiled } from "../compile/compile-v2.js";
 
 export type WorkUnitsFile = { units: WorkUnitCompiled[] };
 
+const WORK_UNIT_ID_RE = /^[a-z0-9][a-z0-9_-]*$/i;
+
+export function cleanWorkUnitId(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const id = value.trim();
+  return WORK_UNIT_ID_RE.test(id) ? id : null;
+}
+
 export async function readWorkUnits(root?: string): Promise<WorkUnitsFile | null> {
   return readJson<WorkUnitsFile>(path.join(goalDir(root), "work-units.json"));
 }
@@ -123,6 +131,7 @@ export function pathTouchesGoalGovernance(filePath: string): boolean {
 }
 
 export function isUnitEvidencePath(filePath: string, unitId: string): boolean {
+  if (!cleanWorkUnitId(unitId)) return false;
   const norm = filePath.replace(/\\/g, "/");
   return new RegExp(`(^|/)evidence/units/${unitId}\\.jsonl$`, "i").test(norm);
 }
@@ -131,7 +140,7 @@ export function extractWorkUnitId(text: string): string | null {
   const m =
     text.match(/work_unit_id\s*[:=]\s*["']?([a-z0-9][a-z0-9_-]*)/i) ??
     text.match(/\[work-unit:([a-z0-9][a-z0-9_-]*)\]/i);
-  return m?.[1] ?? null;
+  return cleanWorkUnitId(m?.[1]);
 }
 
 export { dispositionWaivesUnits } from "./disposition.js";
