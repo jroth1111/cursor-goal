@@ -94,7 +94,8 @@ chmod +x "$GLOBAL_RUNTIME/dist/cli.js"
 
 # Schemas + templates
 cp -R "$CORE_DIR/.cursor/goal/schemas/." "$GLOBAL_SCHEMAS/"
-cp "$CORE_DIR/.cursor/goal/templates/GOAL.md" "$GLOBAL_TEMPLATES/GOAL.md"
+mkdir -p "$GLOBAL_TEMPLATES"
+cp -R "$CORE_DIR/.cursor/goal/templates/." "$GLOBAL_TEMPLATES/"
 cp "$CORE_DIR/.cursor/goal/.gitignore" "$CURSOR_HOME/goal/.gitignore" 2>/dev/null || true
 
 # Hook scripts
