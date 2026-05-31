@@ -23,13 +23,35 @@ const FAILURE_STATUSES = new Set([
   "aborted",
 ]);
 const MALFORMED_EVIDENCE = "__cursor_goal_malformed_latest";
+const INVALID_EVIDENCE_PATH = "__cursor_goal_invalid_evidence_path";
 
 export function legacyEvidenceAllowed(): boolean {
   return process.env.CURSOR_GOAL_LEGACY_EVIDENCE === "1";
 }
 
+export function expectedUnitEvidencePath(unit: Pick<WorkUnitCompiled, "id">): string {
+  return `evidence/units/${unit.id}.jsonl`;
+}
+
+export function unitEvidencePathError(
+  unit: Pick<WorkUnitCompiled, "id" | "evidence_path">,
+): string | null {
+  const expected = expectedUnitEvidencePath(unit);
+  if (unit.evidence_path !== expected) {
+    return `Work unit "${unit.id}" evidence_path must be "${expected}"`;
+  }
+  const normalized = path.posix.normalize(unit.evidence_path.replace(/\\/g, "/"));
+  if (normalized !== expected) {
+    return `Work unit "${unit.id}" evidence_path must stay inside evidence/units`;
+  }
+  return null;
+}
+
 export function unitEvidencePath(root: string, unit: WorkUnitCompiled): string {
-  return path.join(goalDir(root), unit.evidence_path);
+  const evidencePath = unitEvidencePathError(unit)
+    ? expectedUnitEvidencePath(unit)
+    : unit.evidence_path;
+  return path.join(goalDir(root), evidencePath);
 }
 
 function displayEvidencePath(unit: WorkUnitCompiled): string {
@@ -40,6 +62,8 @@ export async function readLatestUnitEvidence(
   root: string,
   unit: WorkUnitCompiled,
 ): Promise<UnitEvidenceRecord | null> {
+  const pathError = unitEvidencePathError(unit);
+  if (pathError) return { [INVALID_EVIDENCE_PATH]: pathError };
   const file = unitEvidencePath(root, unit);
   if (!existsSync(file)) return null;
   const raw = await readFile(file, "utf8");
@@ -59,6 +83,8 @@ export async function readLatestUnitEvidence(
 }
 
 function evidenceBlockReason(unit: WorkUnitCompiled, record: UnitEvidenceRecord): string | null {
+  const invalidPath = record[INVALID_EVIDENCE_PATH];
+  if (typeof invalidPath === "string") return invalidPath;
   if (record[MALFORMED_EVIDENCE] === true) {
     return `Latest evidence for "${unit.id}" is malformed`;
   }
@@ -105,6 +131,8 @@ export async function checkUnitCompletionEvidence(
   root: string,
   unit: WorkUnitCompiled,
 ): Promise<UnitCompletionEvidence> {
+  const pathError = unitEvidencePathError(unit);
+  if (pathError) return { ok: false, reason: pathError };
   const file = unitEvidencePath(root, unit);
   if (!existsSync(file)) {
     return {

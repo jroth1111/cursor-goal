@@ -1134,6 +1134,13 @@
       "layers": ["core", "runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i172-nested-hooks-loop-limit.test.ts"
+    },
+    {
+      "id": "I173",
+      "description": "Work-unit evidence paths cannot escape the canonical evidence directory",
+      "layers": ["runtime", "supervisor"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i173-unit-evidence-path-boundary.test.ts"
     }
   ]
 }

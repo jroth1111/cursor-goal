@@ -158,8 +158,23 @@ async function readWorkUnits(root) {
   return raw.units ?? [];
 }
 
+function expectedUnitEvidencePath(unit) {
+  return `evidence/units/${unit.id}.jsonl`;
+}
+
+function unitEvidencePathError(unit) {
+  const expected = expectedUnitEvidencePath(unit);
+  const actual = typeof unit.evidence_path === "string" ? unit.evidence_path : expected;
+  if (actual !== expected) return `evidence_path must be ${expected}`;
+  const normalized = path.posix.normalize(actual.replace(/\\/g, "/"));
+  if (normalized !== expected) return "evidence_path must stay inside evidence/units";
+  return null;
+}
+
 async function readLatestUnitEvidence(root, unit) {
-  const evidencePath = unit.evidence_path ?? `evidence/units/${unit.id}.jsonl`;
+  const pathError = unitEvidencePathError(unit);
+  if (pathError) return { blocked: true, blocker: pathError, status: "blocked" };
+  const evidencePath = unit.evidence_path ?? expectedUnitEvidencePath(unit);
   const p = path.join(root, ".cursor/goal", evidencePath);
   if (!existsSync(p)) return null;
   const lines = (await readFile(p, "utf8"))
