@@ -69,7 +69,8 @@ async function main(): Promise<void> {
   }
 
   const wuPath = path.join(goalDir(root), "work-units.json");
-  const compileAllowed = session?.mode !== "chat" && config.default_mode !== "chat";
+  const compileAllowed =
+    session?.mode === "governed" || (!session && config.default_mode !== "chat");
   if (compileAllowed && existsSync(goalMd(root)) && !autoInitializedGoal) {
     try {
       if ((await isGoalStale(root)) || !existsSync(wuPath)) {

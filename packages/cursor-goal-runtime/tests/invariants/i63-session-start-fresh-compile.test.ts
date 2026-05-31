@@ -128,4 +128,50 @@ A
     expectHookOk(r);
     expect(existsSync(path.join(p.dir, ".cursor/goal/work-units.json"))).toBe(false);
   });
+
+  it("compiles when session mode is governed even if default mode is chat", async () => {
+    const p = await mkGitProject("i63-governed-session-overrides-chat-default");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      `## Goal
+x
+## Work units
+### mod-a
+A
+- \`pkg/a/\`
+## Checks
+- \`true\`
+`,
+      "utf8",
+    );
+    await mkdir(path.join(p.dir, ".cursor/goal"), { recursive: true });
+    await writeFile(
+      path.join(p.dir, ".cursor/goal/config.json"),
+      JSON.stringify({ default_mode: "chat" }),
+      "utf8",
+    );
+    await writeFile(
+      path.join(p.dir, ".cursor/goal/session-mode.json"),
+      JSON.stringify({
+        mode: "governed",
+        source: "cli",
+        updated_at: new Date().toISOString(),
+      }),
+      "utf8",
+    );
+
+    const hook = path.resolve(import.meta.dirname, "../../dist/hook-sessionStart.mjs");
+    const r = spawnSync("node", [hook], {
+      cwd: p.dir,
+      input: JSON.stringify({ conversation_id: "governed-agent" }),
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+    });
+
+    expectHookOk(r);
+    expect(existsSync(path.join(p.dir, ".cursor/goal/work-units.json"))).toBe(true);
+  });
 });
