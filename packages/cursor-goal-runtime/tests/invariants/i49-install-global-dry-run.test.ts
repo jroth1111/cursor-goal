@@ -57,4 +57,20 @@ describe("I49 install-global dry-run produces manifest and hooks merge", () => {
       false,
     );
   });
+
+  it("keeps the global e2e script rooted at CURSOR_HOME", async () => {
+    const script = path.resolve(
+      import.meta.dirname,
+      "../../../../scripts/e2e-global-cursor-agent.sh",
+    );
+    const contents = await readFile(script, "utf8");
+
+    expect(contents).toContain('CURSOR_HOME="${CURSOR_HOME:-$HOME/.cursor}"');
+    expect(contents).toContain('GLOBAL_HOOKS="${CURSOR_HOME}/hooks"');
+    expect(contents).toContain('ENV_FILE="${CURSOR_HOME}/cursor-goal.env"');
+    expect(contents).toContain('RUNTIME="${CURSOR_HOME}/cursor-goal-runtime"');
+    expect(contents).toContain('CURSOR_GOAL_SCHEMAS="${CURSOR_HOME}/goal/schemas"');
+    expect(contents).not.toContain('${HOME}/.cursor/hooks.json');
+    expect(contents).not.toContain('${HOME}/.cursor/goal/schemas');
+  });
 });

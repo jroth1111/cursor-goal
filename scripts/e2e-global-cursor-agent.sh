@@ -4,9 +4,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-GLOBAL_HOOKS="${HOME}/.cursor/hooks"
-ENV_FILE="${HOME}/.cursor/cursor-goal.env"
-RUNTIME="${HOME}/.cursor/cursor-goal-runtime"
+CURSOR_HOME="${CURSOR_HOME:-$HOME/.cursor}"
+GLOBAL_HOOKS="${CURSOR_HOME}/hooks"
+ENV_FILE="${CURSOR_HOME}/cursor-goal.env"
+RUNTIME="${CURSOR_HOME}/cursor-goal-runtime"
 CLI="${RUNTIME}/dist/cli.js"
 
 REPO_MAIN="/tmp/test_cursor_goal"
@@ -170,8 +171,8 @@ run_t01_t03() {
     fail T01 "$(head -3 "$REPORT_DIR/T01.log")"
   fi
 
-  if jq -e '.hooks.stop[]? | select(.command | contains("goal-stop"))' "${HOME}/.cursor/hooks.json" >/dev/null && \
-     ! jq -e '.hooks.hooks' "${HOME}/.cursor/hooks.json" >/dev/null 2>&1; then
+  if jq -e '.hooks.stop[]? | select(.command | contains("goal-stop"))' "${CURSOR_HOME}/hooks.json" >/dev/null && \
+     ! jq -e '.hooks.hooks' "${CURSOR_HOME}/hooks.json" >/dev/null 2>&1; then
     pass T02
   else
     fail T02 "hooks.json missing goal-stop or nested hooks.hooks"
@@ -289,8 +290,8 @@ A
 ## Checks
 - `true`
 EOF
-  if [[ -d "${HOME}/.cursor/goal/schemas" ]] && \
-     env CURSOR_PROJECT_DIR="$REPO_MAIN" CURSOR_GOAL_SCHEMAS="${HOME}/.cursor/goal/schemas" \
+  if [[ -d "${CURSOR_HOME}/goal/schemas" ]] && \
+     env CURSOR_PROJECT_DIR="$REPO_MAIN" CURSOR_GOAL_SCHEMAS="${CURSOR_HOME}/goal/schemas" \
        node "$CLI" compile >"$REPORT_DIR/T12.log" 2>&1 && \
      [[ -f "$REPO_MAIN/.cursor/goal/manifest.json" ]]; then
     pass T12
@@ -347,7 +348,7 @@ EOF
   [[ ! -f "$REPO_MAIN/.cursor/hooks/goal-stop.sh" ]] && \
     [[ -f "$REPO_MAIN/.cursor/goal/templates/GOAL.md" ]] && t16_ok=1
   bash "$SCRIPT_DIR/install-global.sh" --skip-build >>"$REPORT_DIR/T16.log" 2>&1
-  if [[ "$t16_ok" -eq 1 ]] && ! jq -e '.hooks.hooks' "${HOME}/.cursor/hooks.json" >/dev/null 2>&1; then
+  if [[ "$t16_ok" -eq 1 ]] && ! jq -e '.hooks.hooks' "${CURSOR_HOME}/hooks.json" >/dev/null 2>&1; then
     pass T16
   else
     fail T16 "install skip or hooks.json nested after reinstall"
