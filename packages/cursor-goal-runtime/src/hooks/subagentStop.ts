@@ -39,10 +39,6 @@ const wu = await readWorkUnits(root);
 if (wu && !unitId) {
   const byAgent = findUnitBySubagent(wu.units, subagentId);
   if (byAgent) unitId = byAgent.id;
-  if (!unitId) {
-    const inProgress = wu.units.find((u) => u.status === "in_progress");
-    if (inProgress) unitId = inProgress.id;
-  }
 }
 
 if (unitId) {
