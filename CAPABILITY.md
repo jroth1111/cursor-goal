@@ -161,6 +161,7 @@ Only claim what invariant tests prove.
 | I169 | subagentStop returns fail-open JSON when generated work-unit state is malformed | — | yes | — | i169-subagent-stop-malformed-work-units | tested |
 | I170 | Global install manifest records the installed template directory | yes | — | — | i170-install-manifest-templates | tested |
 | I171 | Supervisor refuses to launch while any per-agent disposition is active | — | — | yes | i171-supervisor-disposition-gate | tested |
+| I172 | Runtime and minimal hooks read loop_limit from legacy nested hooks.hooks configs | yes | yes | — | i172-nested-hooks-loop-limit | tested |
 | I90 | cursor-goal init seeds GOAL without compiling by default | — | yes | — | i90-init-no-compile | tested |
 | I91 | cursor-goal init --detect writes project-native checks | — | yes | — | i91-init-detect | tested |
 | I92 | Default unit acceptance requires evidence file not path existence | — | yes | — | i92-acceptance-defaults | tested |

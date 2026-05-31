@@ -141,8 +141,13 @@ export function readLoopLimitFromHooksJson(root: string): number | null {
   if (!existsSync(file)) return null;
   try {
     const raw = readFileSync(file, "utf8");
-    const cfg = JSON.parse(raw) as { hooks?: { stop?: Array<{ loop_limit?: number }> } };
-    const stop = cfg.hooks?.stop;
+    type HooksMap = { hooks?: HooksMap; stop?: Array<{ loop_limit?: number }> };
+    const cfg = JSON.parse(raw) as { hooks?: HooksMap };
+    let hooks = cfg.hooks;
+    for (let i = 0; i < 8 && hooks?.hooks; i += 1) {
+      hooks = hooks.hooks;
+    }
+    const stop = hooks?.stop;
     if (!stop?.length) return null;
     for (const h of stop) {
       if (typeof h.loop_limit === "number") return h.loop_limit;
