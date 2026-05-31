@@ -43,4 +43,35 @@ Unit
     expect(text).toMatch(/Adversarial verification/);
     expect(text).toMatch(/summary/);
   });
+
+  it("rejects explicit units without verified_by", async () => {
+    const p = await mkGitProject("i85-no-verified-by");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      `## Goal
+x
+
+## Work units
+
+### u1
+Unit
+- scope: \`src/\`
+
+## Checks
+- \`true\`
+`,
+      "utf8",
+    );
+    await compileGoalV2(p.dir);
+    const deliverable = path.join(p.dir, ".cursor/goal/outputs/u1/deliverable.md");
+    await mkdir(path.dirname(deliverable), { recursive: true });
+    await writeFile(deliverable, "summary\n", "utf8");
+
+    const text = await formatDispatchVerifyCli(p.dir, "u1");
+
+    expect(text).toMatch(/Unknown unit or unit has no verified_by: u1/);
+    expect(text).not.toMatch(/Adversarial verification/);
+  });
 });

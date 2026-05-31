@@ -35,6 +35,21 @@ export function buildVerificationPrompt(
   ].join("\n");
 }
 
+function hasVerifier(unit: WorkUnitCompiled | undefined): unit is WorkUnitCompiled {
+  return typeof unit?.verified_by === "string" && unit.verified_by.trim().length > 0;
+}
+
+function selectVerifiableUnit(
+  units: WorkUnitCompiled[],
+  unitId?: string,
+): WorkUnitCompiled | undefined {
+  if (unitId) {
+    const unit = findUnitById(units, unitId);
+    return hasVerifier(unit) ? unit : undefined;
+  }
+  return units.find((u) => hasVerifier(u) && u.status === "done") ?? units.find(hasVerifier);
+}
+
 export async function formatDispatchVerifyCli(
   root: string,
   unitId?: string,
@@ -42,10 +57,7 @@ export async function formatDispatchVerifyCli(
   const wu = await readWorkUnits(root);
   if (!wu?.units?.length) return "No work units — run cursor-goal compile";
 
-  const unit =
-    (unitId ? findUnitById(wu.units, unitId) : undefined) ??
-    wu.units.find((u) => u.verified_by && u.status === "done") ??
-    wu.units.find((u) => u.verified_by);
+  const unit = selectVerifiableUnit(wu.units, unitId);
 
   if (!unit) {
     return unitId
@@ -170,10 +182,7 @@ export async function runDispatchVerifySpawn(
   }
 
   const wu = await readWorkUnits(root);
-  const unit =
-    (options.unitId ? findUnitById(wu?.units ?? [], options.unitId) : undefined) ??
-    wu?.units?.find((u) => u.verified_by && u.status === "done") ??
-    wu?.units?.find((u) => u.verified_by);
+  const unit = selectVerifiableUnit(wu?.units ?? [], options.unitId);
   if (!unit) throw new Error("No unit with verified_by configured");
 
   const bin = resolveCursorAgentBin();
