@@ -3,8 +3,14 @@
   "hooks": {
     "sessionStart": [{ "command": "hooks/goal-session-start.sh" }],
     "beforeSubmitPrompt": [{ "command": "hooks/goal-prompt.sh" }],
-    "preToolUse": [{ "command": "hooks/goal-pre-tool.sh" }],
+    "preToolUse": [
+      {
+        "command": "hooks/goal-pre-tool.sh",
+        "matcher": "Write|Edit|MultiEdit|Read|Grep|Glob|Task|WebFetch|WebSearch|MCP:.*"
+      }
+    ],
     "beforeShellExecution": [{ "command": "hooks/goal-shell.sh" }],
+    "preCompact": [{ "command": "hooks/goal-pre-compact.sh" }],
     "postToolUse": [{ "command": "hooks/goal-post-tool.sh" }],
     "stop": [
       {

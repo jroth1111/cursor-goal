@@ -1,4 +1,5 @@
 import path from "node:path";
+import { existsSync, realpathSync } from "node:fs";
 import {
   cleanWorkUnitId,
   findUnitById,
@@ -12,10 +13,33 @@ function normalizePath(filePath: string): string {
   return path.posix.normalize(filePath.replace(/\\/g, "/"));
 }
 
+function canonicalAbsolutePath(filePath: string): string {
+  const resolved = path.resolve(filePath);
+  let cursor = resolved;
+  const suffix: string[] = [];
+  while (!existsSync(cursor)) {
+    const parent = path.dirname(cursor);
+    if (parent === cursor) return normalizePath(resolved);
+    suffix.unshift(path.basename(cursor));
+    cursor = parent;
+  }
+  try {
+    return normalizePath(path.join(realpathSync(cursor), ...suffix));
+  } catch {
+    return normalizePath(resolved);
+  }
+}
+
+function canonicalPath(filePath: string): string {
+  const normalized = normalizePath(filePath);
+  if (!path.isAbsolute(normalized)) return normalized;
+  return canonicalAbsolutePath(normalized);
+}
+
 function relativePathForScope(filePath: string, root?: string): string | null {
-  const norm = normalizePath(filePath);
+  const norm = canonicalPath(filePath);
   if (!root) return norm;
-  const rootNorm = normalizePath(path.resolve(root));
+  const rootNorm = canonicalAbsolutePath(root);
   if (path.posix.isAbsolute(norm)) {
     if (norm === rootNorm) return ".";
     if (norm.startsWith(`${rootNorm}/`)) return norm.slice(rootNorm.length + 1);

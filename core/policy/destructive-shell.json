@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "rules": [
+  {
+    "id": "drop_database",
+    "js": "\\bdrop\\s+database\\b",
+    "flags": "i"
+  },
+  {
+    "id": "force_git_push",
+    "js": "\\bgit\\b[\\s\\S]*\\bpush\\b",
+    "flags": "i",
+    "also_match": "(^|[\\s;&|])(-f\\b|--force([=\\s]|$)|--force-with-lease([=\\s]|$)|\\+[^\\s;&|]+)"
+  },
+  {
+    "id": "recursive_rm",
+    "js": "(^|[\\s;&|])rm([\\s;&|]|$)",
+    "flags": "i",
+    "also_match_any": [
+      "(^|[\\s;&|])-[a-z]*r[a-z]*f[a-z]*(?=$|[\\s;&|])",
+      "(^|[\\s;&|])-[a-z]*f[a-z]*r[a-z]*(?=$|[\\s;&|])",
+      "(^|[\\s;&|])(-[a-z]*r[a-z]*|--recursive)(?=$|[\\s;&|])[\\s\\S]*(^|[\\s;&|])(-[a-z]*f[a-z]*|--force)(?=$|[\\s;&|])",
+      "(^|[\\s;&|])(-[a-z]*f[a-z]*|--force)(?=$|[\\s;&|])[\\s\\S]*(^|[\\s;&|])(-[a-z]*r[a-z]*|--recursive)(?=$|[\\s;&|])"
+    ]
+  }
+  ],
+  "deny_fixtures": [
+    "rm -rf /tmp/x",
+    "rm -r -f /tmp/x",
+    "rm --recursive --force /tmp/x",
+    "git push -f origin main",
+    "git push --force-with-lease origin main",
+    "git push origin +main",
+    "DROP DATABASE prod"
+  ]
+}

@@ -26,7 +26,7 @@ describe("I140 install-global dry-run skips build", () => {
     fakeBin = path.join(os.tmpdir(), `i140-bin-${suffix}`);
     const repoRoot = path.resolve(import.meta.dirname, "../../../../");
 
-    await mkdir(path.join(fixtureRoot, "scripts"), { recursive: true });
+    await mkdir(path.join(fixtureRoot, "scripts/lib"), { recursive: true });
     await mkdir(path.join(fixtureRoot, "core/lib"), { recursive: true });
     await mkdir(path.join(fixtureRoot, "core/.cursor"), { recursive: true });
     await mkdir(path.join(fixtureRoot, "packages/cursor-goal-runtime"), { recursive: true });
@@ -34,6 +34,10 @@ describe("I140 install-global dry-run skips build", () => {
     await cp(
       path.join(repoRoot, "scripts/install-global.sh"),
       path.join(fixtureRoot, "scripts/install-global.sh"),
+    );
+    await cp(
+      path.join(repoRoot, "scripts/lib/global-cli-flags.sh"),
+      path.join(fixtureRoot, "scripts/lib/global-cli-flags.sh"),
     );
     await cp(
       path.join(repoRoot, "core/lib/merge-hooks-json.sh"),

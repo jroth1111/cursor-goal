@@ -224,8 +224,7 @@ Unit A
     });
     expect(write.stdout.permission).toBe("allow");
 
-    const shell = execCoreHookWithMinimalEnv(p.dir, "preToolUse", {
-      tool_name: "Shell",
+    const shell = execCoreHookWithMinimalEnv(p.dir, "beforeShellExecution", {
       command: "rm -rf /tmp/cursor-goal-nope",
     });
     expect(shell.stdout.permission).toBe("deny");

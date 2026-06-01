@@ -20,10 +20,11 @@ describe("I80 triage log", () => {
     const prompt = "implement auth middleware until tests pass";
     const classification = classifyPrompt(prompt);
     expect(classification.deliveryScore).toBeGreaterThan(0);
-    await appendTriageLog(p.dir, prompt, "nudge", "conv-80");
+    await appendTriageLog(p.dir, prompt, "nudge", "conv-80", ["extra"]);
     const entry = await readLastTriageEntry(p.dir, "conv-80");
     expect(entry?.agent_id).toBe("conv-80");
     expect(entry?.mode).toBe("nudge");
+    expect(entry?.reasons ?? []).toContain("extra");
     expect(entry?.prompt_hash).toMatch(/^[a-f0-9]{16}$/);
   });
 

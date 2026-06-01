@@ -2,13 +2,14 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { requireFreshCompile } from "../lib/compile-stale.js";
 import { resolveAgentId } from "../lib/runtime-state.js";
-import { hasAgentDisposition, isAgentSubmitBlocked } from "../lib/disposition.js";
+import { hasAgentDisposition, isAgentSubmitBlocked, sessionEndMarkerPath } from "../lib/disposition.js";
 import { goalDir, goalMd, projectRoot } from "../lib/paths.js";
 import { hookJson } from "../lib/verify.js";
 import { readStdinJson } from "../lib/stdin.js";
 import { nudgeMessage, resolveEffectiveMode, appendTriageLog } from "../lib/prompt-triage.js";
 import { isStrictGovernance } from "../lib/strict-mode.js";
 import { resolveRuntimeRoot } from "../lib/resolve-runtime.js";
+import { isGovernedPromptBlock } from "../lib/governance-config.js";
 
 async function main(): Promise<void> {
   const root = projectRoot();
@@ -21,6 +22,12 @@ async function main(): Promise<void> {
     notes.push("Goal paused (.cursor/goal/PAUSED); stop verification is idle until cursor-goal resume");
   }
 
+  if (existsSync(sessionEndMarkerPath(root))) {
+    notes.push(
+      "SESSION_END present — resume: cursor-goal explain session-end && cursor-goal session-end clear --force && cursor-goal next",
+    );
+  }
+
   let resolved: Awaited<ReturnType<typeof resolveEffectiveMode>>;
   try {
     resolved = await resolveEffectiveMode(root, prompt, input.conversation_id);
@@ -31,7 +38,13 @@ async function main(): Promise<void> {
     return;
   }
 
-  await appendTriageLog(root, prompt, resolved.mode, input.conversation_id).catch(() => undefined);
+  await appendTriageLog(
+    root,
+    prompt,
+    resolved.mode,
+    input.conversation_id,
+    resolved.triageReasons,
+  ).catch(() => undefined);
 
   if (resolved.mode === "chat") {
     hookJson(notes.length ? { continue: true, agent_message: notes.join("; ") } : { continue: true });
@@ -56,8 +69,15 @@ async function main(): Promise<void> {
     return;
   }
 
+  const promptBlock = await isGovernedPromptBlock(root);
+
   if (!existsSync(goalMd(root))) {
-    notes.push("Create GOAL.md before a governed run: cursor-goal init");
+    const msg = "Create GOAL.md before a governed run: cursor-goal init";
+    if (promptBlock) {
+      hookJson({ continue: false, agent_message: notes.length ? `${notes.join("; ")}; ${msg}` : msg });
+      return;
+    }
+    notes.push(msg);
     hookJson({ continue: true, agent_message: notes.join("; ") });
     return;
   }
@@ -67,11 +87,17 @@ async function main(): Promise<void> {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     const compileUnavailable = /Cannot find module|ERR_MODULE_NOT_FOUND|MODULE_NOT_FOUND/i.test(msg);
-    notes.push(
-      compileUnavailable
-        ? `${msg}. Compile runtime unavailable; normal work may continue, but release requires a working runtime/checks.`
-        : `${msg}. Fix GOAL.md and run: cursor-goal compile`,
-    );
+    const compileNote = compileUnavailable
+      ? `${msg}. Compile runtime unavailable; normal work may continue, but release requires a working runtime/checks.`
+      : `${msg}. Fix GOAL.md and run: cursor-goal compile`;
+    if (promptBlock && !compileUnavailable) {
+      hookJson({
+        continue: false,
+        agent_message: notes.length ? `${notes.join("; ")}; ${compileNote}` : compileNote,
+      });
+      return;
+    }
+    notes.push(compileNote);
   }
 
   try {

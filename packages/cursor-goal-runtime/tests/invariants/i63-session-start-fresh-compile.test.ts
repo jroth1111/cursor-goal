@@ -129,6 +129,38 @@ A
     expect(existsSync(path.join(p.dir, ".cursor/goal/work-units.json"))).toBe(false);
   });
 
+  it("surfaces SESSION_END with a resume hint", async () => {
+    const p = await mkGitProject("i63-session-end-hint");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      "## Goal\nx\n## Checks\n- `true`\n",
+      "utf8",
+    );
+    await compileGoalV2(p.dir);
+    await writeFile(
+      path.join(p.dir, ".cursor/goal/passports/SESSION_END.json"),
+      JSON.stringify({ status: "SESSION_END", reason: "session_end_without_release" }, null, 2),
+      "utf8",
+    );
+
+    const hook = path.resolve(import.meta.dirname, "../../dist/hook-sessionStart.mjs");
+    const r = spawnSync("node", [hook], {
+      cwd: p.dir,
+      input: JSON.stringify({ conversation_id: "agent-a" }),
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+    });
+
+    expectHookOk(r);
+    const out = JSON.parse((r.stdout || "{}").trim()) as { agent_message?: string };
+    expect(String(out.agent_message ?? "")).toMatch(/session ended without release|without RELEASE|SESSION_END/i);
+    expect(String(out.agent_message ?? "")).toMatch(/cursor-goal explain/i);
+    expect(String(out.agent_message ?? "")).toMatch(/cursor-goal next/i);
+  });
+
   it("compiles when session mode is governed even if default mode is chat", async () => {
     const p = await mkGitProject("i63-governed-session-overrides-chat-default");
     cleanup = p.cleanup;

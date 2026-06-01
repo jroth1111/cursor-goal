@@ -3,7 +3,7 @@ import path from "node:path";
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { readGovernanceConfig, readSessionMode, type GovernanceMode } from "./governance-config.js";
 import { goalDir, goalMd, readJson } from "./paths.js";
-import { isAgentSubmitBlocked } from "./disposition.js";
+import { isAgentSubmitBlocked, sessionEndMarkerPath } from "./disposition.js";
 import { resolveAgentId } from "./runtime-state.js";
 import { hashPrompt } from "./explain-stop.js";
 
@@ -99,6 +99,7 @@ export async function isBlockedRuntime(
 export type ResolveModeResult = {
   mode: EffectiveMode;
   nudgeKind?: "delivery" | "coverage";
+  triageReasons?: string[];
 };
 
 export async function resolveEffectiveMode(
@@ -111,6 +112,28 @@ export async function resolveEffectiveMode(
   const classified = classifyPrompt(prompt);
   const agentId = resolveAgentId(conversationId);
   const blocked = await isBlockedRuntime(root, agentId);
+
+  // Universal future-proofing:
+  // If the repo has a `SESSION_END.json`, the previous governed session ended
+  // without a RELEASE passport. Default to governed mode so the next chat
+  // resumes governance instead of silently falling back to chat mode.
+  if (existsSync(sessionEndMarkerPath(root))) {
+    // Allow explicit opt-out via read-only/no-goal wording.
+    if (classified.reasons.includes("read-only-opt-out") || classified.reasons.includes("opt-out")) {
+      return { mode: "chat" };
+    }
+    if (classified.reasons.includes("empty")) {
+      return { mode: "chat" };
+    }
+
+    // Only force governed if the repo is actually governed (prevents stale SESSION_END from
+    // unexpectedly turning ordinary Q&A into governance in repos without a GOAL contract).
+    const diag = await readJson<{ had_governed_contract?: boolean }>(sessionEndMarkerPath(root)).catch(() => null);
+    const governed = (diag?.had_governed_contract ?? null) === true || (await hasGovernedContract(root));
+    if (governed) {
+      return { mode: "governed", triageReasons: ["session_end_present"] };
+    }
+  }
 
   if (session?.mode === "chat") {
     if (blocked) {
@@ -128,11 +151,11 @@ export async function resolveEffectiveMode(
   }
 
   if (blocked) {
-    return { mode: "governed" };
+    return { mode: "governed", triageReasons: ["blocked_runtime"] };
   }
 
   if (classified.forceGoverned) {
-    return { mode: "governed" };
+    return { mode: "governed", triageReasons: ["explicit_governed"] };
   }
 
   if (config.default_mode === "chat") {
@@ -140,7 +163,7 @@ export async function resolveEffectiveMode(
   }
 
   if (await hasGovernedContract(root)) {
-    return { mode: "governed" };
+    return { mode: "governed", triageReasons: ["governed_contract_present"] };
   }
 
   if (classified.reasons.includes("read-only-opt-out") || classified.reasons.includes("opt-out")) {
@@ -204,14 +227,18 @@ export async function appendTriageLog(
   prompt: string,
   mode: EffectiveMode,
   conversationId?: string,
+  extraReasons?: string[],
 ): Promise<void> {
   const classification = classifyPrompt(prompt);
+  const reasons = extraReasons?.length
+    ? [...new Set([...classification.reasons, ...extraReasons])]
+    : classification.reasons;
   const entry: TriageLogEntry = {
     at: new Date().toISOString(),
     agent_id: resolveAgentId(conversationId),
     mode,
     classification,
-    reasons: classification.reasons,
+    reasons,
     prompt_hash: hashPrompt(prompt),
   };
   const file = triageLogPath(root);

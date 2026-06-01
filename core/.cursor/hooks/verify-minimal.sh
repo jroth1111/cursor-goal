@@ -12,8 +12,45 @@ INPUT="$(cat)"
 STATUS="$(echo "$INPUT" | jq -r '.status // "unknown"')"
 CURSOR_LOOP="$(echo "$INPUT" | jq -r '.loop_count // 0')"
 CONV_ID="$(echo "$INPUT" | jq -r '.conversation_id // "default"')"
-ROOT="${CURSOR_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+STOP_HOOK_ACTIVE="$(echo "$INPUT" | jq -r '.stop_hook_active // false')"
+
+realpath_dir() {
+  local p="$1"
+  if [[ -d "$p" ]]; then
+    (cd "$p" && pwd -P)
+  else
+    printf '%s\n' "$p"
+  fi
+}
+
+hook_install_root() {
+  realpath_dir "${CURSOR_HOME:-${HOME}/.cursor}/hooks"
+}
+
+resolve_root() {
+  local root
+  if [[ -n "${CURSOR_PROJECT_DIR:-}" ]]; then
+    realpath_dir "$CURSOR_PROJECT_DIR"
+    return
+  fi
+  root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  root="$(realpath_dir "$root")"
+  local hooks
+  hooks="$(hook_install_root)"
+  if [[ "$root" == "$hooks" || "$root" == "$hooks/"* ]]; then
+    return 2
+  fi
+  printf '%s\n' "$root"
+}
+
+if ! ROOT="$(resolve_root)"; then
+  echo '{"followup_message":"cursor-goal: CURSOR_PROJECT_DIR missing; refusing to use global hooks directory as project root."}'
+  exit 0
+fi
 cd "$ROOT"
+
+# shellcheck source=/dev/null
+source "$(dirname "$0")/_cgr-lib.sh"
 
 GOAL_DIR=".cursor/goal"
 PASSPORTS="$GOAL_DIR/passports"
@@ -26,25 +63,6 @@ AGENT_DIR="$GOAL_DIR/agents/$AGENT_ID"
 AGENT_STATE="$AGENT_DIR/runtime-state.json"
 mkdir -p "$PASSPORTS" "$GOAL_DIR/evidence" "$AGENT_DIR"
 
-destructive_shell() {
-  local cmd="$1"
-  if command -v perl >/dev/null 2>&1; then
-    printf '%s' "$cmd" | perl -0777 -ne '
-      exit 0 if /\bdrop\s+database\b/i;
-      if (/\bgit\b[\s\S]*\bpush\b/i &&
-          /(?:^|[\s;&|])(?:-f\b|--force(?:[=\s]|$)|--force-with-lease(?:[=\s]|$)|\+[^\s;&|]+)/i) { exit 0; }
-      if (/(?:^|[\s;&|])rm(?:[\s;&|]|$)/i &&
-          (/(?:^|[\s;&|])-[a-z]*r[a-z]*f[a-z]*(?=$|[\s;&|])/i ||
-           /(?:^|[\s;&|])-[a-z]*f[a-z]*r[a-z]*(?=$|[\s;&|])/i ||
-           /(?:^|[\s;&|])(?:-[a-z]*r[a-z]*|--recursive)(?=$|[\s;&|])[\s\S]*(?:^|[\s;&|])(?:-[a-z]*f[a-z]*|--force)(?=$|[\s;&|])/i ||
-           /(?:^|[\s;&|])(?:-[a-z]*f[a-z]*|--force)(?=$|[\s;&|])[\s\S]*(?:^|[\s;&|])(?:-[a-z]*r[a-z]*|--recursive)(?=$|[\s;&|])/i)) { exit 0; }
-      exit 1;
-    '
-    return $?
-  fi
-  printf '%s' "$cmd" | grep -qiE '\bdrop[[:space:]]+database\b|\bgit\b.*\bpush\b.*(--force([=[:space:]]|$)|--force-with-lease([=[:space:]]|$)|(^|[[:space:]])-f([[:space:]]|$)|(^|[[:space:];&|])\+[^[:space:];&|]+)|\brm\b.*(-[[:alpha:]]*r[[:alpha:]]*f|-[[:alpha:]]*f[[:alpha:]]*r|--recursive.*--force|--force.*--recursive)'
-}
-
 if [[ -f "$GOAL_DIR/PAUSED" ]]; then
   echo '{}'
   exit 0
@@ -55,15 +73,7 @@ if [[ "$STATUS" != "completed" ]]; then
   exit 0
 fi
 
-LOOP_LIMIT=40
-if [[ -f "$ROOT/.cursor/hooks.json" ]]; then
-  HL="$(jq -r '
-    def flatten_hooks:
-      if (.hooks.hooks? | type) == "object" then .hooks | flatten_hooks else . end;
-    flatten_hooks | .hooks.stop[]? | select(.loop_limit != null) | .loop_limit
-  ' "$ROOT/.cursor/hooks.json" 2>/dev/null | head -1)"
-  [[ -n "$HL" && "$HL" != "null" ]] && LOOP_LIMIT="$HL"
-fi
+LOOP_LIMIT="$(cgr_read_loop_limit "$ROOT")"
 if [[ -f "$GOAL_DIR/manifest.json" ]]; then
   ML="$(jq -r '.loop_limit // empty' "$GOAL_DIR/manifest.json")"
   [[ -n "$ML" ]] && LOOP_LIMIT="$ML"
@@ -495,6 +505,11 @@ $LOOP_LINE
 
 Human review required. See .cursor/goal/agents/$AGENT_ID/DISPOSITION.md"
   jq -n --arg m "$DISP_MSG" '{followup_message:$m}'
+  exit 0
+fi
+
+if [[ "$STOP_HOOK_ACTIVE" == "true" ]]; then
+  echo '{}'
   exit 0
 fi
 

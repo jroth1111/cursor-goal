@@ -12,6 +12,7 @@ const hooks = [
   "postToolUse",
   "subagentStop",
   "sessionEnd",
+  "preCompact",
 ];
 
 await mkdir(path.join(root, "dist"), { recursive: true });

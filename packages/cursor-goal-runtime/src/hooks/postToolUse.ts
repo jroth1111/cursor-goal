@@ -1,10 +1,12 @@
-import { appendFile, mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { appendFile, mkdir, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ensureGoalDirs, goalDir, projectRoot } from "../lib/paths.js";
 import { markEdit, gitTreeId } from "../lib/git-state.js";
 import { hookJson } from "../lib/verify.js";
 import { readStdinJson } from "../lib/stdin.js";
 import { structuredWorkUnitId } from "../lib/work-units.js";
+import { resolveAgentId, readAgentHandoffRead } from "../lib/runtime-state.js";
 
 async function main(): Promise<void> {
   const input = await readStdinJson<{
@@ -46,6 +48,27 @@ async function main(): Promise<void> {
     const unitsDir = path.join(goalDir(root), "evidence", "units");
     await mkdir(unitsDir, { recursive: true });
     await appendFile(path.join(unitsDir, `${workUnitId}.jsonl`), line + "\n", "utf8");
+  }
+
+  const agentId = resolveAgentId(input);
+  const handoffFlag = path.join(goalDir(root), ".post-tool-handoff-nudge");
+  try {
+    const handoff = await readAgentHandoffRead(root, agentId);
+    const blocked = handoff.submitBlocked || handoff.handoff?.blocked === true;
+    if (blocked && handoff.handoff?.next_action) {
+      const shouldNudge = !existsSync(handoffFlag);
+      if (shouldNudge) {
+        await writeFile(handoffFlag, new Date().toISOString(), "utf8");
+        hookJson({
+          additional_context: `cursor-goal blocked: ${String(handoff.handoff.next_action).slice(0, 500)}`,
+        });
+        return;
+      }
+    } else if (existsSync(handoffFlag)) {
+      await unlink(handoffFlag).catch(() => undefined);
+    }
+  } catch {
+    /* fail-open */
   }
 
   hookJson({});

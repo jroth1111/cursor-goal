@@ -8,7 +8,6 @@ import {
   markUnitInProgress,
   pathTouchesGoalGovernance,
 } from "../lib/work-units.js";
-import { checkShellGate } from "../lib/shell-allow.js";
 import { isToolGovernancePassthrough } from "../lib/governance-active.js";
 import { resolveAgentId } from "../lib/runtime-state.js";
 import {
@@ -36,14 +35,7 @@ const filePath =
   (input.tool_input?.file_path as string) ??
   "";
 
-if (tool === "Shell" || tool === "Bash") {
-  const cmd = String(input.command ?? input.tool_input?.command ?? "");
-  const gate = await checkShellGate(cmd, root);
-  if (!gate.allowed) {
-    hookJson({ permission: "deny", agent_message: gate.reason });
-    process.exit(0);
-  }
-}
+// Shell destructive gates run only on beforeShellExecution (see hooks.json matcher).
 
 // Subagent isolation is a safety gate, not governance ceremony. Keep it active
 // even when chat passthrough would otherwise allow tools.

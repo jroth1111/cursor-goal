@@ -7,6 +7,8 @@ export type SessionMode = "chat" | "governed";
 
 export type GovernanceConfig = {
   default_mode: GovernanceMode;
+  /** When true, governed beforeSubmitPrompt blocks missing GOAL / stale compile (I200). */
+  governed_prompt_block?: boolean;
 };
 
 export type SessionModeFile = {
@@ -42,9 +44,12 @@ export async function readGovernanceConfig(root?: string): Promise<GovernanceCon
   const file = configPath(root);
   if (!existsSync(file)) return { ...DEFAULT_CONFIG };
 
-  const raw = await readJson<{ default_mode?: unknown }>(file);
+  const raw = await readJson<{ default_mode?: unknown; governed_prompt_block?: unknown }>(file);
   const mode = parseMode(raw?.default_mode);
-  return { default_mode: mode ?? DEFAULT_CONFIG.default_mode };
+  return {
+    default_mode: mode ?? DEFAULT_CONFIG.default_mode,
+    ...(raw?.governed_prompt_block === true ? { governed_prompt_block: true } : {}),
+  };
 }
 
 export async function writeGovernanceConfig(
@@ -70,6 +75,13 @@ export async function writeSessionMode(
     source,
     updated_at: new Date().toISOString(),
   });
+}
+
+export async function isGovernedPromptBlock(root?: string): Promise<boolean> {
+  const env = process.env.CURSOR_GOAL_GOVERNED_PROMPT_BLOCK?.trim();
+  if (env === "1" || env === "true" || env === "yes") return true;
+  const config = await readGovernanceConfig(root);
+  return config.governed_prompt_block === true;
 }
 
 export async function clearSessionMode(root?: string): Promise<void> {

@@ -1,6 +1,6 @@
 import path from "node:path";
 import { goalDir, projectRoot, readJson } from "./paths.js";
-import { readLoopLimitFromHooksJson } from "./git-state.js";
+import { readLoopLimitFromGlobalHooksJson, readLoopLimitFromHooksJson } from "./git-state.js";
 
 const DEFAULT_LOOP_LIMIT = 40;
 
@@ -9,11 +9,16 @@ function validLoopLimit(value: unknown): number | null {
 }
 
 export async function readLoopLimit(root = projectRoot()): Promise<number> {
-  const fromHooks = readLoopLimitFromHooksJson(root);
+  const fromProjectHooks = readLoopLimitFromHooksJson(root);
+  if (fromProjectHooks !== null) return fromProjectHooks;
   const manifest = await readJson<{ loop_limit?: unknown }>(
     path.join(goalDir(root), "manifest.json"),
   ).catch(() => null);
-  return fromHooks ?? validLoopLimit(manifest?.loop_limit) ?? DEFAULT_LOOP_LIMIT;
+  const fromManifest = validLoopLimit(manifest?.loop_limit);
+  if (fromManifest !== null) return fromManifest;
+  const fromGlobalHooks = readLoopLimitFromGlobalHooksJson();
+  if (fromGlobalHooks !== null) return fromGlobalHooks;
+  return DEFAULT_LOOP_LIMIT;
 }
 
 export async function syncLoopLimitToManifest(root = projectRoot()): Promise<number> {

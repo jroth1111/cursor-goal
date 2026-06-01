@@ -1,4 +1,5 @@
 import path from "node:path";
+import { existsSync, realpathSync } from "node:fs";
 import { goalDir, readJson } from "./paths.js";
 import { parseGoalMd } from "./parse-goal-md.js";
 
@@ -10,10 +11,33 @@ function normalizePath(filePath: string): string {
   return filePath.replace(/\\/g, "/");
 }
 
+function canonicalAbsolutePath(filePath: string): string {
+  const resolved = path.resolve(filePath);
+  let cursor = resolved;
+  const suffix: string[] = [];
+  while (!existsSync(cursor)) {
+    const parent = path.dirname(cursor);
+    if (parent === cursor) return normalizePath(resolved);
+    suffix.unshift(path.basename(cursor));
+    cursor = parent;
+  }
+  try {
+    return normalizePath(path.join(realpathSync(cursor), ...suffix));
+  } catch {
+    return normalizePath(resolved);
+  }
+}
+
+function canonicalScopePath(filePath: string): string {
+  const normalized = normalizePath(filePath);
+  if (!path.isAbsolute(normalized)) return path.posix.normalize(normalized);
+  return canonicalAbsolutePath(normalized);
+}
+
 function relativePathForScope(filePath: string, root?: string): string {
-  const norm = normalizePath(filePath);
+  const norm = canonicalScopePath(filePath);
   if (!root) return norm;
-  const rootNorm = normalizePath(path.resolve(root));
+  const rootNorm = canonicalAbsolutePath(root);
   if (norm === rootNorm) return ".";
   if (norm.startsWith(`${rootNorm}/`)) return norm.slice(rootNorm.length + 1);
   return norm;

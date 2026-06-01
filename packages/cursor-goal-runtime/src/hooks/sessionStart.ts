@@ -9,7 +9,7 @@ import {
   type GovernanceConfig,
   type SessionModeFile,
 } from "../lib/governance-config.js";
-import { hasAgentDisposition, isAgentSubmitBlocked } from "../lib/disposition.js";
+import { hasAgentDisposition, isAgentSubmitBlocked, sessionEndMarkerPath } from "../lib/disposition.js";
 import { resolveAgentId } from "../lib/runtime-state.js";
 import { readRepoBlockedStopTotal } from "../lib/goal-loop.js";
 import { ensureGoalDirs, goalDir, goalMd, projectRoot } from "../lib/paths.js";
@@ -38,6 +38,10 @@ async function main(): Promise<void> {
   const agentId = resolveAgentId(sessionInput);
   const root = projectRoot();
   await ensureGoalDirs(root);
+
+  const runtimeMissingWarn = path.join(goalDir(root), ".warned-runtime-missing");
+  const { unlink } = await import("node:fs/promises");
+  await unlink(runtimeMissingWarn).catch(() => undefined);
 
   let config: GovernanceConfig = { default_mode: "auto" };
   let session: SessionModeFile | null = null;
@@ -132,6 +136,10 @@ async function main(): Promise<void> {
     }
   } catch {
     brief += "; runtime state unreadable - continuing fail-open";
+  }
+
+  if (existsSync(sessionEndMarkerPath(root))) {
+    brief += "; prior session ended without RELEASE — run: cursor-goal explain && cursor-goal next";
   }
 
   if (

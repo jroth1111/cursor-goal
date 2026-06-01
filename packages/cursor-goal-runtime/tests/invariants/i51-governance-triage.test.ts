@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { writeFile } from "node:fs/promises";
+import { writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -118,6 +118,57 @@ describe("I51 governance triage", () => {
     const out = JSON.parse((r.stdout ?? "{}").trim());
     expect(out.continue).toBe(true);
     expect(String(out.agent_message ?? "")).toMatch(/blocker|blocked/i);
+  });
+
+  it("SESSION_END forces governed triage for the next prompt", async () => {
+    const p = await mkGitProject("i51-session-end-governed");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      "## Goal\nx\n## Checks\n- `true`\n## Scope\n- `src/`\n",
+      "utf8",
+    );
+    await compileGoalV2(p.dir);
+    await writeSessionMode(p.dir, "chat", "cli");
+
+    await writeFile(
+      path.join(p.dir, ".cursor", "goal", "passports", "SESSION_END.json"),
+      JSON.stringify({ status: "SESSION_END", reason: "session_end_without_release" }, null, 2),
+      "utf8",
+    );
+
+    const r = runBeforeSubmit(p, "How does this work?");
+    expect(r.status).toBe(0);
+
+    const triagePath = path.join(p.dir, ".cursor", "goal", "triage-log.jsonl");
+    const raw = await readFile(triagePath, "utf8");
+    const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const last = JSON.parse(lines[lines.length - 1]!) as { mode?: string };
+    expect(last.mode).toBe("governed");
+  });
+
+  it("SESSION_END does not force governed without a governed contract", async () => {
+    const p = await mkGitProject("i51-session-end-no-contract");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+
+    await writeSessionMode(p.dir, "chat", "cli");
+    await writeFile(
+      path.join(p.dir, ".cursor", "goal", "passports", "SESSION_END.json"),
+      JSON.stringify({ status: "SESSION_END", reason: "session_end_without_release", had_governed_contract: false }, null, 2),
+      "utf8",
+    );
+
+    const r = runBeforeSubmit(p, "How does this work?");
+    expect(r.status).toBe(0);
+
+    const triagePath = path.join(p.dir, ".cursor", "goal", "triage-log.jsonl");
+    const raw = await readFile(triagePath, "utf8");
+    const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+    const last = JSON.parse(lines[lines.length - 1]!) as { mode?: string };
+    expect(last.mode).toBe("chat");
   });
 
   it("stop is idle when governance inactive and no GOAL", async () => {

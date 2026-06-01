@@ -31,6 +31,7 @@ export function execCoreHook(
       postToolUse: "goal-post-tool.sh",
       subagentStop: "goal-subagent-stop.sh",
       sessionEnd: "goal-session-end.sh",
+      preCompact: "goal-pre-compact.sh",
     };
     script = path.join(hooksDir, map[step] ?? "goal-stop.sh");
   }

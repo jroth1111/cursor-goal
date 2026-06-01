@@ -27,11 +27,10 @@ describe("I23 shell permissiveness", { timeout: 30_000 }, () => {
       "utf8",
     );
     await compileGoalV2(p.dir);
-    const hook = path.resolve(import.meta.dirname, "../../dist/hook-preToolUse.mjs");
+    const hook = path.resolve(import.meta.dirname, "../../dist/hook-beforeShellExecution.mjs");
     const r = spawnSync("node", [hook], {
       cwd: p.dir,
       input: JSON.stringify({
-        tool_name: "Shell",
         command: "npm test -- --run",
       }),
       encoding: "utf8",
@@ -57,13 +56,6 @@ describe("I23 shell permissiveness", { timeout: 30_000 }, () => {
     ]) {
       expect(shellCommandAllowed(command), command).toBe(false);
       expect((await checkShellGate(command, p.dir)).allowed, command).toBe(false);
-      expect(
-        execCoreHook(p.dir, "preToolUse", {
-          tool_name: "Shell",
-          tool_input: { command },
-        }).stdout.permission,
-        command,
-      ).toBe("deny");
       expect(
         execCoreHook(p.dir, "beforeShellExecution", { command }).stdout.permission,
         command,

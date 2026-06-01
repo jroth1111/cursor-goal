@@ -2,33 +2,102 @@
 # Minimal non-stop hooks — passthrough unless obvious block
 set -euo pipefail
 
+_lib="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=/dev/null
+source "$_lib/_cgr-lib.sh"
+
 STEP="${1:-}"
 INPUT="$(cat)"
-ROOT="${CURSOR_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+
+realpath_dir() {
+  local p="$1"
+  if [[ -d "$p" ]]; then
+    (cd "$p" && pwd -P)
+  else
+    printf '%s\n' "$p"
+  fi
+}
+
+hook_install_root() {
+  realpath_dir "${CURSOR_HOME:-${HOME}/.cursor}/hooks"
+}
+
+resolve_root() {
+  local root
+  if [[ -n "${CURSOR_PROJECT_DIR:-}" ]]; then
+    realpath_dir "$CURSOR_PROJECT_DIR"
+    return
+  fi
+  root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  root="$(realpath_dir "$root")"
+  local hooks
+  hooks="$(hook_install_root)"
+  if [[ "$root" == "$hooks" || "$root" == "$hooks/"* ]]; then
+    return 2
+  fi
+  printf '%s\n' "$root"
+}
+
+root_resolution_response() {
+  local msg="CURSOR_PROJECT_DIR missing; refusing to use global hooks directory as project root."
+  case "$STEP" in
+    stop)
+      printf '{"followup_message":"cursor-goal: %s"}\n' "$msg"
+      ;;
+    beforeSubmitPrompt)
+      printf '{"continue":true,"agent_message":"cursor-goal: %s"}\n' "$msg"
+      ;;
+    preToolUse|beforeShellExecution)
+      printf '{"permission":"allow","agent_message":"cursor-goal: %s"}\n' "$msg"
+      ;;
+    sessionStart)
+      printf '{"continue":true,"agent_message":"cursor-goal: %s"}\n' "$msg"
+      ;;
+    *)
+      printf '{"agent_message":"cursor-goal: %s"}\n' "$msg"
+      ;;
+  esac
+}
+
+if ! ROOT="$(resolve_root)"; then
+  root_resolution_response
+  exit 0
+fi
 GOAL_DIR="$ROOT/.cursor/goal"
 mkdir -p "$GOAL_DIR/passports" "$GOAL_DIR/evidence"
 
-destructive_shell() {
-  local cmd="$1"
-  if command -v perl >/dev/null 2>&1; then
-    printf '%s' "$cmd" | perl -0777 -ne '
-      exit 0 if /\bdrop\s+database\b/i;
-      if (/\bgit\b[\s\S]*\bpush\b/i &&
-          /(?:^|[\s;&|])(?:-f\b|--force(?:[=\s]|$)|--force-with-lease(?:[=\s]|$)|\+[^\s;&|]+)/i) { exit 0; }
-      if (/(?:^|[\s;&|])rm(?:[\s;&|]|$)/i &&
-          (/(?:^|[\s;&|])-[a-z]*r[a-z]*f[a-z]*(?=$|[\s;&|])/i ||
-           /(?:^|[\s;&|])-[a-z]*f[a-z]*r[a-z]*(?=$|[\s;&|])/i ||
-           /(?:^|[\s;&|])(?:-[a-z]*r[a-z]*|--recursive)(?=$|[\s;&|])[\s\S]*(?:^|[\s;&|])(?:-[a-z]*f[a-z]*|--force)(?=$|[\s;&|])/i ||
-           /(?:^|[\s;&|])(?:-[a-z]*f[a-z]*|--force)(?=$|[\s;&|])[\s\S]*(?:^|[\s;&|])(?:-[a-z]*r[a-z]*|--recursive)(?=$|[\s;&|])/i)) { exit 0; }
-      exit 1;
-    '
-    return $?
-  fi
-  printf '%s' "$cmd" | grep -qiE '\bdrop[[:space:]]+database\b|\bgit\b.*\bpush\b.*(--force([=[:space:]]|$)|--force-with-lease([=[:space:]]|$)|(^|[[:space:]])-f([[:space:]]|$)|(^|[[:space:];&|])\+[^[:space:];&|]+)|\brm\b.*(-[[:alpha:]]*r[[:alpha:]]*f|-[[:alpha:]]*f[[:alpha:]]*r|--recursive.*--force|--force.*--recursive)'
-}
-
 normalize_file_path() {
   local f="${1//\\//}"
+  if command -v node >/dev/null 2>&1; then
+    node -e '
+const fs = require("node:fs");
+const path = require("node:path");
+const raw = process.argv[1] || "";
+const slash = raw.replace(/\\/g, "/");
+if (!path.isAbsolute(slash)) {
+  process.stdout.write(path.posix.normalize(slash));
+  process.exit(0);
+}
+const resolved = path.resolve(slash);
+let cursor = resolved;
+const suffix = [];
+while (!fs.existsSync(cursor)) {
+  const parent = path.dirname(cursor);
+  if (parent === cursor) {
+    process.stdout.write(resolved.replace(/\\/g, "/"));
+    process.exit(0);
+  }
+  suffix.unshift(path.basename(cursor));
+  cursor = parent;
+}
+try {
+  process.stdout.write(path.join(fs.realpathSync(cursor), ...suffix).replace(/\\/g, "/"));
+} catch {
+  process.stdout.write(resolved.replace(/\\/g, "/"));
+}
+' "$f" 2>/dev/null || printf '%s' "$f"
+    return 0
+  fi
   jq -nr --arg p "$f" '
     def norm($path):
       ($path | gsub("/+"; "/")) as $compact |
@@ -88,21 +157,40 @@ unit_evidence_path() {
   [[ -n "$id" && "$f" =~ (^|/)\.cursor/goal/evidence/units/${id}\.jsonl$ ]]
 }
 
+git_tree_id() {
+  git -C "$ROOT" rev-parse HEAD 2>/dev/null || printf 'no-git'
+}
+
+install_git_sha() {
+  local manifest="${CURSOR_HOME:-${HOME}/.cursor}/cursor-goal/install-manifest.json"
+  if [[ -f "$manifest" ]]; then
+    jq -r '.git_sha // null' "$manifest" 2>/dev/null || printf 'null'
+  else
+    printf 'null'
+  fi
+}
+
+last_jsonl_entry() {
+  local file="$1"
+  if [[ -f "$file" ]]; then
+    tail -n 1 "$file" | jq -c '.' 2>/dev/null || printf 'null'
+  else
+    printf 'null'
+  fi
+}
+
 case "$STEP" in
   sessionStart)
-    if [[ ! -f "$ROOT/GOAL.md" ]] && [[ -f "$ROOT/.cursor/goal/templates/GOAL.md" ]]; then
-      cp "$ROOT/.cursor/goal/templates/GOAL.md" "$ROOT/GOAL.md"
+    rm -f "$GOAL_DIR/.warned-runtime-missing"
+    if [[ ! -f "$ROOT/GOAL.md" ]]; then
+      if [[ -f "$ROOT/.cursor/goal/templates/GOAL.md" ]]; then
+        cp "$ROOT/.cursor/goal/templates/GOAL.md" "$ROOT/GOAL.md"
+      elif [[ -f "${CURSOR_HOME:-${HOME}/.cursor}/goal/templates/GOAL.md" ]]; then
+        cp "${CURSOR_HOME:-${HOME}/.cursor}/goal/templates/GOAL.md" "$ROOT/GOAL.md"
+      fi
     fi
     if [[ ! -f "$GOAL_DIR/manifest.json" ]]; then
-      LOOP_LIMIT=40
-      if [[ -f "$ROOT/.cursor/hooks.json" ]]; then
-        HL="$(jq -r '
-          def flatten_hooks:
-            if (.hooks.hooks? | type) == "object" then .hooks | flatten_hooks else . end;
-          flatten_hooks | .hooks.stop[]? | select(.loop_limit != null) | .loop_limit
-        ' "$ROOT/.cursor/hooks.json" 2>/dev/null | head -1)"
-        [[ -n "$HL" && "$HL" != "null" ]] && LOOP_LIMIT="$HL"
-      fi
+      LOOP_LIMIT="$(cgr_read_loop_limit "$ROOT")"
       echo "{\"goal_id\":\"default\",\"loop_limit\":$LOOP_LIMIT,\"runtime\":\"minimal\"}" > "$GOAL_DIR/manifest.json"
     fi
     if [[ ! -f "$GOAL_DIR/trajectory.json" ]]; then
@@ -126,14 +214,6 @@ case "$STEP" in
     NORM_FILE=""
     if [[ -n "$FILE" ]]; then
       NORM_FILE="$(normalize_file_path "$FILE")"
-    fi
-    if [[ "$TOOL" == "Shell" || "$TOOL" == "Bash" ]]; then
-      CMD="$(echo "$INPUT" | jq -r '.command // .tool_input.command // empty')"
-      if destructive_shell "$CMD"; then
-        jq -n --arg m "Destructive shell blocked by cursor-goal minimal policy." \
-          '{permission:"deny",agent_message:$m}'
-        exit 0
-      fi
     fi
     if [[ "$IS_SUB" == "true" ]] && [[ "$NORM_FILE" == ".cursor/goal" || "$NORM_FILE" == .cursor/goal/* || "$NORM_FILE" == */.cursor/goal || "$NORM_FILE" == */.cursor/goal/* ]]; then
       WUID="$(echo "$INPUT" | jq -r '.work_unit_id // .tool_input.work_unit_id // empty')"
@@ -224,8 +304,41 @@ case "$STEP" in
     ;;
   sessionEnd)
     if [[ ! -f "$GOAL_DIR/passports/RELEASE.json" ]] && [[ ! -f "$GOAL_DIR/passports/SESSION_END.json" ]]; then
-      echo '{"status":"SESSION_END","reason":"session_end_without_release"}' > "$GOAL_DIR/passports/SESSION_END.json"
+      LAST_STOP="$(last_jsonl_entry "$GOAL_DIR/stop-trace.jsonl")"
+      LAST_CHECK="$(last_jsonl_entry "$GOAL_DIR/evidence/proof-runs.jsonl")"
+      FAILURE_CLASS="release_missing"
+      WHY="release passport missing"
+      LAST_CHECK_OK="$(printf '%s' "$LAST_CHECK" | jq -r '.ok // empty' 2>/dev/null || true)"
+      LAST_STOP_RESULT="$(printf '%s' "$LAST_STOP" | jq -r '.pipeline_result // empty' 2>/dev/null || true)"
+      if [[ "$LAST_CHECK_OK" == "false" ]]; then
+        LAST_CHECK_CMD="$(printf '%s' "$LAST_CHECK" | jq -r '.cmd // "unknown check"' 2>/dev/null || printf 'unknown check')"
+        FAILURE_CLASS="checks_failed"
+        WHY="last check failed ($LAST_CHECK_CMD)"
+      elif [[ -n "$LAST_STOP_RESULT" && "$LAST_STOP_RESULT" != "release" ]]; then
+        LAST_STOP_FAILED="$(printf '%s' "$LAST_STOP" | jq -r '.level_failed // .failures[0] // "unknown"' 2>/dev/null || printf 'unknown')"
+        FAILURE_CLASS="stop_blocked"
+        WHY="last stop did not release ($LAST_STOP_FAILED)"
+      elif [[ "$LAST_CHECK_OK" == "true" ]]; then
+        FAILURE_CLASS="green_but_unreleased"
+        WHY="checks passed but RELEASE passport was not written"
+      fi
+      jq -n \
+        --arg status "SESSION_END" \
+        --arg reason "session_end_without_release" \
+        --arg failure_class "$FAILURE_CLASS" \
+        --arg root "$ROOT" \
+        --arg git_tree "$(git_tree_id)" \
+        --arg runtime_root "minimal" \
+        --arg install_git_sha "$(install_git_sha)" \
+        --arg why "$WHY" \
+        --argjson last_stop_trace "$LAST_STOP" \
+        --argjson last_check_result "$LAST_CHECK" \
+        '{status:$status,reason:$reason,failure_class:$failure_class,root:$root,git_tree:$git_tree,runtime_root:$runtime_root,install_git_sha:$install_git_sha,why_no_release:$why,last_stop_trace:$last_stop_trace,last_check_result:$last_check_result}' \
+        > "$GOAL_DIR/passports/SESSION_END.json"
     fi
+    echo '{}'
+    ;;
+  preCompact)
     echo '{}'
     ;;
   *)

@@ -120,8 +120,6 @@ describe("I68 fail-open contract", { timeout: 30_000 }, () => {
     for (const command of commands) {
       const shell = execCoreHook(p.dir, "beforeShellExecution", { command });
       expect(shell.stdout.permission).toBe("deny");
-      const pre = execCoreHook(p.dir, "preToolUse", { tool_name: "Shell", command });
-      expect(pre.stdout.permission).toBe("deny");
     }
   });
 

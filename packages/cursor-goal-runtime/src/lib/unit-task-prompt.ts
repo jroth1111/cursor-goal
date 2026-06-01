@@ -24,5 +24,10 @@ export function buildUnitTaskPrompt(unit: WorkUnitCompiled): string {
     "",
     "Acceptance:",
     acceptance,
+    "",
+    "Completion:",
+    "- Return one final summary with evidence paths when done",
+    "- Do not spawn nested review subagents or repeat handoff blocks",
+    "- Stop after this unit's acceptance criteria are met",
   ].join("\n");
 }

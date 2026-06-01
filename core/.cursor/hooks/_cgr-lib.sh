@@ -2,16 +2,54 @@
 # shellcheck shell=bash
 set -euo pipefail
 
+_cgr_lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "$_cgr_lib_dir/destructive-shell-policy.sh" ]]; then
+  # shellcheck source=/dev/null
+  source "$_cgr_lib_dir/destructive-shell-policy.sh"
+fi
+
 _cgr_hook_dir() {
   cd "$(dirname "${BASH_SOURCE[0]}")" && pwd
 }
 
+cgr_realpath() {
+  local p="$1"
+  if [[ -d "$p" ]]; then
+    (cd "$p" && pwd -P)
+  else
+    printf '%s\n' "$p"
+  fi
+}
+
+cgr_cursor_hooks_root() {
+  local cursor_home="${CURSOR_HOME:-${HOME}/.cursor}"
+  cgr_realpath "$cursor_home/hooks"
+}
+
+cgr_root_is_hook_install_dir() {
+  local root hooks
+  root="$(cgr_realpath "$1")"
+  hooks="$(cgr_cursor_hooks_root)"
+  [[ "$root" == "$hooks" || "$root" == "$hooks/"* ]]
+}
+
 _cgr_project_root() {
   if [[ -n "${CURSOR_PROJECT_DIR:-}" ]]; then
-    printf '%s\n' "$CURSOR_PROJECT_DIR"
+    cgr_realpath "$CURSOR_PROJECT_DIR"
     return
   fi
-  git rev-parse --show-toplevel 2>/dev/null || pwd
+  local root
+  root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+  cgr_realpath "$root"
+}
+
+_cgr_project_root_checked() {
+  local root
+  root="$(_cgr_project_root)"
+  if [[ -z "${CURSOR_PROJECT_DIR:-}" ]] && cgr_root_is_hook_install_dir "$root"; then
+    return 2
+  fi
+  printf '%s\n' "$root"
 }
 
 # Prints absolute path to cursor-goal-runtime package root, or empty.
@@ -193,9 +231,31 @@ cgr_normalize_path() {
   local raw="$1"
   if command -v node >/dev/null 2>&1; then
     node -e '
+const fs = require("node:fs");
 const path = require("node:path");
 const raw = process.argv[1] || "";
-process.stdout.write(path.posix.normalize(raw.replace(/\\/g, "/")));
+const slash = raw.replace(/\\/g, "/");
+if (!path.isAbsolute(slash)) {
+  process.stdout.write(path.posix.normalize(slash));
+  process.exit(0);
+}
+const resolved = path.resolve(slash);
+let cursor = resolved;
+const suffix = [];
+while (!fs.existsSync(cursor)) {
+  const parent = path.dirname(cursor);
+  if (parent === cursor) {
+    process.stdout.write(resolved.replace(/\\/g, "/"));
+    process.exit(0);
+  }
+  suffix.unshift(path.basename(cursor));
+  cursor = parent;
+}
+try {
+  process.stdout.write(path.join(fs.realpathSync(cursor), ...suffix).replace(/\\/g, "/"));
+} catch {
+  process.stdout.write(resolved.replace(/\\/g, "/"));
+}
 ' "$raw" 2>/dev/null || printf '%s' "${raw//\\//}"
     return 0
   fi
@@ -215,23 +275,60 @@ cgr_path_inside_project() {
   [[ "$norm" != ".." && "$norm" != ../* ]]
 }
 
-cgr_destructive_shell() {
-  local cmd="$1"
-  if command -v perl >/dev/null 2>&1; then
-    printf '%s' "$cmd" | perl -0777 -ne '
-      exit 0 if /\bdrop\s+database\b/i;
-      if (/\bgit\b[\s\S]*\bpush\b/i &&
-          /(?:^|[\s;&|])(?:-f\b|--force(?:[=\s]|$)|--force-with-lease(?:[=\s]|$)|\+[^\s;&|]+)/i) { exit 0; }
-      if (/(?:^|[\s;&|])rm(?:[\s;&|]|$)/i &&
-          (/(?:^|[\s;&|])-[a-z]*r[a-z]*f[a-z]*(?=$|[\s;&|])/i ||
-           /(?:^|[\s;&|])-[a-z]*f[a-z]*r[a-z]*(?=$|[\s;&|])/i ||
-           /(?:^|[\s;&|])(?:-[a-z]*r[a-z]*|--recursive)(?=$|[\s;&|])[\s\S]*(?:^|[\s;&|])(?:-[a-z]*f[a-z]*|--force)(?=$|[\s;&|])/i ||
-           /(?:^|[\s;&|])(?:-[a-z]*f[a-z]*|--force)(?=$|[\s;&|])[\s\S]*(?:^|[\s;&|])(?:-[a-z]*r[a-z]*|--recursive)(?=$|[\s;&|])/i)) { exit 0; }
-      exit 1;
-    '
-    return $?
+if ! declare -f cgr_destructive_shell >/dev/null 2>&1; then
+  cgr_destructive_shell() {
+    return 1
+  }
+fi
+
+destructive_shell() {
+  cgr_destructive_shell "$@"
+}
+
+cgr_jq_loop_limit_from_file() {
+  local f="$1"
+  [[ -f "$f" ]] || return 1
+  jq -r '
+    def flatten_hooks:
+      if (.hooks.hooks? | type) == "object" then .hooks | flatten_hooks else . end;
+    flatten_hooks | .hooks.stop[]? | select(.loop_limit != null) | .loop_limit
+  ' "$f" 2>/dev/null | head -1
+}
+
+cgr_read_loop_limit() {
+  local root="$1"
+  local cursor_home="${CURSOR_HOME:-${HOME}/.cursor}"
+  local hl ml=""
+  hl="$(cgr_jq_loop_limit_from_file "$root/.cursor/hooks.json")"
+  if [[ -n "$hl" && "$hl" != "null" ]]; then
+    printf '%s\n' "$hl"
+    return 0
   fi
-  printf '%s' "$cmd" | grep -qiE '\bdrop[[:space:]]+database\b|\bgit\b.*\bpush\b.*(--force([=[:space:]]|$)|--force-with-lease([=[:space:]]|$)|(^|[[:space:]])-f([[:space:]]|$)|(^|[[:space:];&|])\+[^[:space:];&|]+)|\brm\b.*(-[[:alpha:]]*r[[:alpha:]]*f|-[[:alpha:]]*f[[:alpha:]]*r|--recursive.*--force|--force.*--recursive)'
+  if [[ -f "$root/.cursor/goal/manifest.json" ]]; then
+    ml="$(jq -r '.loop_limit // empty' "$root/.cursor/goal/manifest.json" 2>/dev/null | head -1)"
+    if [[ -n "$ml" && "$ml" != "null" ]]; then
+      printf '%s\n' "$ml"
+      return 0
+    fi
+  fi
+  hl="$(cgr_jq_loop_limit_from_file "$cursor_home/hooks.json")"
+  if [[ -n "$hl" && "$hl" != "null" ]]; then
+    printf '%s\n' "$hl"
+    return 0
+  fi
+  printf '40\n'
+}
+
+cgr_runtime_missing_note_allowed() {
+  local root="${CURSOR_PROJECT_DIR:-}"
+  [[ -n "$root" ]] || return 0
+  local flag="$root/.cursor/goal/.warned-runtime-missing"
+  if [[ -f "$flag" ]]; then
+    return 1
+  fi
+  mkdir -p "$(dirname "$flag")"
+  touch "$flag"
+  return 0
 }
 
 cgr_subagent_governance_safety() {
@@ -284,6 +381,50 @@ cgr_safety_response() {
   return 1
 }
 
+cgr_root_resolution_response() {
+  local step="$1"
+  local input="$2"
+  local msg="CURSOR_PROJECT_DIR missing; refusing to use global hooks directory as project root."
+  local tool cmd file is_sub norm
+  tool="$(cgr_json_string_field "$input" "tool_name")"
+  cmd="$(cgr_json_string_field "$input" "command")"
+  if [[ "$step" == "beforeShellExecution" || "$tool" == "Shell" || "$tool" == "Bash" ]]; then
+    if cgr_destructive_shell "$cmd"; then
+      printf '{"permission":"deny","agent_message":"Destructive shell blocked by cursor-goal minimal policy; %s"}\n' "$msg"
+      return 0
+    fi
+  fi
+  if [[ "$step" == "preToolUse" ]]; then
+    is_sub="$(cgr_json_bool_field "$input" "is_subagent")"
+    file="$(cgr_json_string_field "$input" "file_path")"
+    if [[ -z "$file" ]]; then
+      file="$(cgr_json_string_field "$input" "path")"
+    fi
+    norm="$(cgr_normalize_path "$file")"
+    if [[ "$is_sub" == "true" && ( "$norm" == ".cursor/goal" || "$norm" == .cursor/goal/* || "$norm" == */.cursor/goal || "$norm" == */.cursor/goal/* ) ]]; then
+      printf '{"permission":"deny","agent_message":"Subagent governance write denied; %s"}\n' "$msg"
+      return 0
+    fi
+  fi
+  case "$step" in
+    stop)
+      printf '{"followup_message":"cursor-goal: %s"}\n' "$msg"
+      ;;
+    beforeSubmitPrompt)
+      printf '{"continue":true,"agent_message":"cursor-goal: %s"}\n' "$msg"
+      ;;
+    preToolUse|beforeShellExecution)
+      printf '{"permission":"allow","agent_message":"cursor-goal: %s"}\n' "$msg"
+      ;;
+    sessionStart)
+      printf '{"continue":true,"agent_message":"cursor-goal: %s"}\n' "$msg"
+      ;;
+    *)
+      printf '{"agent_message":"cursor-goal: %s"}\n' "$msg"
+      ;;
+  esac
+}
+
 cgr_minimal_response() {
   local step="$1"
   local input="$2"
@@ -302,6 +443,7 @@ cgr_minimal_response() {
     postToolUse) out="$(printf '%s' "$input" | bash "$lib/handlers-minimal.sh" postToolUse 2>"$err_file")" ;;
     subagentStop) out="$(printf '%s' "$input" | bash "$lib/handlers-minimal.sh" subagentStop 2>"$err_file")" ;;
     sessionEnd) out="$(printf '%s' "$input" | bash "$lib/handlers-minimal.sh" sessionEnd 2>"$err_file")" ;;
+    preCompact) out="$(printf '%s' "$input" | bash "$lib/handlers-minimal.sh" preCompact 2>"$err_file")" ;;
     *) out='{}' ;;
   esac
   rc=$?
@@ -327,10 +469,16 @@ cgr_minimal_response() {
 
 cgr_dispatch() {
   local step="$1"
-  local rt out rc input note err_file err
+  local rt out rc input note err_file err root
   local trace_on=0
   [[ "${CURSOR_GOAL_E2E_TRACE:-}" == "1" ]] && trace_on=1
   input="$(cat)"
+
+  if ! root="$(_cgr_project_root_checked)"; then
+    cgr_root_resolution_response "$step" "$input"
+    exit 0
+  fi
+  export CURSOR_PROJECT_DIR="$root"
 
   rt="$(cgr_resolve_runtime)"
   if [[ -n "$rt" ]]; then
@@ -359,6 +507,9 @@ cgr_dispatch() {
   fi
 
   note="$(cgr_no_runtime_message)"
+  if ! cgr_runtime_missing_note_allowed; then
+    note=""
+  fi
   out="$(cgr_minimal_response "$step" "$input" "$note")"
   if [[ "$trace_on" -eq 1 ]]; then
     cgr_e2e_trace "$step" "minimal-no-runtime" "$out"

@@ -23,7 +23,11 @@ describe("I139 install-global dry-run runtime optional", () => {
     fakeHome = path.join(os.tmpdir(), `i139-home-${suffix}`);
     const repoRoot = path.resolve(import.meta.dirname, "../../../../");
 
-    await mkdir(path.join(fixtureRoot, "scripts"), { recursive: true });
+    await mkdir(path.join(fixtureRoot, "scripts/lib"), { recursive: true });
+    await cp(
+      path.join(repoRoot, "scripts/lib/global-cli-flags.sh"),
+      path.join(fixtureRoot, "scripts/lib/global-cli-flags.sh"),
+    );
     await mkdir(path.join(fixtureRoot, "core/lib"), { recursive: true });
     await mkdir(path.join(fixtureRoot, "core/.cursor"), { recursive: true });
     await mkdir(path.join(fixtureRoot, "packages/cursor-goal-runtime"), { recursive: true });

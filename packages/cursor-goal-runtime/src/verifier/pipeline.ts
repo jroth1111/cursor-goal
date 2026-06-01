@@ -40,6 +40,12 @@ import { levelAdversarialBlocked } from "./l-adversarial.js";
 import { appendStopTrace } from "../lib/stop-trace.js";
 import type { StopInput, VerifyKind, VerifierContext, PipelineOptions } from "./types.js";
 
+export function governanceFollowupMessage(message: string): string {
+  const trimmed = message.trim();
+  if (trimmed.startsWith("[governance]")) return trimmed;
+  return `[governance] ${trimmed}`;
+}
+
 export type VerifyResult =
   | { kind: "release" }
   | { kind: "continue"; message: string }
@@ -202,6 +208,19 @@ export async function runStopPipeline(
     return { kind: "release" };
   }
 
+  if (input.stop_hook_active === true) {
+    const disposition = dispositionForLoop(ctx, ctx.followupMessage ?? "Checks still failing.", ctx.loopCount);
+    if (disposition) {
+      return {
+        kind: "disposition",
+        failed: [...ctx.failures],
+        message:
+          "Stop hook already active — human review required. See .cursor/goal/agents/ disposition or run: cursor-goal explain",
+      };
+    }
+    return { kind: "idle" };
+  }
+
   if (dryRun) {
     const nextLoop = ctx.loopCount + 1;
     const runtimeState = await computeRuntimeState({
@@ -223,7 +242,7 @@ export async function runStopPipeline(
     }
     return {
       kind: "continue",
-      message: ctx.followupMessage ?? followup,
+      message: governanceFollowupMessage(ctx.followupMessage ?? followup),
     };
   }
 
@@ -265,14 +284,15 @@ export async function runStopPipeline(
 
   return {
     kind: "continue",
-    message:
+    message: governanceFollowupMessage(
       ctx.followupMessage ??
-      formatFollowupMessage(
-        { ...runtimeState, loop_count: agentLoop },
-        cursorStopLoopFromInput(input),
-        repoTotal,
-        agentId,
-      ),
+        formatFollowupMessage(
+          { ...runtimeState, loop_count: agentLoop },
+          cursorStopLoopFromInput(input),
+          repoTotal,
+          agentId,
+        ),
+    ),
   };
 }
 

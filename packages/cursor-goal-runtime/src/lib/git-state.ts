@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { cursorHome } from "./template.js";
 import { goalDir, projectRoot, readJson, writeJson } from "./paths.js";
 
 export type GoalState = {
@@ -136,11 +137,10 @@ export function listDiffFiles(root: string): string[] {
   }
 }
 
-export function readLoopLimitFromHooksJson(root: string): number | null {
-  const file = path.join(root, ".cursor", "hooks.json");
-  if (!existsSync(file)) return null;
+function readLoopLimitFromHooksFile(filePath: string): number | null {
+  if (!existsSync(filePath)) return null;
   try {
-    const raw = readFileSync(file, "utf8");
+    const raw = readFileSync(filePath, "utf8");
     type HooksMap = { hooks?: HooksMap; stop?: Array<{ loop_limit?: number }> };
     const cfg = JSON.parse(raw) as { hooks?: HooksMap };
     let hooks = cfg.hooks;
@@ -150,10 +150,19 @@ export function readLoopLimitFromHooksJson(root: string): number | null {
     const stop = hooks?.stop;
     if (!stop?.length) return null;
     for (const h of stop) {
-      if (typeof h.loop_limit === "number") return h.loop_limit;
+      if (typeof h.loop_limit === "number" && h.loop_limit >= 1) return h.loop_limit;
     }
     return null;
   } catch {
     return null;
   }
+}
+
+/** Project `.cursor/hooks.json` only (global fallback is applied in loop-limit.ts). */
+export function readLoopLimitFromHooksJson(root: string): number | null {
+  return readLoopLimitFromHooksFile(path.join(root, ".cursor", "hooks.json"));
+}
+
+export function readLoopLimitFromGlobalHooksJson(): number | null {
+  return readLoopLimitFromHooksFile(path.join(cursorHome(), "hooks.json"));
 }

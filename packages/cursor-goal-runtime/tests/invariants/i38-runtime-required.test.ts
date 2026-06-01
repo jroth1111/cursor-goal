@@ -100,6 +100,12 @@ describe("I38 hooks fail open without runtime", () => {
 
     const runtime = mkdtempSync(path.join(os.tmpdir(), "i38-runtime-"));
     await mkdir(path.join(runtime, "dist"), { recursive: true });
+    // cgr_resolve_runtime only honors CURSOR_GOAL_RUNTIME when hook-stop.mjs exists.
+    await writeFile(
+      path.join(runtime, "dist/hook-stop.mjs"),
+      "process.stdout.write('{}');\n",
+      "utf8",
+    );
     await writeFile(
       path.join(runtime, "dist/hook-beforeShellExecution.mjs"),
       "throw new Error('broken runtime');\n",
