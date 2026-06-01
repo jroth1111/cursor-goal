@@ -36,3 +36,9 @@ Create `.cursor/goal/outputs/<unit-id>/deliverable.md` with:
 ## Done
 
 When finished, stop. Parent `subagentStop` records evidence. Parent verifies all units before release.
+
+## Completion discipline
+
+- Return **one** final summary with evidence paths; do not repeat handoff blocks or spawn nested review subagents.
+- Stay within this unit's scope and acceptance criteria only.
+- Do not claim RELEASE or mark the goal complete — the parent agent owns release authority.

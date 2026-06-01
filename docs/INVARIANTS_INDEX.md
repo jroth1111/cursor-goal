@@ -98,3 +98,16 @@ I12, I25, I27, I28, I45, I50, I55, I59, I60, I71
 | I170 | Global install manifest records the installed template directory |
 | I171 | Supervisor refuses to launch while any per-agent disposition is active |
 | I172 | Runtime and minimal hooks read loop_limit from legacy nested hooks.hooks configs |
+
+## Governance and operator hardening (I203–I210)
+
+| ID | Summary |
+|----|---------|
+| I203 | Root `npm run check` runs `npm test` before `verify-capability.mjs` |
+| I204 | Global/repo install scripts reject unknown flags consistently |
+| I205 | Doctor reports cursor-agent preflight for `dispatch --spawn` |
+| I206 | `init --interactive --dry-run` previews without writing `GOAL.md` |
+| I207 | Unit task prompts include completion discipline |
+| I208 | `status --json` exposes `blocked_sources` |
+| I209 | Blocked stop followups tagged `[governance]` |
+| I210 | Governance file edits require `CURSOR_GOAL_GOVERNANCE_OK` or strict failure |

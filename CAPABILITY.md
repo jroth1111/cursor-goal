@@ -166,10 +166,41 @@ Only claim what invariant tests prove.
 | I174 | Done work-unit status requires acceptable unit evidence before parent release | — | yes | — | i174-done-units-require-evidence | tested |
 | I175 | Runtime-required schemas are tracked for clean-checkout distribution | yes | yes | — | i175-tracked-schema-coverage | tested |
 | I176 | Global install manifest paths are JSON-escaped | yes | — | — | i176-install-manifest-json-escaping | tested |
+| I177 | Hooks/runtime refuse global hooks dir as project root | yes | yes | — | i177-hook-root-boundary | tested |
+| I178 | Doctor strict mode errors on stale global install manifests | — | yes | — | i178-doctor-strict-stale-install | tested |
+| I179 | Session-end without release records diagnostics | — | yes | — | i179-session-end-diagnostics | tested |
+| I180 | Stop-time checks have finite default timeout | — | yes | — | i180-default-check-timeout | tested |
+| I181 | Global install writes installed-snapshot verification report | yes | — | — | i181-install-global-verification-report | tested |
+| I182 | Explain session-end diagnostics | — | yes | — | i182-explain-session-end | tested |
+| I183 | cursor-goal run command wrapper proof logging | — | yes | — | i183-command-wrapper-proof-run | tested |
+| I184 | Green checks without RELEASE classified | — | yes | — | i184-session-end-green-unreleased | tested |
+| I185 | Root check verifies temporary installed snapshot parity | — | yes | — | i185-installed-parity-check-script | tested |
+| I186 | Incident summary clusters recent Cursor/governance failures | — | yes | — | i186-incidents-since-today | tested |
+| I187 | Temporary installed parity smokes installed Node CLI and hook runtime | yes | yes | — | i187-installed-runtime-smoke | tested |
+| I188 | Incident summary includes real Cursor agent transcript JSONL failures | — | yes | — | i188-incidents-agent-transcripts | tested |
+| I189 | SESSION_END preserves stop blocker over green check state | — | yes | — | i189-session-end-stop-blocker-precedence | tested |
+| I190 | cursor-goal run timeout cleans command process groups | — | yes | — | i190-command-wrapper-process-group | tested |
+| I191 | Bounded incident summaries exclude undated records | — | yes | — | i191-incidents-since-filters-undated | tested |
+| I192 | Minimal SESSION_END diagnostics include failure_class | yes | — | — | i192-minimal-session-end-failure-class | tested |
+| I196 | loop_limit from project then global hooks.json | yes | yes | — | i196-loop-limit-global | tested |
+| I197 | Shell gate on beforeShellExecution; preToolUse matcher | yes | — | — | i197-shell-single-gate | tested |
+| I198 | preCompact snapshot when agent blocked | — | yes | — | i198-precompact-blocked | tested |
+| I199 | stop_hook_active suppresses followup loop | yes | yes | — | i199-stop-hook-active | tested |
+| I200 | governed_prompt_block opt-in prompt gate | — | yes | — | i200-governed-prompt-block | tested |
+| I201 | Runtime-missing note once per session | yes | — | — | i201-runtime-warn-once | tested |
+| I202 | destructive-shell.json TS/bash parity | yes | yes | — | i202-shell-policy-parity | tested |
 | I90 | cursor-goal init seeds GOAL without compiling by default | — | yes | — | i90-init-no-compile | tested |
 | I91 | cursor-goal init --detect writes project-native checks | — | yes | — | i91-init-detect | tested |
 | I92 | Default unit acceptance requires evidence file not path existence | — | yes | — | i92-acceptance-defaults | tested |
 | I93 | Proof-plan shell policy emits advisory warnings only | — | yes | — | i93-proof-plan-advisory | tested |
+| I203 | Root `npm run check` runs `npm test` before `verify-capability.mjs` | — | yes | — | i203-check-requires-green-tests | tested |
+| I204 | Global/repo install scripts reject unknown flags consistently | yes | — | — | i204-global-install-flag-parity | tested |
+| I205 | Doctor reports cursor-agent preflight for dispatch --spawn | — | yes | — | i205-doctor-agent-preflight | tested |
+| I206 | `init --interactive --dry-run` previews without writing GOAL.md | — | yes | — | i206-init-interactive-dry-run | tested |
+| I207 | Unit task prompts include completion discipline | — | yes | — | i207-unit-task-prompt-completion | tested |
+| I208 | `status --json` exposes `blocked_sources` | — | yes | — | i208-status-json-blocked-sources | tested |
+| I209 | Blocked stop followups tagged `[governance]` | — | yes | — | i209-stop-followup-governance-tag | tested |
+| I210 | Governance file edits require acknowledgment (strict optional) | — | yes | — | i210-governance-diff-guard | tested |
 
 ## Multi-agent runtime state (one repo, many parent conversations)
 

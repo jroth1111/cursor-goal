@@ -18,7 +18,3 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run check
-      - run: npm run test:invariants
-      - run: npm test
-      - run: node scripts/verify-readme-claims.mjs
-      - run: node scripts/verify-capability.mjs

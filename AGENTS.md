@@ -13,6 +13,7 @@ Governed work on this tree **must** follow proof-first order. Do not scaffold an
    npm run check
    ```
 5. Update [`CAPABILITY.md`](CAPABILITY.md) — only mark `tested` when the linked invariant test passes in CI.
+6. Root **`npm run check`** runs the full test suite before capability verification (I203). See [`docs/BRANCH_REVIEW.md`](docs/BRANCH_REVIEW.md) for branch review and multi-agent guidance.
 
 ## Forbidden patterns
 

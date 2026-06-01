@@ -13,6 +13,18 @@ cursor-goal doctor
 
 User hooks live in `~/.cursor/hooks.json` (paths like `hooks/goal-stop.sh`). Runtime: `~/.cursor/cursor-goal-runtime/`. Schemas: `~/.cursor/goal/schemas/`.
 
+### After changing cursor-goal (dev → IDE)
+
+From the [cursor-goal](.) repo root:
+
+```bash
+npm run sync:global          # build + install:global + verify-installed-parity
+cursor-goal doctor           # warn if global install SHA ≠ repo HEAD
+cursor-goal doctor --strict  # exit 1 when global runtime is stale
+```
+
+Restart Cursor if hooks do not reload after editing `hooks.json`.
+
 **cursor-agent wrapper:** `cursor-agent-goal` sources `~/.cursor/cursor-goal.env` then runs `cursor-agent`.
 
 **Governance triage (default `auto`):** Each prompt is classified in `beforeSubmitPrompt`:
@@ -24,6 +36,20 @@ User hooks live in `~/.cursor/hooks.json` (paths like `hooks/goal-stop.sh`). Run
 | **governed** | Full gates — GOAL, compile, scope, stop RELEASE |
 
 Hard triggers (always governed): `GOAL.md` with checks, `runtime-state.json` blocked, `cursor-goal mode governed`, or `default_mode: governed` in `.cursor/goal/config.json`.
+
+### Recovering from SESSION_END (ended without RELEASE)
+
+If a governed session ends without writing `.cursor/goal/passports/RELEASE.json`, the runtime writes
+`.cursor/goal/passports/SESSION_END.json` with diagnostics. Future prompts may re-enter governed mode so you
+don’t lose the run context.
+
+Use this recovery loop:
+
+```bash
+cursor-goal explain session-end
+cursor-goal session-end clear --force
+cursor-goal next
+```
 
 ```bash
 cursor-goal mode              # show default + session mode
@@ -70,15 +96,22 @@ When global runtime exists, plain `install.sh` skips hook copy and only seeds te
    cursor-goal verify
    cursor-goal goal lint
    cursor-goal dispatch --verify --unit <id>   # adversarial prompt (I85)
+   cursor-goal doctor --json                   # hooks, runtime, cursor-agent preflight (I205)
    cursor-goal dispatch --verify --spawn       # run cursor-agent verifier (exit 1 if missing)
    cursor-goal dispatch --verify --spawn --dry-run  # print agent argv + prompt (I95)
    cursor-goal logs 20           # tail stop-trace.jsonl
    cursor-goal upgrade           # refresh global runtime install
    ```
 
-Optional: set `CURSOR_GOAL_LEGACY_EVIDENCE=1` only when migrating old unit evidence files. Use `cursor-goal init` (seeds GOAL only), `cursor-goal init --interactive` (guided GOAL.md — I94; add `--force` to overwrite an existing file), or `cursor-goal init --detect` to add project-native checks; `init --compile` opts into immediate compile.
+Optional: set `CURSOR_GOAL_LEGACY_EVIDENCE=1` only when migrating old unit evidence files. Use `cursor-goal init` (seeds GOAL only), `cursor-goal init --interactive` (guided GOAL.md — I94; refuses overwrite unless `--force`; `--dry-run` prints preview — I206), or `cursor-goal init --detect` to add project-native checks; `init --compile` opts into immediate compile.
+
+Mark CAPABILITY rows **`tested` only after `npm run check` passes** (includes full `npm test` — I203). Editing `CAPABILITY.md` / `INVARIANTS.json`: run tests first, then `CURSOR_GOAL_GOVERNANCE_OK=1` if `verify-governance-diff` warns (I210). See [`docs/BRANCH_REVIEW.md`](docs/BRANCH_REVIEW.md).
 
 `CURSOR_GOAL_STRICT=1` blocks governed `beforeSubmitPrompt` when the runtime package is missing (runtime hook and core bash — I86). Subagents with `verified_by` must write `.cursor/goal/outputs/<unit-id>/deliverable.md` (prompt includes path — I81).
+
+`governed_prompt_block` in `.cursor/goal/config.json` (or `CURSOR_GOAL_GOVERNED_PROMPT_BLOCK=1`) blocks governed prompts when `GOAL.md` is missing or compile is stale (I200). Default is warn-only.
+
+`preCompact` hook injects a short goal snapshot when the agent is blocked (I198). Shell gates run on `beforeShellExecution` only; `preToolUse` uses a matcher (I197).
 
 ## Work units + subagents
 

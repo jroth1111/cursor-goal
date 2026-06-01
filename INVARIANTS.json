@@ -1162,6 +1162,223 @@
       "layers": ["core"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i176-install-manifest-json-escaping.test.ts"
+    },
+    {
+      "id": "I177",
+      "description": "Hooks and runtime refuse to use the global hook install directory as a project root",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i177-hook-root-boundary.test.ts"
+    },
+    {
+      "id": "I178",
+      "description": "Doctor strict mode escalates stale global install manifests to errors",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i178-doctor-strict-stale-install.test.ts"
+    },
+    {
+      "id": "I179",
+      "description": "Session-end without release records root, runtime, install, stop, and check diagnostics",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i179-session-end-diagnostics.test.ts"
+    },
+    {
+      "id": "I180",
+      "description": "Stop-time checks have a finite default timeout unless explicitly disabled",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i180-default-check-timeout.test.ts"
+    },
+    {
+      "id": "I181",
+      "description": "Global install writes an installed-snapshot verification report",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i181-install-global-verification-report.test.ts"
+    },
+    {
+      "id": "I182",
+      "description": "cursor-goal explain session-end explains why the last session ended without release",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i182-explain-session-end.test.ts"
+    },
+    {
+      "id": "I183",
+      "description": "cursor-goal run wraps commands with timeout, elapsed time, output capture, and proof-run logging",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i183-command-wrapper-proof-run.test.ts"
+    },
+    {
+      "id": "I184",
+      "description": "Session-end diagnostics classify green checks without a release passport as green_but_unreleased",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i184-session-end-green-unreleased.test.ts"
+    },
+    {
+      "id": "I185",
+      "description": "Repository check verifies installed-runtime parity against a temporary global install snapshot",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i185-installed-parity-check-script.test.ts"
+    },
+    {
+      "id": "I186",
+      "description": "cursor-goal incidents summarizes recent session, proof-run, and Cursor terminal failures",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i186-incidents-since-today.test.ts"
+    },
+    {
+      "id": "I187",
+      "description": "Temporary installed parity verification smokes the installed Node CLI and hook runtime",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i187-installed-runtime-smoke.test.ts"
+    },
+    {
+      "id": "I188",
+      "description": "Incident summaries include real Cursor agent transcript JSONL failures",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i188-incidents-agent-transcripts.test.ts"
+    },
+    {
+      "id": "I189",
+      "description": "Session-end diagnostics prefer concrete stop blockers over green check state",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i189-session-end-stop-blocker-precedence.test.ts"
+    },
+    {
+      "id": "I190",
+      "description": "cursor-goal run timeout cleans up child processes in the command process group",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i190-command-wrapper-process-group.test.ts"
+    },
+    {
+      "id": "I191",
+      "description": "Bounded incident summaries exclude undated records unless --since all is used",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i191-incidents-since-filters-undated.test.ts"
+    },
+    {
+      "id": "I192",
+      "description": "Minimal fallback session-end diagnostics include the same failure_class surface",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i192-minimal-session-end-failure-class.test.ts"
+    },
+    {
+      "id": "I196",
+      "description": "loop_limit reads project hooks.json then global ~/.cursor/hooks.json",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i196-loop-limit-global.test.ts"
+    },
+    {
+      "id": "I197",
+      "description": "Shell destructive gate runs on beforeShellExecution only; preToolUse uses matcher",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i197-shell-single-gate.test.ts"
+    },
+    {
+      "id": "I198",
+      "description": "preCompact hook emits additional_context when agent is blocked",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i198-precompact-blocked.test.ts"
+    },
+    {
+      "id": "I199",
+      "description": "stop_hook_active suppresses followup_message when checks still fail",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i199-stop-hook-active.test.ts"
+    },
+    {
+      "id": "I200",
+      "description": "governed_prompt_block stops prompt when GOAL missing (opt-in config)",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i200-governed-prompt-block.test.ts"
+    },
+    {
+      "id": "I201",
+      "description": "Runtime-missing warning attaches once per session",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i201-runtime-warn-once.test.ts"
+    },
+    {
+      "id": "I202",
+      "description": "destructive-shell.json policy matches TS and minimal bash gates",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i202-shell-policy-parity.test.ts"
+    },
+    {
+      "id": "I203",
+      "description": "Root npm run check runs npm test before verify-capability.mjs",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i203-check-requires-green-tests.test.ts"
+    },
+    {
+      "id": "I204",
+      "description": "Global and repo install scripts reject unknown flags consistently",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i204-global-install-flag-parity.test.ts"
+    },
+    {
+      "id": "I205",
+      "description": "Doctor reports cursor-agent preflight for dispatch --spawn",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i205-doctor-agent-preflight.test.ts"
+    },
+    {
+      "id": "I206",
+      "description": "init --interactive --dry-run previews without writing GOAL.md",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i206-init-interactive-dry-run.test.ts"
+    },
+    {
+      "id": "I207",
+      "description": "Unit task prompts include completion discipline guardrails",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i207-unit-task-prompt-completion.test.ts"
+    },
+    {
+      "id": "I208",
+      "description": "status --json exposes blocked_sources when checks fail",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i208-status-json-blocked-sources.test.ts"
+    },
+    {
+      "id": "I209",
+      "description": "Blocked stop followup messages are tagged [governance]",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i209-stop-followup-governance-tag.test.ts"
+    },
+    {
+      "id": "I210",
+      "description": "Governance file edits require acknowledgment or strict failure",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i210-governance-diff-guard.test.ts"
     }
   ]
 }
