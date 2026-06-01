@@ -12,16 +12,21 @@ export function printUsage(): void {
   console.log(`cursor-goal — governance runtime for cursor-goal
 
 Usage:
-  cursor-goal init [--interactive] [--force] [--detect] [--compile]
+  cursor-goal init [--interactive] [--force] [--dry-run] [--detect] [--compile]
   cursor-goal compile [--watch]
   cursor-goal verify
+  cursor-goal run [--timeout-ms N] [--json] -- <command> [args...]
+  cursor-goal check [--timeout-ms N] [--json] -- <command> [args...]
   cursor-goal explain [--json] [--conversation <id>]
+  cursor-goal explain session-end [--json]
+  cursor-goal session-end clear [--force]
+  cursor-goal incidents [--since today|all|DATE] [--json]
   cursor-goal next [--json|--verbose] [--conversation <id>]
   cursor-goal goal lint
   cursor-goal dispatch [--verify] [--spawn] [--unit <id>] [--record-response <id> --from <file>] [--dry-run|--run]
   cursor-goal logs [N]
   cursor-goal upgrade
-  cursor-goal doctor [--json|--fix]
+  cursor-goal doctor [--json|--fix|--strict]
   cursor-goal pause|resume
   cursor-goal mode [chat|governed|auto|set auto|chat|governed|why]
   cursor-goal mode why [--conversation <id>]

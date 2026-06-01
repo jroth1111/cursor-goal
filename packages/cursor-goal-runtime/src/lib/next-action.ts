@@ -10,6 +10,7 @@ export type NextActionKind =
   | "phase"
   | "blocked_unit"
   | "dispatch_unit"
+  | "recover_session_end"
   | "fix_checks"
   | "fix_scope"
   | "fix_proxy"
@@ -55,6 +56,7 @@ function otherFailures(ctx: VerifierContext): string[] {
       !checkFails.some((r) => r.cmd === f) &&
       !f.startsWith("forbidden-proxy") &&
       !f.includes("proxy") &&
+      f !== "SESSION_END" &&
       !f.startsWith("stale-proof"),
   );
 }
@@ -117,6 +119,20 @@ export async function rankNextAction(input: NextActionInput): Promise<NextAction
   const phaseBlocked = input.phaseBlocked ?? ctx.phaseBlocked;
 
   const candidates: RankedCandidate[] = [];
+
+  if (ctx.failures.includes("SESSION_END")) {
+    candidates.push({
+      priority: 0,
+      action: {
+        kind: "recover_session_end",
+        headline: "Recover from SESSION_END (prior run ended without RELEASE)",
+        detail:
+          "Run: cursor-goal explain session-end\n" +
+          "Then: cursor-goal session-end clear --force\n" +
+          "Then continue with: cursor-goal next",
+      },
+    });
+  }
 
   if (unitsBlocked && open.length > 0) {
     const action = await dispatchUnitAction(ctx, open);

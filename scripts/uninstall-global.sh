@@ -2,6 +2,10 @@
 # Remove cursor-goal global install from ~/.cursor
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/global-cli-flags.sh
+source "$SCRIPT_DIR/lib/global-cli-flags.sh"
+
 PURGE_RUNTIME=0
 
 usage() {
@@ -11,20 +15,9 @@ usage() {
 for arg in "$@"; do
   case "$arg" in
     --purge-runtime) PURGE_RUNTIME=1 ;;
-    --help|-h)
-      usage
-      exit 0
-      ;;
-    --*)
-      echo "Unknown option: $arg" >&2
-      usage >&2
-      exit 1
-      ;;
-    *)
-      echo "Unexpected argument: $arg" >&2
-      usage >&2
-      exit 1
-      ;;
+    --help|-h) cgr_show_help usage ;;
+    --*) cgr_unknown_option "$arg" usage ;;
+    *) cgr_unexpected_argument "$arg" usage ;;
   esac
 done
 
@@ -35,7 +28,7 @@ echo "Uninstalling cursor-goal global hooks from $CURSOR_HOME"
 
 if [[ -d "$CURSOR_HOME/hooks" ]]; then
   find "$CURSOR_HOME/hooks" -maxdepth 1 \( -type f -o -type l \) \
-    \( -name 'goal-*.sh' -o -name '_cgr-lib.sh' -o -name 'handlers-minimal.sh' -o -name 'verify-minimal.sh' \) \
+    \( -name 'goal-*.sh' -o -name '_cgr-lib.sh' -o -name 'handlers-minimal.sh' -o -name 'verify-minimal.sh' -o -name 'destructive-shell-policy.sh' \) \
     -delete
 fi
 

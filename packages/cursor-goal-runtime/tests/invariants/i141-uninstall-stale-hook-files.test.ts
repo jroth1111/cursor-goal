@@ -20,6 +20,7 @@ describe("I141 uninstall stale hook files", () => {
     await mkdir(path.join(fakeCursorHome, "hooks"), { recursive: true });
     await writeFile(path.join(fakeCursorHome, "hooks/goal-stop.sh"), "#!/usr/bin/env bash\n", "utf8");
     await writeFile(path.join(fakeCursorHome, "hooks/goal-old.sh"), "#!/usr/bin/env bash\n", "utf8");
+    await writeFile(path.join(fakeCursorHome, "hooks/destructive-shell-policy.sh"), "# stale\n", "utf8");
     await writeFile(path.join(fakeCursorHome, "hooks/user-stop.sh"), "#!/usr/bin/env bash\n", "utf8");
     await symlink(
       path.join(fakeCursorHome, "hooks/user-stop.sh"),
@@ -38,6 +39,7 @@ describe("I141 uninstall stale hook files", () => {
     expect(existsSync(path.join(fakeCursorHome, "hooks/goal-stop.sh"))).toBe(false);
     expect(existsSync(path.join(fakeCursorHome, "hooks/goal-old.sh"))).toBe(false);
     expect(existsSync(path.join(fakeCursorHome, "hooks/goal-stale-link.sh"))).toBe(false);
+    expect(existsSync(path.join(fakeCursorHome, "hooks/destructive-shell-policy.sh"))).toBe(false);
     expect(existsSync(path.join(fakeCursorHome, "hooks/user-stop.sh"))).toBe(true);
   });
 });

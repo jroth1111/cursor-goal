@@ -8,6 +8,7 @@ import { auditGoalAlignment } from "./goal-alignment.js";
 import { readFile } from "node:fs/promises";
 import { cursorHome } from "./template.js";
 import { resolveRuntimeRoot as resolveRuntime } from "./resolve-runtime.js";
+import { probeCursorAgentPreflight } from "./dispatch-verify.js";
 
 export type DoctorIssue = { level: "error" | "warn"; message: string };
 
@@ -15,7 +16,17 @@ export type DoctorReport = {
   issues: DoctorIssue[];
   runtime_root: string | null;
   hooks: { global: boolean; project: boolean };
+  agent_preflight?: ReturnType<typeof probeCursorAgentPreflight>;
 };
+
+export type DoctorOptions = {
+  strict?: boolean;
+};
+
+function strictMode(options?: DoctorOptions): boolean {
+  if (options?.strict) return true;
+  return /^(1|true|yes)$/i.test(process.env.CURSOR_GOAL_STRICT ?? "");
+}
 
 export function resolveRuntimeRoot(root: string): string | null {
   return resolveRuntime(root);
@@ -40,10 +51,11 @@ function sourceHeadMatches(source: string, gitSha: string): boolean | null {
   return r.stdout.trim().startsWith(normalizedSha);
 }
 
-export async function runDoctor(root = projectRoot()): Promise<DoctorIssue[]> {
+export async function runDoctor(root = projectRoot(), options: DoctorOptions = {}): Promise<DoctorIssue[]> {
   const issues: DoctorIssue[] = [];
   const projectHooks = hasProjectHooks(root);
   const globalHooks = hasGlobalHooks();
+  const strict = strictMode(options);
 
   if (!projectHooks && !globalHooks) {
     issues.push({
@@ -102,7 +114,7 @@ export async function runDoctor(root = projectRoot()): Promise<DoctorIssue[]> {
           : null;
         if (current === false) {
           issues.push({
-            level: "warn",
+            level: strict ? "error" : "warn",
             message: `Global runtime may be stale (installed from ${manifest.git_sha}) — run: cursor-goal upgrade`,
           });
         } else if (current === null) {
@@ -122,14 +134,24 @@ export async function runDoctor(root = projectRoot()): Promise<DoctorIssue[]> {
     }
   }
 
+  const preflight = probeCursorAgentPreflight();
+  if (!preflight.available) {
+    issues.push({
+      level: "warn",
+      message: `${preflight.bin} not available for dispatch --verify --spawn (status=${preflight.status ?? "n/a"}). Set CURSOR_AGENT_BIN or use --dry-run.`,
+    });
+  }
+
   return issues;
 }
 
-export async function buildDoctorReport(root = projectRoot()): Promise<DoctorReport> {
+export async function buildDoctorReport(root = projectRoot(), options: DoctorOptions = {}): Promise<DoctorReport> {
+  const agent_preflight = probeCursorAgentPreflight();
   return {
-    issues: await runDoctor(root),
+    issues: await runDoctor(root, options),
     runtime_root: resolveRuntimeRoot(root),
     hooks: { global: hasGlobalHooks(), project: hasProjectHooks(root) },
+    agent_preflight,
   };
 }
 

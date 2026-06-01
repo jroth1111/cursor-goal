@@ -18,13 +18,24 @@ import {
 } from "../lib/dispatch-verify.js";
 import { readStopTraceTail } from "../lib/stop-trace.js";
 import { runGlobalUpgrade } from "../lib/upgrade.js";
+import { runWrappedCommand } from "../lib/command-run.js";
+import { buildIncidentReport, formatIncidentReport } from "../lib/incidents.js";
+import {
+  formatSessionEndDiagnostics,
+  readSessionEndDiagnostics,
+} from "../lib/session-end-report.js";
 import { operatorOptionsFromArgv } from "./shared.js";
 
-const doctorOptions = new Set(["--json", "--fix"]);
+const doctorOptions = new Set(["--json", "--fix", "--strict"]);
 const nextOptions = new Set(["--json", "--verbose"]);
 const explainOptions = new Set(["--json"]);
+const runOptions = new Set(["--json"]);
 const statusOptions = new Set(["--json"]);
+const incidentsOptions = new Set(["--json"]);
+const sessionEndClearOptions = new Set(["--force"]);
 const conversationValueOptions = new Set(["--conversation"]);
+const runValueOptions = new Set(["--timeout-ms"]);
+const incidentsValueOptions = new Set(["--since"]);
 const dispatchFlags = new Set(["--dry-run", "--run", "--verify", "--spawn"]);
 const dispatchValueOptions = new Set(["--unit", "--record-response", "--from"]);
 
@@ -33,6 +44,22 @@ export async function handleVerify(rest: string[]): Promise<void> {
   const r = await runStopVerifier({ status: "completed", loop_count: 0 });
   console.log(JSON.stringify(r, null, 2));
   process.exit(r.kind === "release" ? 0 : 1);
+}
+
+export async function handleRun(rest: string[], source = "cursor-goal run"): Promise<void> {
+  const { json, timeoutMs, commandTokens } = parseRunArgs(rest);
+  try {
+    const result = await runWrappedCommand(projectRoot(), commandTokens, { timeoutMs, source });
+    if (json) {
+      console.log(JSON.stringify(result, null, 2));
+    } else if (result.output) {
+      process.stdout.write(result.output.endsWith("\n") ? result.output : `${result.output}\n`);
+    }
+    process.exit(result.status);
+  } catch (e) {
+    console.error(e instanceof Error ? e.message : String(e));
+    process.exit(1);
+  }
 }
 
 function optionValue(rest: string[], option: string): string | undefined {
@@ -111,6 +138,84 @@ function rejectUnsupportedDispatchArgs(rest: string[]): void {
     console.error(arg.startsWith("-") ? `Unknown option: ${arg}` : `Unexpected argument: ${arg}`);
     process.exit(1);
   }
+}
+
+function parseRunArgs(rest: string[]): { json: boolean; timeoutMs?: number; commandTokens: string[] } {
+  const delimiter = rest.indexOf("--");
+  const optionArgs = delimiter >= 0 ? rest.slice(0, delimiter) : rest;
+  const commandTokens = delimiter >= 0 ? rest.slice(delimiter + 1) : [];
+  let json = false;
+  let timeoutMs: number | undefined;
+  const seenValueOptions = new Set<string>();
+
+  for (let i = 0; i < optionArgs.length; i += 1) {
+    const arg = optionArgs[i];
+    if (runOptions.has(arg)) {
+      json = true;
+      continue;
+    }
+    if (runValueOptions.has(arg)) {
+      const value = optionArgs[i + 1];
+      if (!value || value.startsWith("-")) {
+        console.error(`Missing value for ${arg}`);
+        process.exit(1);
+      }
+      if (seenValueOptions.has(arg)) {
+        console.error(`Duplicate option: ${arg}`);
+        process.exit(1);
+      }
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        console.error(`Invalid value for ${arg}: ${value}`);
+        process.exit(1);
+      }
+      timeoutMs = parsed;
+      seenValueOptions.add(arg);
+      i += 1;
+      continue;
+    }
+    if (delimiter < 0) {
+      commandTokens.push(...optionArgs.slice(i));
+      break;
+    }
+    console.error(arg.startsWith("-") ? `Unknown option: ${arg}` : `Unexpected argument: ${arg}`);
+    process.exit(1);
+  }
+
+  return { json, timeoutMs, commandTokens };
+}
+
+function parseIncidentsArgs(rest: string[]): { json: boolean; since: string } {
+  let json = false;
+  let since = "today";
+  const seenValueOptions = new Set<string>();
+
+  for (let i = 0; i < rest.length; i += 1) {
+    const arg = rest[i];
+    if (incidentsOptions.has(arg)) {
+      json = true;
+      continue;
+    }
+    if (incidentsValueOptions.has(arg)) {
+      const value = rest[i + 1];
+      if (!value || value.startsWith("-")) {
+        console.error(`Missing value for ${arg}`);
+        process.exit(1);
+      }
+      if (seenValueOptions.has(arg)) {
+        console.error(`Duplicate option: ${arg}`);
+        process.exit(1);
+      }
+      since = value;
+      seenValueOptions.add(arg);
+      i += 1;
+      continue;
+    }
+    console.error(arg.startsWith("-") ? `Unknown option: ${arg}` : `Unexpected argument: ${arg}`);
+    process.exit(1);
+  }
+
+  return { json, since };
 }
 
 function isDispatchVerifyRejection(text: string): boolean {
@@ -260,6 +365,18 @@ export async function handleUpgrade(rest: string[]): Promise<void> {
 }
 
 export async function handleExplain(rest: string[]): Promise<void> {
+  if (rest[0] === "session-end") {
+    const args = rest.slice(1);
+    rejectUnsupportedOperatorArgs(args, explainOptions, new Set());
+    const diagnostics = await readSessionEndDiagnostics(projectRoot());
+    if (args.includes("--json")) {
+      console.log(JSON.stringify(diagnostics ?? {}, null, 2));
+    } else {
+      console.log(formatSessionEndDiagnostics(diagnostics));
+    }
+    process.exit(diagnostics ? 0 : 1);
+  }
+
   rejectUnsupportedOperatorArgs(rest, explainOptions);
   const report = await buildExplainReport({
     status: "completed",
@@ -273,12 +390,57 @@ export async function handleExplain(rest: string[]): Promise<void> {
   process.exit(0);
 }
 
+export async function handleSessionEnd(rest: string[]): Promise<void> {
+  const sub = rest[0];
+  if (sub !== "clear") {
+    console.error(`Unknown session-end subcommand: ${sub ?? "(missing)"}`);
+    console.error("Usage: cursor-goal session-end clear [--force]");
+    process.exit(1);
+  }
+  const args = rest.slice(1);
+  for (const a of args) {
+    if (sessionEndClearOptions.has(a)) continue;
+    console.error(a.startsWith("-") ? `Unknown option: ${a}` : `Unexpected argument: ${a}`);
+    process.exit(1);
+  }
+  const force = args.includes("--force");
+  const root = projectRoot();
+  const diagnostics = await readSessionEndDiagnostics(root);
+  if (!diagnostics) {
+    console.log("No SESSION_END diagnostics found.");
+    process.exit(0);
+  }
+  if (!force) {
+    console.log(formatSessionEndDiagnostics(diagnostics));
+    console.log("");
+    console.error("Refusing to clear SESSION_END without --force.");
+    console.error("Next: cursor-goal session-end clear --force");
+    process.exit(1);
+  }
+  await unlink(path.join(goalDir(root), "passports", "SESSION_END.json")).catch(() => undefined);
+  await unlink(path.join(goalDir(root), "passports", "SESSION_END.md")).catch(() => undefined);
+  console.log("Cleared SESSION_END.");
+  process.exit(0);
+}
+
+export async function handleIncidents(rest: string[]): Promise<void> {
+  const { json, since } = parseIncidentsArgs(rest);
+  const report = await buildIncidentReport(projectRoot(), since);
+  if (json) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    console.log(formatIncidentReport(report));
+  }
+  process.exit(0);
+}
+
 export async function handleDoctor(rest: string[]): Promise<void> {
   rejectUnsupportedOptionOnlyArgs(rest, doctorOptions);
   const json = rest.includes("--json");
   const fix = rest.includes("--fix");
+  const strict = rest.includes("--strict");
   const actions = fix ? await applyDoctorFixes(projectRoot()) : [];
-  const report = await buildDoctorReport();
+  const report = await buildDoctorReport(projectRoot(), { strict });
   if (json) {
     console.log(JSON.stringify(fix ? { ...report, fixes: actions } : report, null, 2));
     process.exit(report.issues.some((i) => i.level === "error") ? 1 : 0);

@@ -144,13 +144,33 @@ export async function recordVerifierFromFile(
   return recordVerifierResponse(root, unitId, text, { allowReprompt: false });
 }
 
-function resolveCursorAgentBin(): string {
+export function resolveCursorAgentBin(): string {
   return process.env.CURSOR_AGENT_BIN ?? "cursor-agent";
 }
 
-export function cursorAgentAvailable(bin = resolveCursorAgentBin()): boolean {
+export type CursorAgentPreflight = {
+  bin: string;
+  available: boolean;
+  status: number | null;
+  stdout_preview: string;
+  error_message: string | null;
+};
+
+export function probeCursorAgentPreflight(bin = resolveCursorAgentBin()): CursorAgentPreflight {
   const r = spawnSync(bin, ["--version"], { encoding: "utf8", timeout: 15_000 });
-  return r.error === undefined && r.status === 0 && (r.stdout ?? "").trim().length > 0;
+  const stdout = (r.stdout ?? "").trim();
+  const available = r.error === undefined && r.status === 0 && stdout.length > 0;
+  return {
+    bin,
+    available,
+    status: r.status ?? null,
+    stdout_preview: stdout.slice(0, 120),
+    error_message: r.error ? String(r.error.message ?? r.error) : null,
+  };
+}
+
+export function cursorAgentAvailable(bin = resolveCursorAgentBin()): boolean {
+  return probeCursorAgentPreflight(bin).available;
 }
 
 function spawnVerifierAgent(bin: string, prompt: string, root: string): string {

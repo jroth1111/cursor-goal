@@ -10,10 +10,13 @@ import {
   handleDispatch,
   handleDoctor,
   handleExplain,
+  handleIncidents,
   handleLogs,
   handleNext,
   handlePause,
   handleResume,
+  handleRun,
+  handleSessionEnd,
   handleStatus,
   handleUpgrade,
   handleVerify,
@@ -35,6 +38,12 @@ export async function runCli(argv: string[]): Promise<void> {
     case "verify":
       await handleVerify(rest);
       break;
+    case "run":
+      await handleRun(rest);
+      break;
+    case "check":
+      await handleRun(rest, "cursor-goal check");
+      break;
     case "next":
       await handleNext(rest);
       break;
@@ -49,6 +58,12 @@ export async function runCli(argv: string[]): Promise<void> {
       break;
     case "explain":
       await handleExplain(rest);
+      break;
+    case "session-end":
+      await handleSessionEnd(rest);
+      break;
+    case "incidents":
+      await handleIncidents(rest);
       break;
     case "goal":
       await handleGoal(rest);

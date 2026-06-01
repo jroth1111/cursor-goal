@@ -15,7 +15,7 @@ import { lintGoalMd } from "../lib/goal-lint.js";
 import { goalTemplatePath } from "../lib/template.js";
 import { applyDetectedChecks } from "../lib/goal-detect.js";
 import { startCompileWatch } from "../lib/compile-watch.js";
-import { writeInteractiveGoal } from "../lib/init-interactive.js";
+import { previewInteractiveGoal, writeInteractiveGoal } from "../lib/init-interactive.js";
 
 const unitsUsage = "Usage: cursor-goal units list | cursor-goal units done <id>";
 const validDirectSetPhases = new Set<Phase>([
@@ -26,7 +26,7 @@ const validDirectSetPhases = new Set<Phase>([
   "VERIFY",
   "DONE",
 ]);
-const initOptions = new Set(["--compile", "--detect", "--interactive", "--force"]);
+const initOptions = new Set(["--compile", "--detect", "--interactive", "--force", "--dry-run"]);
 const compileOptions = new Set(["--watch"]);
 const discoveryCompleteOptions = new Set(["--plan-only"]);
 
@@ -73,6 +73,7 @@ export async function handleInit(rest: string[]): Promise<void> {
   const doDetect = rest.includes("--detect");
   const forceInteractive = rest.includes("--interactive");
   const forceOverwrite = rest.includes("--force");
+  const dryRun = rest.includes("--dry-run");
 
   if (forceInteractive) {
     const dest = goalMd(projectRoot());
@@ -80,6 +81,15 @@ export async function handleInit(rest: string[]): Promise<void> {
     if (existed && !forceOverwrite) {
       console.error("GOAL.md already exists; use --force to overwrite or edit in place");
       process.exit(1);
+    }
+    if (dryRun) {
+      const preview = await previewInteractiveGoal(projectRoot());
+      console.log(preview);
+      console.error(`${existed && forceOverwrite ? "Would write" : "Would create"} ${dest} (dry-run)`);
+      if (doCompile || doDetect) {
+        console.error("Note: --compile and --detect are not applied in dry-run mode");
+      }
+      return;
     }
     await writeInteractiveGoal(projectRoot());
     console.log(`${existed && forceOverwrite ? "Wrote" : "Created"} ${dest}`);

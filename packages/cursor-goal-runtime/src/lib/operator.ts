@@ -28,6 +28,14 @@ import { levelWorkUnitsBlocked } from "../verifier/l-work-units.js";
 import { isRuntimeStateStale } from "./dispatch-cli.js";
 import { resolveDispatchHead } from "./dispatch-head.js";
 
+export type BlockedSources = {
+  checks: boolean;
+  units: boolean;
+  phase: boolean;
+  disposition: boolean;
+  submit: boolean;
+};
+
 export type OperatorSnapshot = RuntimeStateFile & {
   dispatch_head?: {
     unit_id: string;
@@ -35,6 +43,8 @@ export type OperatorSnapshot = RuntimeStateFile & {
     queue_index: number;
   };
   runtime_state_stale?: boolean;
+  blocked_sources?: BlockedSources;
+  advisory_warnings?: string[];
 };
 
 export type OperatorSnapshotOptions = {
@@ -70,6 +80,10 @@ async function buildFreshContext(
 
   for (const c of checkResults) {
     if (!c.ok) ctx.failures.push(c.cmd);
+  }
+
+  if (existsSync(sessionEndMarkerPath(root))) {
+    ctx.failures.push("SESSION_END");
   }
 
   ctx.unitsBlocked = await levelWorkUnitsBlocked(ctx);
@@ -123,7 +137,20 @@ export async function buildOperatorSnapshot(
     };
   }
 
-  const snap: OperatorSnapshot = { ...merged, runtime_state_stale: stale };
+  const blocked_sources: BlockedSources = {
+    checks: ctx.checkResults.some((c) => !c.ok),
+    units: ctx.unitsBlocked === true,
+    phase: ctx.phaseBlocked === true,
+    disposition: countAgentsInDisposition(r) > 0,
+    submit: submitBlocked,
+  };
+
+  const snap: OperatorSnapshot = {
+    ...merged,
+    runtime_state_stale: stale,
+    blocked_sources,
+    advisory_warnings: [],
+  };
   const head = await resolveDispatchHead(r);
   if (head) {
     snap.dispatch_head = {
@@ -194,5 +221,15 @@ export async function formatOperatorStatus(root?: string): Promise<string> {
   if (stale) lines.push("runtime_state_stale: true");
   if (open.length) lines.push(`open_units: ${open.map((u) => `${u.id}(${u.status})`).join(", ")}`);
   if (existsSync(runtimeStatePath(r))) lines.push("runtime_state: .cursor/goal/runtime-state.json");
+  const snap = await buildOperatorSnapshot(r);
+  if (!("error" in snap) && snap.blocked && snap.blocked_sources) {
+    const parts: string[] = [];
+    if (snap.blocked_sources.checks) parts.push("checks");
+    if (snap.blocked_sources.units) parts.push("units");
+    if (snap.blocked_sources.phase) parts.push("phase");
+    if (snap.blocked_sources.disposition) parts.push("disposition");
+    if (snap.blocked_sources.submit) parts.push("submit");
+    if (parts.length) lines.push(`blocked_because: ${parts.join(", ")}`);
+  }
   return lines.join("\n");
 }

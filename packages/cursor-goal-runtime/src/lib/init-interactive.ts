@@ -131,13 +131,21 @@ export async function promptInteractiveGoal(
   }
 }
 
-export async function writeInteractiveGoal(
+export async function previewInteractiveGoal(
   root = projectRoot(),
   answers?: InteractiveAnswers,
 ): Promise<string> {
   const resolved = answers ?? (await promptInteractiveGoal());
+  return buildGoalMarkdown(resolved);
+}
+
+export async function writeInteractiveGoal(
+  root = projectRoot(),
+  answers?: InteractiveAnswers,
+): Promise<string> {
+  const markdown = await previewInteractiveGoal(root, answers);
   const dest = goalMd(root);
   await mkdir(goalDir(root), { recursive: true });
-  await writeFile(dest, buildGoalMarkdown(resolved), "utf8");
+  await writeFile(dest, markdown, "utf8");
   return dest;
 }

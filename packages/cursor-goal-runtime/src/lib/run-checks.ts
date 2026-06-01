@@ -7,6 +7,8 @@ import { shellCommandAllowed } from "./shell-allow.js";
 
 export type CheckResult = { cmd: string; ok: boolean; tree: string; output?: string };
 
+export const DEFAULT_CHECK_TIMEOUT_MS = 10 * 60 * 1000;
+
 function captureExecError(err: unknown): string {
   if (err && typeof err === "object") {
     const e = err as { stderr?: string; stdout?: string; message?: string };
@@ -16,9 +18,11 @@ function captureExecError(err: unknown): string {
   return String(err).slice(0, 4000);
 }
 
-function checkTimeoutMs(): number {
-  const n = Number(process.env.CURSOR_GOAL_CHECK_TIMEOUT_MS);
-  return Number.isFinite(n) && n > 0 ? n : 0;
+export function checkTimeoutMs(): number {
+  const raw = process.env.CURSOR_GOAL_CHECK_TIMEOUT_MS;
+  if (raw === "0") return 0;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_CHECK_TIMEOUT_MS;
 }
 
 export async function runChecks(root: string, commands: string[]): Promise<CheckResult[]> {
@@ -50,7 +54,8 @@ export async function runChecks(root: string, commands: string[]): Promise<Check
           timeoutMs > 0 &&
           (e?.code === "ETIMEDOUT" || e?.signal === "SIGKILL" || e?.signal === "SIGTERM" || e?.killed)
         ) {
-          output = `check timed out after ${timeoutMs}ms (CURSOR_GOAL_CHECK_TIMEOUT_MS)\n${output}`;
+          const source = process.env.CURSOR_GOAL_CHECK_TIMEOUT_MS ? "CURSOR_GOAL_CHECK_TIMEOUT_MS" : "default";
+          output = `check timed out after ${timeoutMs}ms (${source})\n${output}`;
         }
       }
     }

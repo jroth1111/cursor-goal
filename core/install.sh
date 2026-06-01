@@ -3,19 +3,24 @@
 set -euo pipefail
 
 SRC="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SRC/.." && pwd)"
+# shellcheck source=../scripts/lib/global-cli-flags.sh
+source "$REPO_ROOT/scripts/lib/global-cli-flags.sh"
 DEST=""
 LOCAL_HOOKS=0
+
+core_install_usage() {
+  echo "Usage: bash core/install.sh [TARGET_REPO_ROOT] [--local-hooks]"
+}
 
 for arg in "$@"; do
   case "$arg" in
     --local-hooks) LOCAL_HOOKS=1 ;;
     --help|-h)
-      echo "Usage: bash core/install.sh [TARGET_REPO_ROOT] [--local-hooks]"
-      exit 0
+      cgr_show_help core_install_usage
       ;;
     --*)
-      echo "Unknown option: $arg" >&2
-      exit 1
+      cgr_unknown_option "$arg" core_install_usage
       ;;
     *)
       if [[ -n "$DEST" ]]; then
