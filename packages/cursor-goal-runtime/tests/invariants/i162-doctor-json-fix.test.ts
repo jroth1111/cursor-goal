@@ -26,10 +26,15 @@ describe("I162 doctor json fix output", () => {
     await writeFile(stale, "old next unit\n", "utf8");
 
     const cli = path.resolve(import.meta.dirname, "../../dist/cli.js");
+    const runtimeRoot = path.resolve(import.meta.dirname, "../../");
     const r = spawnSync("node", [cli, "doctor", "--json", "--fix"], {
       cwd: p.dir,
       encoding: "utf8",
-      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+      env: {
+        ...process.env,
+        CURSOR_PROJECT_DIR: p.dir,
+        CURSOR_GOAL_RUNTIME: runtimeRoot,
+      },
     });
 
     expect(r.status, r.stderr || r.stdout).toBe(0);
