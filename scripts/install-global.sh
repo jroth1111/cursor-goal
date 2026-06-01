@@ -69,21 +69,54 @@ if git -C "$REPO_ROOT" rev-parse --short HEAD >/dev/null 2>&1; then
   GIT_SHA="$(git -C "$REPO_ROOT" rev-parse --short HEAD)"
 fi
 
+write_install_manifest() {
+  local dry_run="${1:-0}"
+  local installed_at
+  installed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  if [[ "$dry_run" -eq 1 ]]; then
+    jq -n \
+      --arg installed_at "$installed_at" \
+      --arg source "$REPO_ROOT" \
+      --arg git_sha "$GIT_SHA" \
+      --arg runtime "$GLOBAL_RUNTIME" \
+      --arg schemas "$GLOBAL_SCHEMAS" \
+      --arg templates "$GLOBAL_TEMPLATES" \
+      --arg hooks "$GLOBAL_HOOKS" \
+      '{
+        installed_at: $installed_at,
+        source: $source,
+        git_sha: $git_sha,
+        runtime: $runtime,
+        schemas: $schemas,
+        templates: $templates,
+        hooks: $hooks,
+        dry_run: true
+      }' > "$GLOBAL_MANIFEST"
+  else
+    jq -n \
+      --arg installed_at "$installed_at" \
+      --arg source "$REPO_ROOT" \
+      --arg git_sha "$GIT_SHA" \
+      --arg runtime "$GLOBAL_RUNTIME" \
+      --arg schemas "$GLOBAL_SCHEMAS" \
+      --arg templates "$GLOBAL_TEMPLATES" \
+      --arg hooks "$GLOBAL_HOOKS" \
+      '{
+        installed_at: $installed_at,
+        source: $source,
+        git_sha: $git_sha,
+        runtime: $runtime,
+        schemas: $schemas,
+        templates: $templates,
+        hooks: $hooks
+      }' > "$GLOBAL_MANIFEST"
+  fi
+}
+
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "DRY RUN — would install to $CURSOR_HOME"
   mkdir -p "$CURSOR_HOME/cursor-goal"
-  cat > "$GLOBAL_MANIFEST" <<EOF
-{
-  "installed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "source": "$REPO_ROOT",
-  "git_sha": "$GIT_SHA",
-  "runtime": "$GLOBAL_RUNTIME",
-  "schemas": "$GLOBAL_SCHEMAS",
-  "templates": "$GLOBAL_TEMPLATES",
-  "hooks": "$GLOBAL_HOOKS",
-  "dry_run": true
-}
-EOF
+  write_install_manifest 1
   # shellcheck source=../core/lib/merge-hooks-json.sh
   source "$CORE_DIR/lib/merge-hooks-json.sh"
   merge_hooks_json "$CURSOR_HOME/hooks.json" "$CORE_DIR/.cursor/hooks.json.user.example"
@@ -154,17 +187,7 @@ ln -sf "$GLOBAL_RUNTIME/dist/cli.js" "$LOCAL_BIN/cursor-goal"
 ln -sf "$SCRIPT_DIR/cursor-agent-goal.sh" "$LOCAL_BIN/cursor-agent-goal"
 chmod +x "$SCRIPT_DIR/cursor-agent-goal.sh"
 
-cat > "$GLOBAL_MANIFEST" <<EOF
-{
-  "installed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "source": "$REPO_ROOT",
-  "git_sha": "$GIT_SHA",
-  "runtime": "$GLOBAL_RUNTIME",
-  "schemas": "$GLOBAL_SCHEMAS",
-  "templates": "$GLOBAL_TEMPLATES",
-  "hooks": "$GLOBAL_HOOKS"
-}
-EOF
+write_install_manifest 0
 
 if [[ "$WRITE_PROFILE" -eq 1 ]]; then
   SNIPPET="source \"$ENV_FILE\""

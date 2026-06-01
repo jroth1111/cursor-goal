@@ -165,6 +165,7 @@ Only claim what invariant tests prove.
 | I173 | Work-unit evidence paths cannot escape the canonical evidence directory | — | yes | yes | i173-unit-evidence-path-boundary | tested |
 | I174 | Done work-unit status requires acceptable unit evidence before parent release | — | yes | — | i174-done-units-require-evidence | tested |
 | I175 | Runtime-required schemas are tracked for clean-checkout distribution | yes | yes | — | i175-tracked-schema-coverage | tested |
+| I176 | Global install manifest paths are JSON-escaped | yes | — | — | i176-install-manifest-json-escaping | tested |
 | I90 | cursor-goal init seeds GOAL without compiling by default | — | yes | — | i90-init-no-compile | tested |
 | I91 | cursor-goal init --detect writes project-native checks | — | yes | — | i91-init-detect | tested |
 | I92 | Default unit acceptance requires evidence file not path existence | — | yes | — | i92-acceptance-defaults | tested |
