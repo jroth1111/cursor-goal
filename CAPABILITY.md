@@ -148,7 +148,7 @@ Only claim what invariant tests prove.
 | I157 | Dry-run stop pipeline simulates auto-advance without mutating trajectory | — | yes | — | i157-dry-run-auto-advance | tested |
 | I158 | Scope dot-segment paths are normalized and explicit root scope allows repository files before verifier enforcement | — | yes | — | i158-scope-dot-segments | tested |
 | I88 | Subagent status gate blocks failed/cancelled completion | yes | yes | — | i88-subagent-status-gate | tested |
-| I89 | Strict unit evidence v1 schema by default | — | yes | — | i89-unit-evidence-schema | tested |
+| I89 | Strict unit evidence v1 schema by default | — | yes | yes | i89-unit-evidence-schema | tested |
 | I160 | Session-end hook reports local marker write failures without crashing | — | yes | — | i160-session-end-fail-open | tested |
 | I161 | Subagent WriteGate denies when work-unit state is unreadable | yes | yes | — | i161-subagent-malformed-work-units | tested |
 | I162 | Doctor --json --fix emits one parseable JSON document | — | yes | — | i162-doctor-json-fix | tested |

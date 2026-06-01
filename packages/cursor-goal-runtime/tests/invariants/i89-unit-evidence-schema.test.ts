@@ -53,6 +53,32 @@ A
     expect(r.reason).toMatch(/evidence_version/i);
   });
 
+  it("supervisor dry-run blocks legacy evidence before redispatching a unit", async () => {
+    const dir = await setupProject();
+    await mkdir(path.join(dir, ".cursor/hooks"), { recursive: true });
+    await writeFile(path.join(dir, ".cursor/hooks/goal-stop.sh"), "#!/usr/bin/env bash\n", "utf8");
+    const evidenceDir = path.join(dir, ".cursor/goal/evidence/units");
+    await mkdir(evidenceDir, { recursive: true });
+    await writeFile(
+      path.join(evidenceDir, "unit-a.jsonl"),
+      JSON.stringify({ work_unit_id: "unit-a", ok: true, status: "passed" }) + "\n",
+      "utf8",
+    );
+
+    const supervisor = path.resolve(import.meta.dirname, "../../../../supervisor/run-goal.mjs");
+    const r = spawnSync("node", [supervisor, "--dry-run", "--units-only"], {
+      cwd: dir,
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: dir },
+    });
+
+    expect(r.status, r.stderr || r.stdout).toBe(0);
+    const out = `${r.stdout}\n${r.stderr}`;
+    expect(out).toMatch(/Blocked unit: unit-a/);
+    expect(out).toMatch(/evidence_version/i);
+    expect(out).not.toMatch(/Dispatch unit: unit-a/);
+  });
+
   it("accepts v1 evidence with acceptance_ok and success status", async () => {
     const dir = await setupProject();
     const wu = await readWorkUnits(dir);

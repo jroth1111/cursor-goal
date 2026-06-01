@@ -19,6 +19,20 @@ const supervisorBooleanOptions = new Set([
   "--units-only",
 ]);
 
+const failureStatuses = new Set([
+  "failed",
+  "blocked",
+  "cancelled",
+  "canceled",
+  "error",
+  "timeout",
+  "aborted",
+]);
+
+function legacyEvidenceAllowed() {
+  return process.env.CURSOR_GOAL_LEGACY_EVIDENCE === "1";
+}
+
 export function buildAgentArgs(prompt, interactive = false) {
   if (interactive) return [];
   return ["--print", "--trust", "--force", prompt];
@@ -196,21 +210,41 @@ async function readLatestUnitEvidence(root, unit) {
 function blockedUnitReason(unit, record) {
   if (!record) return null;
   if (record.malformed === true) return `latest evidence for ${unit.id} is malformed`;
+  const recordUnitId = typeof record.work_unit_id === "string" ? record.work_unit_id : "";
+  if (recordUnitId && recordUnitId !== unit.id) {
+    return `evidence work_unit_id ${recordUnitId} does not match unit ${unit.id}`;
+  }
   if (record.blocked === true || record.ok === false) {
     return typeof record.blocker === "string" && record.blocker.trim()
       ? record.blocker
       : `latest evidence for ${unit.id} is blocked or failed`;
   }
   const status = typeof record.status === "string" ? record.status.trim().toLowerCase() : "";
-  if (["failed", "blocked", "cancelled", "canceled", "error", "timeout", "aborted"].includes(status)) {
+  if (failureStatuses.has(status)) {
     return typeof record.blocker === "string" && record.blocker.trim()
       ? record.blocker
       : `latest evidence for ${unit.id} has status ${status}`;
   }
-  if (record.evidence_version === 1 && record.acceptance_ok !== true) {
-    return `latest evidence for ${unit.id} has not passed acceptance`;
+  if (record.evidence_version === 1) {
+    if (typeof record.at !== "string" || !record.at.trim()) {
+      return `unit evidence for ${unit.id} missing timestamp`;
+    }
+    if (record.acceptance_ok !== true) {
+      return `unit evidence for ${unit.id} has not passed acceptance`;
+    }
+    const subagentStatus =
+      typeof record.subagent_status === "string"
+        ? record.subagent_status.trim().toLowerCase()
+        : "";
+    if (failureStatuses.has(subagentStatus)) {
+      return `unit evidence for ${unit.id} has non-success subagent_status`;
+    }
+    return null;
   }
-  return null;
+  if (legacyEvidenceAllowed()) {
+    return null;
+  }
+  return `unit evidence for ${unit.id} requires evidence_version: 1`;
 }
 
 async function readDispatchQueue(root) {
