@@ -411,7 +411,11 @@ cgr_root_resolution_response() {
       printf '{"followup_message":"cursor-goal: %s"}\n' "$msg"
       ;;
     beforeSubmitPrompt)
-      printf '{"continue":true,"agent_message":"cursor-goal: %s"}\n' "$msg"
+      if cgr_strict_enabled; then
+        printf '{"continue":false,"agent_message":"CURSOR_GOAL_STRICT=1: cursor-goal: %s"}\n' "$msg"
+      else
+        printf '{"continue":true,"agent_message":"cursor-goal: %s"}\n' "$msg"
+      fi
       ;;
     preToolUse|beforeShellExecution)
       printf '{"permission":"allow","agent_message":"cursor-goal: %s"}\n' "$msg"

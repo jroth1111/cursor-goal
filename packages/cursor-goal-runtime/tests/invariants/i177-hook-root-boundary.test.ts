@@ -65,4 +65,33 @@ describe("I177 hook root boundary", () => {
     expect(r.stdout).toMatch(/CURSOR_PROJECT_DIR|hooks directory/i);
     expect(existsSync(path.join(hooksDir, ".cursor/goal"))).toBe(false);
   });
+
+  it("beforeSubmitPrompt blocks under CURSOR_GOAL_STRICT when root resolves to global hooks dir", async () => {
+    tempDir = path.join(os.tmpdir(), `i177-strict-${process.pid}-${Date.now()}`);
+    const cursorHome = path.join(tempDir, "cursor");
+    const hooksDir = path.join(cursorHome, "hooks");
+    await mkdir(hooksDir, { recursive: true });
+    const script = path.resolve(import.meta.dirname, "../../../../core/.cursor/hooks/goal-prompt.sh");
+    const env = {
+      ...process.env,
+      CURSOR_HOME: cursorHome,
+      CURSOR_GOAL_STRICT: "1",
+      HOME: tempDir,
+    };
+    delete env.CURSOR_PROJECT_DIR;
+    delete env.CURSOR_GOAL_RUNTIME;
+
+    const r = spawnSync("bash", [script], {
+      cwd: hooksDir,
+      input: JSON.stringify({ prompt: "implement feature" }),
+      encoding: "utf8",
+      env,
+    });
+
+    expect(r.status, r.stderr || r.stdout).toBe(0);
+    const out = JSON.parse((r.stdout ?? "").trim() || "{}") as { continue?: boolean; agent_message?: string };
+    expect(out.continue).toBe(false);
+    expect(String(out.agent_message ?? "")).toMatch(/CURSOR_GOAL_STRICT|CURSOR_PROJECT_DIR|hooks directory/i);
+    expect(existsSync(path.join(hooksDir, ".cursor/goal"))).toBe(false);
+  });
 });

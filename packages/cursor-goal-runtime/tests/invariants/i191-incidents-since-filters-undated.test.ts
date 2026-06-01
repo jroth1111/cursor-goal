@@ -68,4 +68,20 @@ describe("I191 incidents bounded since filter", () => {
     expect(allReport.clusters?.proof_run_failed).toBe(1);
     expect(allReport.clusters?.terminal_unknown_exit).toBe(1);
   });
+
+  it("rejects invalid --since instead of treating it as epoch zero", async () => {
+    const p = await mkGitProject("i191-invalid-since");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+
+    const cli = path.resolve(import.meta.dirname, "../../dist/cli.js");
+    const r = spawnSync("node", [cli, "incidents", "--since", "yesterday", "--json"], {
+      cwd: p.dir,
+      encoding: "utf8",
+      env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },
+    });
+
+    expect(r.status).not.toBe(0);
+    expect(r.stderr || r.stdout).toMatch(/Invalid --since/i);
+  });
 });

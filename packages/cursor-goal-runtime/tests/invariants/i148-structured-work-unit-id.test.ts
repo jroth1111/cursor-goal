@@ -45,6 +45,25 @@ Module B
     return p;
   }
 
+  it("marks Task in_progress from structured work_unit_id without a prompt token", async () => {
+    const p = await seed();
+
+    const r = execCoreHook(p.dir, "preToolUse", {
+      tool_name: "Task",
+      work_unit_id: "mod-a",
+      tool_input: { prompt: "Implement module A only." },
+      conversation_id: "worker-1",
+    });
+
+    expect(r.stdout.permission).toBe("allow");
+    const workUnits = JSON.parse(
+      await readFile(path.join(p.dir, ".cursor/goal/work-units.json"), "utf8"),
+    );
+    const modA = workUnits.units.find((unit: { id: string }) => unit.id === "mod-a");
+    expect(modA.status).toBe("in_progress");
+    expect(modA.subagent_id).toBe("worker-1");
+  });
+
   it("does not let free-form tool payload text override structured preToolUse work_unit_id", async () => {
     const p = await seed();
 

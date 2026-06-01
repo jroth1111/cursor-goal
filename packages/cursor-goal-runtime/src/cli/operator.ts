@@ -19,7 +19,11 @@ import {
 import { readStopTraceTail } from "../lib/stop-trace.js";
 import { runGlobalUpgrade } from "../lib/upgrade.js";
 import { runWrappedCommand } from "../lib/command-run.js";
-import { buildIncidentReport, formatIncidentReport } from "../lib/incidents.js";
+import {
+  buildIncidentReport,
+  formatIncidentReport,
+  InvalidIncidentsSinceError,
+} from "../lib/incidents.js";
 import {
   formatSessionEndDiagnostics,
   readSessionEndDiagnostics,
@@ -425,7 +429,16 @@ export async function handleSessionEnd(rest: string[]): Promise<void> {
 
 export async function handleIncidents(rest: string[]): Promise<void> {
   const { json, since } = parseIncidentsArgs(rest);
-  const report = await buildIncidentReport(projectRoot(), since);
+  let report;
+  try {
+    report = await buildIncidentReport(projectRoot(), since);
+  } catch (err) {
+    if (err instanceof InvalidIncidentsSinceError) {
+      console.error(err.message);
+      process.exit(1);
+    }
+    throw err;
+  }
   if (json) {
     console.log(JSON.stringify(report, null, 2));
   } else {

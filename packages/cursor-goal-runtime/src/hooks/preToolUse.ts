@@ -3,6 +3,7 @@ import { hookJson } from "../lib/verify.js";
 import { readStdinJson } from "../lib/stdin.js";
 import {
   extractWorkUnitId,
+  structuredWorkUnitId,
   isSubagentContext,
   isUnitEvidencePath,
   markUnitInProgress,
@@ -98,7 +99,8 @@ try {
 
 if (tool === "Task" || tool === "task" || tool === "Subagent") {
   const prompt = String(input.tool_input?.prompt ?? input.tool_input?.description ?? "");
-  const unitId = extractWorkUnitId(prompt);
+  const unitId =
+    structuredWorkUnitId(input as Record<string, unknown>) ?? extractWorkUnitId(prompt);
   const subagentId = String(
     input.tool_input?.subagent_id ?? input.conversation_id ?? "subagent",
   );

@@ -18,6 +18,13 @@ export type IncidentReport = {
   incidents: Incident[];
 };
 
+export class InvalidIncidentsSinceError extends Error {
+  constructor(since: string) {
+    super(`Invalid --since value: ${since}. Use today, all, or an ISO date/time.`);
+    this.name = "InvalidIncidentsSinceError";
+  }
+}
+
 function startForSince(since: string): number {
   if (since === "all") return 0;
   if (since === "today") {
@@ -26,7 +33,10 @@ function startForSince(since: string): number {
     return d.getTime();
   }
   const t = Date.parse(since);
-  return Number.isFinite(t) ? t : 0;
+  if (!Number.isFinite(t)) {
+    throw new InvalidIncidentsSinceError(since);
+  }
+  return t;
 }
 
 function includeAt(at: string | undefined, start: number): boolean {
