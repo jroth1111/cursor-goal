@@ -14,6 +14,19 @@ import { levelWorkUnitsBlocked } from "../verifier/l-work-units.js";
 import { levelTrajectoryBlocked } from "../verifier/l-trajectory.js";
 import { levelFreshProofBlocked } from "../verifier/l6-fresh-proof.js";
 import type { StopInput, VerifierContext } from "../verifier/types.js";
+import { readSessionMode } from "./governance-config.js";
+import { isGovernanceActive } from "./governance-active.js";
+import { readLastTriageEntry } from "./prompt-triage.js";
+import {
+  resolveStopCheckProfile,
+  type CheckProfile,
+} from "./run-checks.js";
+
+export type { CheckProfile };
+
+export function resolveCheckProfile(loopCount = 0): CheckProfile {
+  return resolveStopCheckProfile(loopCount);
+}
 
 export type ExplainReport = {
   level_failed: string | null;
@@ -26,6 +39,10 @@ export type ExplainReport = {
   pipeline_result: "release" | "continue" | "disposition" | "idle";
   agent_handoff_blocked: boolean;
   last_stop_trace: StopTraceEntry | null;
+  session_mode: string | null;
+  triage_force_governed: boolean;
+  governance_active: boolean;
+  check_profile: CheckProfile;
 };
 
 function levelFromFailures(failures: string[]): string | null {
@@ -74,6 +91,9 @@ export async function buildExplainReport(
   const { submitBlocked } = await readAgentHandoffRead(root, agentId);
   const traceTail = await readStopTraceTail(root, 1);
   const lastStopTrace = traceTail.length ? (traceTail[traceTail.length - 1] ?? null) : null;
+  const session = await readSessionMode(root);
+  const triage = await readLastTriageEntry(root, agentId);
+  const governanceActive = await isGovernanceActive(root, agentId);
 
   return {
     level_failed: levelFromFailures(mergedFailures),
@@ -90,6 +110,10 @@ export async function buildExplainReport(
     pipeline_result: pipeline.kind,
     agent_handoff_blocked: submitBlocked,
     last_stop_trace: lastStopTrace,
+    session_mode: session?.mode ?? null,
+    triage_force_governed: triage?.classification?.forceGoverned ?? false,
+    governance_active: governanceActive,
+    check_profile: resolveCheckProfile(loopCount),
   };
 }
 
@@ -109,6 +133,10 @@ export function formatExplainReport(report: ExplainReport): string {
     `Units blocked: ${report.units_blocked}`,
     `Phase blocked: ${report.phase_blocked}`,
     `Agent submit blocked: ${report.agent_handoff_blocked}`,
+    `Session mode: ${report.session_mode ?? "(none)"}`,
+    `Triage forceGoverned: ${report.triage_force_governed}`,
+    `Governance active: ${report.governance_active}`,
+    `Check profile: ${report.check_profile}`,
     "",
     ...(report.last_stop_trace
       ? [

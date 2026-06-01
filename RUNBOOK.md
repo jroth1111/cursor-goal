@@ -41,7 +41,16 @@ env -u CURSOR_GOAL_RUNTIME npm test && npm run check
 | **nudge** | Passthrough + hint to run `cursor-goal init` (delivery/coverage detected) |
 | **governed** | Full gates — GOAL, compile, scope, stop RELEASE |
 
-Hard triggers (always governed): `GOAL.md` with checks, `runtime-state.json` blocked, `cursor-goal mode governed`, or `default_mode: governed` in `.cursor/goal/config.json`.
+Hard triggers (always governed): `/goal …` or `cursor-goal govern`, `runtime-state.json` blocked, `cursor-goal mode governed`, `default_mode: governed`, or (under `auto`) delivery-shaped prompts when `GOAL.md` has checks.
+
+**Session pin vs stop checks**
+
+| Session (`session-mode.json`) | `/goal` or `forceGoverned` triage | Blocked agent | Stop runs checks |
+|------------------------------|-----------------------------------|---------------|------------------|
+| `chat` | yes → escalates to `governed` | yes | yes when governed |
+| `governed` | yes | yes | yes |
+
+`/goal` and delivery escalation persist `session-mode.json` as `governed` (source `triage`) so follow-up prompts stay on the stop loop. Only `cursor-goal mode chat` clears the pin.
 
 ### Recovering from SESSION_END (ended without RELEASE)
 
@@ -148,10 +157,37 @@ node supervisor/run-goal.mjs --parent-only
 
 Equivalent CLI: `cursor-goal dispatch --run` (units only).
 
+## Multi-phase orchestrator runs
+
+For long orchestrator prompts (e.g. `/goal …` with a phased plan), use `.cursor/goal/orchestrator.json`:
+
+```bash
+cursor-goal orchestrator init --dir .cursor-audit/my-run
+cursor-goal orchestrator start          # marker + governed session + GOAL check
+cursor-goal orchestrator status
+cursor-goal orchestrator finish         # validates MASTER_STATUS / FINAL_REPORT
+```
+
+Guard script (installed at `.cursor/goal/scripts/check-orchestrator-status.mjs`): exits 0 when the marker is absent; when active, requires `FINAL_REPORT.md` or all `required_done` phases `DONE` in `MASTER_STATUS.md` / `ORCHESTRATOR_STATUS.json`.
+
+Operator triage: `cursor-goal triage tail` / `cursor-goal triage why` (alias of `cursor-goal mode why` with governance fields).
+
+## Tiered stop checks
+
+In `GOAL.md ## Checks`, prefix commands with `[fast]` or `[full]` (default tier: `full`):
+
+```markdown
+## Checks
+- `[fast]` npm run lint
+- `[full]` npm test
+```
+
+Blocked stops use the `fast` profile by default; RELEASE re-runs all tiers. Override with `CURSOR_GOAL_STOP_CHECK_PROFILE=fast|all`. When `npm test` is in checks, set `hooks.json` `stop.timeout` ≥ 600 seconds.
+
 ## Missing runtime fallback
 
 If the runtime is missing or crashes, hooks use the fail-open minimal safety
-fallback automatically. Destructive shell commands remain denied (I38).
+fallback automatically. Destructive shell commands remain denied (I38). Minimal bash honors session `chat` unless `/goal` triage or blocked agent (parity with runtime).
 
 ## CI
 

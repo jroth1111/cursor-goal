@@ -11,6 +11,7 @@ import { readStopTraceTail } from "../lib/stop-trace.js";
 import { cursorHome } from "../lib/template.js";
 import { resolveRuntimeRoot } from "../lib/resolve-runtime.js";
 import { hasGovernedContract } from "../lib/prompt-triage.js";
+import { isOrchestratorActive, readOrchestratorConfig } from "../lib/orchestrator.js";
 
 async function readLastJsonl<T>(file: string): Promise<T | null> {
   if (!existsSync(file)) return null;
@@ -87,11 +88,18 @@ async function main(): Promise<void> {
     }>(path.join(goalDir(root), "evidence", "proof-runs.jsonl"));
     const noRelease = classifyNoRelease(lastStopTrace, lastCheck);
     const governedContract = await hasGovernedContract(root).catch(() => false);
+    const orchActive = await isOrchestratorActive(root).catch(() => false);
+    const orchConfig = orchActive ? await readOrchestratorConfig(root).catch(() => null) : null;
     await writeJson(sessionEndMarkerPath(root), {
       status: "SESSION_END",
       reason: "session_end_without_release",
       failure_class: noRelease.failureClass,
       had_governed_contract: governedContract,
+      orchestrator_incomplete: orchActive,
+      orchestrator_audit_dir: orchConfig?.audit_dir ?? null,
+      orchestrator_master_status: orchConfig
+        ? path.join(orchConfig.audit_dir, orchConfig.master_status)
+        : null,
       agent_id: agentId,
       conversation_id: input.conversation_id,
       at: new Date().toISOString(),

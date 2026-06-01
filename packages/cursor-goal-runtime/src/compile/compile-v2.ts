@@ -13,7 +13,7 @@ import { defaultUnitAcceptance } from "../lib/unit-acceptance-defaults.js";
 export type CompiledArtifacts = {
   manifest: Record<string, unknown>;
   scope: { paths: string[]; enforce: boolean };
-  checks: { commands: string[] };
+  checks: { commands: string[]; tiers?: Record<string, "fast" | "full"> };
   intent: Record<string, unknown>;
   claim: Record<string, unknown>;
   workUnits: { units: WorkUnitCompiled[] };
@@ -219,7 +219,10 @@ export async function buildCompiledArtifacts(root: string): Promise<CompiledArti
       compiled_at: now,
     },
     scope: scopePayload,
-    checks: { commands: parsed.checks },
+    checks: {
+      commands: parsed.checks,
+      ...(Object.keys(parsed.checkTiers).length ? { tiers: parsed.checkTiers } : {}),
+    },
     intent: {
       goal: parsed.goalText,
       non_goals: parsed.nonGoals,

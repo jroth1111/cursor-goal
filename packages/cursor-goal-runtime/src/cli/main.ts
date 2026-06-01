@@ -22,6 +22,8 @@ import {
   handleVerify,
 } from "./operator.js";
 import { handleMode } from "./mode.js";
+import { handleTriage } from "./triage.js";
+import { handleOrchestrator } from "./orchestrator.js";
 import { printUsage } from "./shared.js";
 
 export { operatorOptionsFromArgv } from "./shared.js";
@@ -91,6 +93,12 @@ export async function runCli(argv: string[]): Promise<void> {
       break;
     case "mode":
       await handleMode(rest);
+      break;
+    case "triage":
+      await handleTriage(rest);
+      break;
+    case "orchestrator":
+      await handleOrchestrator(rest);
       break;
     default:
       if (cmd && cmd !== "--help" && cmd !== "-h" && cmd !== "help") {

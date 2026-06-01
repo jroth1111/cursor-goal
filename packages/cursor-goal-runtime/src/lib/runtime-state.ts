@@ -11,8 +11,11 @@ import {
   type NextActionKind,
 } from "./next-action.js";
 import { buildUnitTaskPrompt } from "./unit-task-prompt.js";
-import { findUnitById, readWorkUnits } from "./work-units.js";
+import { allUnitsDone, findUnitById, readWorkUnits } from "./work-units.js";
+import { checkUnitCompletionEvidence } from "./unit-evidence.js";
 import { goalDir, passportsDir, projectRoot, readJson } from "./paths.js";
+import { gitTreeId } from "./git-state.js";
+import { readTrajectory } from "../trajectory/fsm.js";
 import { readLoopLimit } from "./loop-limit.js";
 import type { CheckResult } from "./run-checks.js";
 import type { VerifierContext } from "../verifier/types.js";
@@ -85,8 +88,32 @@ export type ReleasePassportFile = {
   at: string;
   mode: RuntimeStateMode;
   loop_count: number;
+  proof_tree?: string;
   [key: string]: unknown;
 };
+
+export async function readReleasePassport(root?: string): Promise<ReleasePassportFile | null> {
+  const r = root ?? projectRoot();
+  return readJson<ReleasePassportFile>(path.join(passportsDir(r), "RELEASE.json")).catch(() => null);
+}
+
+/** True when an on-disk RELEASE passport still matches tree, units, and phase gates. */
+export async function honorExistingReleasePassport(root: string): Promise<boolean> {
+  const passport = await readReleasePassport(root);
+  if (!passport || passport.status !== "RELEASE") return false;
+  if (typeof passport.proof_tree === "string" && passport.proof_tree !== gitTreeId(root)) {
+    return false;
+  }
+  const unitsFile = await readWorkUnits(root);
+  if (!unitsFile?.units.length || !allUnitsDone(unitsFile.units)) return false;
+  for (const unit of unitsFile.units) {
+    const evidence = await checkUnitCompletionEvidence(root, unit);
+    if (!evidence.ok) return false;
+  }
+  const traj = await readTrajectory(root);
+  if (traj.phase === "DISCOVERY" || traj.phase === "INTAKE") return false;
+  return true;
+}
 
 export type ReadRuntimeStateOptions = {
   agentId?: string;

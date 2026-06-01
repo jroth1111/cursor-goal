@@ -68,6 +68,31 @@ if [[ -f "$GOAL_DIR/PAUSED" ]]; then
   exit 0
 fi
 
+# Align with runtime governance: session pinned to chat skips checks unless blocked or /goal triage.
+SESSION_MODE_FILE="$GOAL_DIR/session-mode.json"
+if [[ -f "$SESSION_MODE_FILE" ]] && command -v jq >/dev/null 2>&1; then
+  SM="$(jq -r '.mode // empty' "$SESSION_MODE_FILE" 2>/dev/null || true)"
+  if [[ "$SM" == "chat" ]]; then
+    BLOCKED=0
+    if [[ -f "$AGENT_STATE" ]]; then
+      BLOCKED="$(jq -r '.blocked // false' "$AGENT_STATE" 2>/dev/null || echo false)"
+    fi
+    FORCE_GOV=0
+    TRIAGE_LOG="$GOAL_DIR/triage-log.jsonl"
+    if [[ -f "$TRIAGE_LOG" ]]; then
+      LAST_LINE="$(grep -F "\"agent_id\":\"${AGENT_ID}\"" "$TRIAGE_LOG" 2>/dev/null | tail -1 || true)"
+      if [[ -n "$LAST_LINE" ]]; then
+        FG="$(printf '%s' "$LAST_LINE" | jq -r '.classification.forceGoverned // false' 2>/dev/null || echo false)"
+        [[ "$FG" == "true" ]] && FORCE_GOV=1
+      fi
+    fi
+    if [[ "$BLOCKED" != "true" && "$FORCE_GOV" -ne 1 ]]; then
+      echo '{}'
+      exit 0
+    fi
+  fi
+fi
+
 if [[ "$STATUS" != "completed" ]]; then
   echo '{}'
   exit 0

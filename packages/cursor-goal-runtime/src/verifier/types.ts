@@ -1,5 +1,5 @@
 import type { ParsedGoal } from "../lib/parse-goal-md.js";
-import type { CheckResult } from "../lib/run-checks.js";
+import type { CheckProfile, CheckResult } from "../lib/run-checks.js";
 
 export type StopInput = {
   status?: string;
@@ -30,6 +30,8 @@ export type VerifierContext = {
   /** Prefer this over generic followup when set by invalidators. */
   followupMessage?: string;
   advisoryWarnings?: string[];
+  checkProfile?: CheckProfile;
+  checkTiers?: Record<string, "fast" | "full">;
 };
 
 export type LevelResult = {

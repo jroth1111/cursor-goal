@@ -96,6 +96,30 @@ export async function isBlockedRuntime(
   return isAgentSubmitBlocked(root, id);
 }
 
+/** `/goal` or `cursor-goal govern` — must win over session chat pin. */
+export function shouldForceGovernedSession(classified: PromptClassification): boolean {
+  return classified.forceGoverned;
+}
+
+/** Persist session to governed after triage (survives follow-up prompts). */
+export function shouldPersistGovernedSession(
+  classified: PromptClassification,
+  resolvedMode: EffectiveMode,
+  config: { default_mode: GovernanceMode },
+  hasContract: boolean,
+): boolean {
+  if (resolvedMode === "governed") return true;
+  if (classified.forceGoverned) return true;
+  if (
+    config.default_mode === "auto" &&
+    classified.deliveryScore >= 2 &&
+    hasContract
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export type ResolveModeResult = {
   mode: EffectiveMode;
   nudgeKind?: "delivery" | "coverage";
@@ -135,9 +159,13 @@ export async function resolveEffectiveMode(
     }
   }
 
+  if (shouldForceGovernedSession(classified)) {
+    return { mode: "governed", triageReasons: ["explicit_governed"] };
+  }
+
   if (session?.mode === "chat") {
     if (blocked) {
-      return { mode: "governed" };
+      return { mode: "governed", triageReasons: ["blocked_runtime"] };
     }
     return { mode: "chat" };
   }
@@ -152,10 +180,6 @@ export async function resolveEffectiveMode(
 
   if (blocked) {
     return { mode: "governed", triageReasons: ["blocked_runtime"] };
-  }
-
-  if (classified.forceGoverned) {
-    return { mode: "governed", triageReasons: ["explicit_governed"] };
   }
 
   if (config.default_mode === "chat") {

@@ -30,6 +30,10 @@ Usage:
   cursor-goal pause|resume
   cursor-goal mode [chat|governed|auto|set auto|chat|governed|why]
   cursor-goal mode why [--conversation <id>]
+  cursor-goal triage tail [N] [--conversation <id>] [--json]
+  cursor-goal triage why [--conversation <id>]
+  cursor-goal orchestrator init [--dir <audit_dir>]
+  cursor-goal orchestrator start|finish [--keep-check]|status [--json]
   cursor-goal phase advance IMPLEMENT
   cursor-goal discovery complete [notes]
   cursor-goal units list

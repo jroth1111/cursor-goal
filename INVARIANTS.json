@@ -1379,6 +1379,62 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i210-governance-diff-guard.test.ts"
+    },
+    {
+      "id": "I211",
+      "description": "Stop hook honors existing RELEASE passport without re-blocking",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i211-stop-honors-release-passport.test.ts"
+    },
+    {
+      "id": "I212",
+      "description": "/goal escalates session from chat and stop continues when checks fail",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i212-goal-escalates-session.test.ts"
+    },
+    {
+      "id": "I213",
+      "description": "isGovernanceActive true after forceGoverned triage even when session pinned chat",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i213-governance-active-force-goal.test.ts"
+    },
+    {
+      "id": "I214",
+      "description": "Governance mode matrix: /goal and delivery beat session chat pin",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i214-governance-mode-matrix.test.ts"
+    },
+    {
+      "id": "I215",
+      "description": "Doctor warns on governance mismatches (session chat + forceGoverned, intent drift, stop timeout)",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i215-doctor-governance-mismatch.test.ts"
+    },
+    {
+      "id": "I216",
+      "description": "Orchestrator CLI start/finish/status lifecycle",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i216-orchestrator-cli.test.ts"
+    },
+    {
+      "id": "I217",
+      "description": "Orchestrator check script exits 0 without marker and 1 when incomplete",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i217-orchestrator-check-script.test.ts"
+    },
+    {
+      "id": "I218",
+      "description": "GOAL [fast]/[full] check tiers and stop check profiles",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i218-check-profiles.test.ts"
     }
   ]
 }

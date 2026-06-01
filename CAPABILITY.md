@@ -200,6 +200,14 @@ Only claim what invariant tests prove.
 | I207 | Unit task prompts include completion discipline | — | yes | — | i207-unit-task-prompt-completion | tested |
 | I208 | `status --json` exposes `blocked_sources` | — | yes | — | i208-status-json-blocked-sources | tested |
 | I209 | Blocked stop followups tagged `[governance]` | — | yes | — | i209-stop-followup-governance-tag | tested |
+| I211 | Stop hook honors existing RELEASE without re-blocking | — | yes | — | i211-stop-honors-release-passport | tested |
+| I212 | `/goal` escalates session from chat; failing checks → stop `continue` | — | yes | — | i212-goal-escalates-session | tested |
+| I213 | `isGovernanceActive` after `forceGoverned` triage despite session chat | — | yes | — | i213-governance-active-force-goal | tested |
+| I214 | Governance mode matrix: `/goal` and delivery beat session chat pin | — | yes | — | i214-governance-mode-matrix | tested |
+| I215 | Doctor governance mismatch warnings | — | yes | — | i215-doctor-governance-mismatch | tested |
+| I216 | Orchestrator CLI lifecycle | — | yes | — | i216-orchestrator-cli | tested |
+| I217 | Orchestrator check script marker guard | — | yes | — | i217-orchestrator-check-script | tested |
+| I218 | Check tiers `[fast]`/`[full]` and stop profiles | — | yes | — | i218-check-profiles | tested |
 | I210 | Governance file edits require acknowledgment (strict optional) | — | yes | — | i210-governance-diff-guard | tested |
 
 ## Multi-agent runtime state (one repo, many parent conversations)

@@ -11,20 +11,48 @@ export type WorkUnitDraft = {
   verify_prompt?: string | null;
 };
 
+export type CheckTier = "fast" | "full";
+
 export type ParsedGoal = {
   goalText: string;
   nonGoals: string[];
   checks: string[];
+  checkTiers: Record<string, CheckTier>;
   scope: string[];
   forbiddenProxies: string[];
   workUnits: WorkUnitDraft[];
 };
 
+function parseChecksSection(text: string): { commands: string[]; tiers: Record<string, CheckTier> } {
+  const block = sectionBody(text, "Checks");
+  const commands: string[] = [];
+  const tiers: Record<string, CheckTier> = {};
+  for (const line of block.split("\n")) {
+    const t = line.trim();
+    if (!t.startsWith("-")) continue;
+    let item = t.slice(1).trim();
+    item = item.replace(/^`/, "").replace(/`$/, "");
+    let tier: CheckTier = "full";
+    if (/^\[fast\]\s*/i.test(item)) {
+      tier = "fast";
+      item = item.replace(/^\[fast\]\s*/i, "");
+    } else if (/^\[full\]\s*/i.test(item)) {
+      tier = "full";
+      item = item.replace(/^\[full\]\s*/i, "");
+    }
+    item = item.replace(/^`/, "").replace(/`$/, "").trim();
+    if (!item) continue;
+    commands.push(item);
+    tiers[item] = tier;
+  }
+  return { commands, tiers };
+}
+
 export async function parseGoalMd(root?: string): Promise<ParsedGoal> {
   const text = await readFile(goalMd(root), "utf8");
   const goalText = sectionParagraph(text, "Goal") || "Complete work per GOAL.md";
   const nonGoals = sectionBullets(text, "Non-goals");
-  const checks = sectionBullets(text, "Checks");
+  const { commands: checks, tiers: checkTiers } = parseChecksSection(text);
   const scope = sectionBullets(text, "Scope").map(normalizeScopePath);
   const forbiddenProxies = sectionBullets(text, "Forbidden proxies");
   const explicit = parseWorkUnitsSection(text).filter(
@@ -32,7 +60,7 @@ export async function parseGoalMd(root?: string): Promise<ParsedGoal> {
   );
   const workUnits =
     explicit.length > 0 ? explicit : autoSliceWorkUnits(scope, checks);
-  return { goalText, nonGoals, checks, scope, forbiddenProxies, workUnits };
+  return { goalText, nonGoals, checks, checkTiers, scope, forbiddenProxies, workUnits };
 }
 
 function sectionBody(text: string, heading: string): string {

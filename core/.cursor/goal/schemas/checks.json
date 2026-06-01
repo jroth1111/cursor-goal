@@ -8,6 +8,13 @@
     "commands": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
+    },
+    "tiers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["fast", "full"]
+      }
     }
   }
 }

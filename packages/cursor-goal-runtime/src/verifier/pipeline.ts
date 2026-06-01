@@ -9,6 +9,7 @@ import {
   computeRuntimeState,
   formatDispositionMessage,
   formatFollowupMessage,
+  honorExistingReleasePassport,
   releaseRuntimeState,
   resolveAgentId,
   writeUnblockedContinueState,
@@ -110,6 +111,10 @@ export async function runStopPipeline(
   }
 
   const parsed = await parseGoalMd(root);
+  if (!dryRun && (await honorExistingReleasePassport(root))) {
+    await writeUnblockedContinueState(root, { agentId, loopCount: 0 });
+    return { kind: "release" };
+  }
   const loopCount = await resolveGoalBlockedLoopCount(root, agentId);
   const ctx: VerifierContext = {
     root,
@@ -137,6 +142,8 @@ export async function runStopPipeline(
   levelForbiddenProxy(ctx);
   levelIntentStructure(ctx);
   await levelChecksPass(ctx);
+  const { enrichOrchestratorFollowup } = await import("../lib/orchestrator.js");
+  await enrichOrchestratorFollowup(ctx);
   await levelFreshProofBlocked(ctx);
   ctx.advisoryWarnings = await levelProofPlanAdvisory(ctx);
 
@@ -183,6 +190,13 @@ export async function runStopPipeline(
       failures: [...ctx.failures],
       pipeline_result: blocked ? "continue" : "release",
     }).catch(() => undefined);
+  }
+
+  if (!blocked) {
+    const { runFullTierChecksBeforeRelease } = await import("./l3-checks-pass.js");
+    await runFullTierChecksBeforeRelease(ctx);
+    blocked =
+      ctx.failures.length > 0 || ctx.unitsBlocked || ctx.phaseBlocked;
   }
 
   if (!blocked) {

@@ -6,10 +6,21 @@ import { hasAgentDisposition, isAgentSubmitBlocked, sessionEndMarkerPath } from 
 import { goalDir, goalMd, projectRoot } from "../lib/paths.js";
 import { hookJson } from "../lib/verify.js";
 import { readStdinJson } from "../lib/stdin.js";
-import { nudgeMessage, resolveEffectiveMode, appendTriageLog } from "../lib/prompt-triage.js";
+import {
+  classifyPrompt,
+  nudgeMessage,
+  resolveEffectiveMode,
+  appendTriageLog,
+  hasGovernedContract,
+  shouldPersistGovernedSession,
+} from "../lib/prompt-triage.js";
 import { isStrictGovernance } from "../lib/strict-mode.js";
 import { resolveRuntimeRoot } from "../lib/resolve-runtime.js";
-import { isGovernedPromptBlock } from "../lib/governance-config.js";
+import {
+  isGovernedPromptBlock,
+  readGovernanceConfig,
+  writeSessionMode,
+} from "../lib/governance-config.js";
 
 async function main(): Promise<void> {
   const root = projectRoot();
@@ -28,6 +39,7 @@ async function main(): Promise<void> {
     );
   }
 
+  const classified = classifyPrompt(prompt);
   let resolved: Awaited<ReturnType<typeof resolveEffectiveMode>>;
   try {
     resolved = await resolveEffectiveMode(root, prompt, input.conversation_id);
@@ -36,6 +48,27 @@ async function main(): Promise<void> {
     notes.push(`Governance triage unavailable (${msg}); continuing fail-open`);
     hookJson({ continue: true, agent_message: notes.join("; ") });
     return;
+  }
+
+  if (classified.forceGoverned && resolved.mode === "chat") {
+    notes.push(
+      "Session pinned to chat; stop-loop disabled. Run: cursor-goal mode governed",
+    );
+  }
+
+  try {
+    const config = await readGovernanceConfig(root);
+    const hasContract = await hasGovernedContract(root);
+    if (
+      shouldPersistGovernedSession(classified, resolved.mode, config, hasContract)
+    ) {
+      await writeSessionMode(root, "governed", "triage");
+      if (resolved.mode !== "governed") {
+        resolved = { mode: "governed", triageReasons: ["session_escalated"] };
+      }
+    }
+  } catch {
+    /* session write is best-effort */
   }
 
   await appendTriageLog(

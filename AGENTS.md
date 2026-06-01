@@ -22,6 +22,8 @@ Governed work on this tree **must** follow proof-first order. Do not scaffold an
 - Bulk "fix all" without red tests first.
 - Treating file layout as governance.
 
+Multi-phase orchestrator runs: `cursor-goal orchestrator start` + `.cursor/goal/orchestrator.json` (see [`RUNBOOK.md`](RUNBOOK.md)).
+
 ## Release authority
 
 - **Core:** bash hooks + minimal stop verifier.

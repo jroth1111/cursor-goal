@@ -9,6 +9,7 @@ import { readFile } from "node:fs/promises";
 import { cursorHome } from "./template.js";
 import { resolveRuntimeRoot as resolveRuntime } from "./resolve-runtime.js";
 import { probeCursorAgentPreflight } from "./dispatch-verify.js";
+import { auditGovernanceMismatch } from "./governance-doctor.js";
 
 export type DoctorIssue = { level: "error" | "warn"; message: string };
 
@@ -140,6 +141,12 @@ export async function runDoctor(root = projectRoot(), options: DoctorOptions = {
       level: "warn",
       message: `${preflight.bin} not available for dispatch --verify --spawn (status=${preflight.status ?? "n/a"}). Set CURSOR_AGENT_BIN or use --dry-run.`,
     });
+  }
+
+  try {
+    issues.push(...(await auditGovernanceMismatch(root)));
+  } catch {
+    issues.push({ level: "warn", message: "Governance mismatch audit failed" });
   }
 
   return issues;
