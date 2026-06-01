@@ -56,4 +56,35 @@ describe("I181 global install verification report", () => {
     expect(report.checks?.templates?.ok).toBe(true);
     expect(report.checks?.hooks?.ok).toBe(true);
   });
+
+  it("post-install hook_resolution ignores CURSOR_GOAL_RUNTIME from the caller env", async () => {
+    const suffix = `${process.pid}-${Date.now()}`;
+    fakeCursorHome = path.join(os.tmpdir(), `i181-cursor-override-${suffix}`);
+    fakeHome = path.join(os.tmpdir(), `i181-home-override-${suffix}`);
+    fakeBin = path.join(os.tmpdir(), `i181-bin-override-${suffix}`);
+    await mkdir(fakeBin, { recursive: true });
+    await writeFile(path.join(fakeBin, "npm"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+
+    const script = path.resolve(import.meta.dirname, "../../../../scripts/install-global.sh");
+    const repoRoot = path.resolve(import.meta.dirname, "../../../../../");
+    const runtimeRoot = path.resolve(import.meta.dirname, "../../");
+    const r = spawnSync("bash", [script, "--skip-build"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CURSOR_HOME: fakeCursorHome,
+        HOME: fakeHome,
+        PATH: `${fakeBin}:${process.env.PATH ?? ""}`,
+        CURSOR_GOAL_RUNTIME: runtimeRoot,
+      },
+    });
+
+    expect(r.status, r.stderr || r.stdout).toBe(0);
+    const report = JSON.parse(
+      await readFile(path.join(fakeCursorHome, "cursor-goal/install-verify.json"), "utf8"),
+    ) as { ok?: boolean; checks?: Record<string, { ok?: boolean }> };
+    expect(report.ok).toBe(true);
+    expect(report.checks?.hook_resolution?.ok).toBe(true);
+  });
 });

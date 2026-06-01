@@ -159,7 +159,7 @@ verify_global_install() {
   done
 
   tmp_project="$(mktemp -d "${TMPDIR:-/tmp}/cgr-install-verify.XXXXXX")"
-  resolved_runtime="$(env CURSOR_PROJECT_DIR="$tmp_project" CURSOR_HOME="$CURSOR_HOME" HOME="$HOME" bash -c 'source "$1/_cgr-lib.sh" && cgr_resolve_runtime' bash "$GLOBAL_HOOKS" 2>/dev/null || true)"
+  resolved_runtime="$(env -u CURSOR_GOAL_RUNTIME CURSOR_PROJECT_DIR="$tmp_project" CURSOR_HOME="$CURSOR_HOME" HOME="$HOME" bash -c 'source "$1/_cgr-lib.sh" && cgr_resolve_runtime' bash "$GLOBAL_HOOKS" 2>/dev/null || true)"
   rm -rf "$tmp_project"
   if [[ "$resolved_runtime" == "$GLOBAL_RUNTIME" ]]; then
     hook_resolution_ok=true

@@ -25,6 +25,12 @@ cursor-goal doctor --strict  # exit 1 when global runtime is stale
 
 Restart Cursor if hooks do not reload after editing `hooks.json`.
 
+**Tests with `cursor-goal.env` sourced:** `CURSOR_GOAL_RUNTIME` points at your global install and can make install-parity invariant tests fail locally. CI does not set it. From the repo root:
+
+```bash
+env -u CURSOR_GOAL_RUNTIME npm test && npm run check
+```
+
 **cursor-agent wrapper:** `cursor-agent-goal` sources `~/.cursor/cursor-goal.env` then runs `cursor-agent`.
 
 **Governance triage (default `auto`):** Each prompt is classified in `beforeSubmitPrompt`:
