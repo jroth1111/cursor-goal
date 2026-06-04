@@ -5,6 +5,7 @@ import { isGovernanceActive } from "./governance-active.js";
 import { resolveAgentId } from "./runtime-state.js";
 import { readGovernanceConfig, readSessionMode } from "./governance-config.js";
 import { runStopPipeline, type StopInput, type VerifyResult } from "../verifier/index.js";
+import { inferHookEvent, sanitizeHookResponse } from "./hook-response-schema.js";
 
 export type { StopInput, VerifyResult };
 
@@ -26,5 +27,5 @@ export async function runStopVerifier(input: StopInput): Promise<VerifyResult> {
 }
 
 export function hookJson(body: Record<string, unknown>): void {
-  process.stdout.write(`${JSON.stringify(body)}\n`);
+  process.stdout.write(`${JSON.stringify(sanitizeHookResponse(inferHookEvent(), body))}\n`);
 }

@@ -60,7 +60,7 @@ describe("I61 runtime-state P2 fixes", () => {
     expect(state?.blockers[0]).toContain("submit-blocked");
   });
 
-  it("RELEASE leaves repo summary blocked when another agent is in disposition", async () => {
+  it("RELEASE clears stale dispositions across agents", async () => {
     const p = await mkGitProject("i61-release-disp");
     cleanup = p.cleanup;
     restore = withProjectEnv(p.dir).restore;
@@ -82,8 +82,8 @@ describe("I61 runtime-state P2 fixes", () => {
 
     await runStopVerifier({ status: "completed", loop_count: 0, conversation_id: "agent-a" });
     const summary = await readRepoRuntimeSummary(p.dir);
-    expect(summary?.blocked_agent_count).toBeGreaterThanOrEqual(1);
-    expect(countSubmitBlockedAgents(p.dir)).toBe(1);
+    expect(summary?.blocked_agent_count ?? 0).toBe(0);
+    expect(countSubmitBlockedAgents(p.dir)).toBe(0);
   });
 
   it("compile invalidation resets goal-loop and rebuilds repo summary under lock", async () => {

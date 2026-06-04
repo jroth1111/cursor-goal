@@ -37,7 +37,8 @@ describe("stop followup formatting", () => {
       updated_at: new Date().toISOString(),
     });
     expect(msg).toContain("Next action (do this first)");
-    expect(msg).toContain("work_unit_id: mod-a");
+    expect(msg).not.toContain("work_unit_id: mod-a");
+    expect(msg).toContain("inspect the full task prompt with cursor-goal next");
     expect(msg).toContain("agents/default/runtime-state.json");
   });
 });

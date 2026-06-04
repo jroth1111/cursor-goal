@@ -23,6 +23,7 @@ import { isGoalStale } from "../lib/compile-stale.js";
 import { hookJson } from "../lib/verify.js";
 import { readStdinJson } from "../lib/stdin.js";
 import { readTrajectory } from "../trajectory/fsm.js";
+import { formatGovernedSubmitHeader } from "../lib/governed-submit-header.js";
 
 async function tryCompileGoal(root: string): Promise<void> {
   try {
@@ -150,12 +151,18 @@ async function main(): Promise<void> {
     brief += "; note: no conversation_id — shared default agent bucket";
   }
 
-  hookJson({ agent_message: brief });
+  const governed = session?.mode === "governed" || config.default_mode === "governed";
+  if (governed && existsSync(goalMd(root)) && !autoInitNote) {
+    const header = await formatGovernedSubmitHeader(root).catch(() => null);
+    if (header) brief = `${header}\n${brief}`;
+  }
+
+  hookJson({ additional_context: brief });
 }
 
 try {
   await main();
 } catch (e) {
   const msg = e instanceof Error ? e.message : String(e);
-  hookJson({ agent_message: `cursor-goal sessionStart warning: ${msg}; continuing fail-open` });
+  hookJson({ additional_context: `cursor-goal sessionStart warning: ${msg}; continuing fail-open` });
 }

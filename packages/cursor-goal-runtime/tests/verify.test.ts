@@ -4,6 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import { runStopVerifier } from "../src/lib/verify.js";
 import { compileGoal } from "../src/lib/compile-goal.js";
+import { compileGoalV2 } from "../src/compile/compile-v2.js";
 import { seedReleaseReady } from "./helpers/release-ready.js";
 
 async function mkProject(): Promise<string> {
@@ -36,6 +37,7 @@ describe("runStopVerifier", () => {
 `,
       "utf8",
     );
+    await compileGoalV2(dir);
     const r = await runStopVerifier({ status: "completed", loop_count: 0 });
     expect(r.kind).toBe("continue");
     if (r.kind === "continue") {

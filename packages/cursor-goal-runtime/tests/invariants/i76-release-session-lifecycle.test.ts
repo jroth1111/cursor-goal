@@ -52,8 +52,8 @@ describe("I76 release/session terminal lifecycle", () => {
     expect(existsSync(sessionEndMarkerPath(p.dir))).toBe(false);
   });
 
-  it("minimal RELEASE clears a stale SESSION_END marker", async () => {
-    const p = await mkGitProject("i76-minimal-clears-session-end");
+  it("minimal fallback does not clear SESSION_END or write RELEASE on passing checks", async () => {
+    const p = await mkGitProject("i76-minimal-preserves-session-end");
     cleanup = p.cleanup;
     restore = withProjectEnv(p.dir).restore;
 
@@ -74,8 +74,8 @@ describe("I76 release/session terminal lifecycle", () => {
     });
 
     expect(r.exitCode).toBe(0);
-    expect(existsSync(path.join(passportsDir(p.dir), "RELEASE.json"))).toBe(true);
-    expect(existsSync(sessionEndMarkerPath(p.dir))).toBe(false);
+    expect(existsSync(path.join(passportsDir(p.dir), "RELEASE.json"))).toBe(false);
+    expect(existsSync(sessionEndMarkerPath(p.dir))).toBe(true);
   });
 
   it("runtime RELEASE does not reset state when its passport cannot be prepared", async () => {

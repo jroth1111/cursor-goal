@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { resolveAgentId } from "../lib/runtime-state.js";
 import { goalDir, passportsDir, projectRoot, writeJson } from "../lib/paths.js";
@@ -72,7 +72,7 @@ function classifyNoRelease(
 
 async function main(): Promise<void> {
   const root = projectRoot();
-  const input = await readStdinJson<{ conversation_id?: string }>();
+  const input = await readStdinJson<{ conversation_id?: string; reason?: string; duration_ms?: number }>();
   const agentId = resolveAgentId(input);
   const release = path.join(passportsDir(root), "RELEASE.json");
 
@@ -92,7 +92,8 @@ async function main(): Promise<void> {
     const orchConfig = orchActive ? await readOrchestratorConfig(root).catch(() => null) : null;
     await writeJson(sessionEndMarkerPath(root), {
       status: "SESSION_END",
-      reason: "session_end_without_release",
+      reason: input.reason ?? "session_end_without_release",
+      duration_ms: input.duration_ms,
       failure_class: noRelease.failureClass,
       had_governed_contract: governedContract,
       orchestrator_incomplete: orchActive,
@@ -112,6 +113,20 @@ async function main(): Promise<void> {
       last_stop_trace: lastStopTrace,
       last_check_result: lastCheck,
     });
+
+    // Write timestamped session history for operator triage.
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    const sessionsDir = path.join(goalDir(root), "passports", "sessions");
+    await mkdir(sessionsDir, { recursive: true }).catch(() => undefined);
+    await writeJson(path.join(sessionsDir, `SESSION_END_${ts}.json`), {
+      status: "SESSION_END",
+      reason: input.reason ?? "session_end_without_release",
+      duration_ms: input.duration_ms,
+      failure_class: noRelease.failureClass,
+      agent_id: agentId,
+      conversation_id: input.conversation_id,
+      at: new Date().toISOString(),
+    }).catch(() => undefined);
   }
 
   hookJson({});

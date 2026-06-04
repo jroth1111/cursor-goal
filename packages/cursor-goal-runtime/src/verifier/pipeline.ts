@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { appendFile } from "node:fs/promises";
 import nodePath from "node:path";
 import { ensureGoalDirs, goalDir, goalMd, projectRoot } from "../lib/paths.js";
-import { parseGoalMd } from "../lib/parse-goal-md.js";
+import { loadCompiledGoal } from "../lib/compiled-goal.js";
 import { gitTreeId } from "../lib/git-state.js";
 import { readLoopLimit } from "../lib/loop-limit.js";
 import {
@@ -38,7 +38,17 @@ import {
 } from "./invalidators.js";
 import { levelProofPlanAdvisory } from "./l5b-proof-plan-advisory.js";
 import { levelAdversarialBlocked } from "./l-adversarial.js";
-import { appendStopTrace } from "../lib/stop-trace.js";
+import { appendStopTrace, readStopTraceTail } from "../lib/stop-trace.js";
+import { readPromptContext } from "../lib/prompt-context.js";
+import { readTranscriptTailEvidence } from "../lib/transcript-tail.js";
+import {
+  computeSignatureFromContext,
+  detectOscillation,
+  detectTokenStagnation,
+  readStopSignatureTail,
+  recordStopSignature,
+} from "../lib/stop-signature.js";
+import { oscillationSteeringBlurb } from "../lib/followup-steering.js";
 import type { StopInput, VerifyKind, VerifierContext, PipelineOptions } from "./types.js";
 
 export function governanceFollowupMessage(message: string): string {
@@ -100,21 +110,29 @@ export async function runStopPipeline(
   const agentId = resolveAgentId(input);
   const dryRun = options?.dryRun === true;
   await ensureGoalDirs(root);
+  const promptContext = await readPromptContext(root, agentId).catch(() => null);
 
   if (!existsSync(goalMd(root))) {
     if (!dryRun) await writeUnblockedContinueState(root, { agentId });
-    return {
-      kind: "continue",
-      message:
-        "GOAL.md is missing. Create it from .cursor/goal/templates/GOAL.md with ## Checks.",
-    };
+    return { kind: "idle" };
   }
 
-  const parsed = await parseGoalMd(root);
-  if (!dryRun && (await honorExistingReleasePassport(root))) {
-    await writeUnblockedContinueState(root, { agentId, loopCount: 0 });
-    return { kind: "release" };
+  const compiled = await loadCompiledGoal(root);
+  if (!compiled.ok) {
+    if (!dryRun) {
+      await appendStopTrace(root, {
+        at: new Date().toISOString(),
+        agent_id: agentId,
+        level_failed: "compiled-contract",
+        failures: [compiled.message],
+        pipeline_result: "continue",
+        terminal_status: input.status ?? "unknown",
+      }).catch(() => undefined);
+    }
+    return { kind: "continue", message: governanceFollowupMessage(compiled.message) };
   }
+  const parsed = compiled.parsed;
+  const honorPassport = !dryRun && (await honorExistingReleasePassport(root));
   const loopCount = await resolveGoalBlockedLoopCount(root, agentId);
   const ctx: VerifierContext = {
     root,
@@ -138,7 +156,7 @@ export async function runStopPipeline(
   early = wrap(ctx, levelChecksPresent(ctx));
   if (early) return finishEarly(root, early, agentId, ctx, options);
 
-  levelScope(ctx);
+  await levelScope(ctx);
   levelForbiddenProxy(ctx);
   levelIntentStructure(ctx);
   await levelChecksPass(ctx);
@@ -172,6 +190,13 @@ export async function runStopPipeline(
     }
   }
 
+  if (!blocked) {
+    const { runFullTierChecksBeforeRelease } = await import("./l3-checks-pass.js");
+    await runFullTierChecksBeforeRelease(ctx);
+    blocked =
+      ctx.failures.length > 0 || ctx.unitsBlocked || ctx.phaseBlocked;
+  }
+
   const levelFailed =
     ctx.failures[0]?.startsWith("adversarial")
       ? "L-adversarial"
@@ -182,21 +207,52 @@ export async function runStopPipeline(
           : ctx.failures.length
             ? "L-other"
             : null;
+  const signature = blocked ? computeSignatureFromContext(ctx, levelFailed) : undefined;
+  let repeatedSignatureCount = 0;
 
   if (!dryRun) {
+    if (blocked && signature) {
+      repeatedSignatureCount = await recordStopSignature(ctx.root, agentId, signature);
+    }
+    const transcriptTail = await readTranscriptTailEvidence(input.transcript_path).catch(() => undefined);
+    const hasTokens = input.input_tokens != null || input.output_tokens != null;
     await appendStopTrace(ctx.root, {
       at: new Date().toISOString(),
+      agent_id: agentId,
+      ...(signature ? { signature } : {}),
       level_failed: levelFailed,
       failures: [...ctx.failures],
       pipeline_result: blocked ? "continue" : "release",
+      terminal_status: input.status ?? "unknown",
+      honor_passport: honorPassport && !blocked,
+      ...(transcriptTail ? { transcript_tail: transcriptTail } : {}),
+      ...(hasTokens ? {
+        token_usage: {
+          input_tokens: input.input_tokens,
+          output_tokens: input.output_tokens,
+          cache_read_tokens: input.cache_read_tokens,
+          cache_write_tokens: input.cache_write_tokens,
+        },
+      } : {}),
     }).catch(() => undefined);
-  }
 
-  if (!blocked) {
-    const { runFullTierChecksBeforeRelease } = await import("./l3-checks-pass.js");
-    await runFullTierChecksBeforeRelease(ctx);
-    blocked =
-      ctx.failures.length > 0 || ctx.unitsBlocked || ctx.phaseBlocked;
+    // Oscillation detection — replace generic followup when agent is cycling.
+    if (blocked && !ctx.followupMessage) {
+      try {
+        const sigTail = await readStopSignatureTail(ctx.root, agentId, 5);
+        const osc = detectOscillation(sigTail);
+        const traces = await readStopTraceTail(ctx.root, 5);
+        const stagnant = detectTokenStagnation(traces);
+        if (osc) {
+          ctx.followupMessage = oscillationSteeringBlurb(osc.signatures);
+        } else if (stagnant) {
+          ctx.followupMessage =
+            "Token usage growing but checks not improving. Re-read failure output and address root cause instead of re-running.";
+        }
+      } catch {
+        /* oscillation detection is advisory — fail-open */
+      }
+    }
   }
 
   if (!blocked) {
@@ -209,6 +265,7 @@ export async function runStopPipeline(
       phaseBlocked: false,
       unitsBlocked: false,
       blocked: false,
+      promptContext,
     });
     await releaseRuntimeState(root, agentId, releasedState, {
       status: "RELEASE",
@@ -223,16 +280,56 @@ export async function runStopPipeline(
   }
 
   if (input.stop_hook_active === true) {
-    const disposition = dispositionForLoop(ctx, ctx.followupMessage ?? "Checks still failing.", ctx.loopCount);
+    const disposition = dispositionForLoop(
+      ctx,
+      ctx.followupMessage ?? "Checks still failing.",
+      ctx.loopCount,
+      repeatedSignatureCount,
+    );
     if (disposition) {
+      const runtimeState = await computeRuntimeState({
+        ctx,
+        phase: ctx.phase,
+        phaseBlocked: ctx.phaseBlocked,
+        unitsBlocked: ctx.unitsBlocked,
+        blocked: true,
+        promptContext,
+      });
+      const { agentLoop, repoTotal } = await recordBlockedStop(
+        root,
+        agentId,
+        ctx.loopCount,
+        runtimeState,
+        { disposition },
+      );
       return {
         kind: "disposition",
         failed: [...ctx.failures],
-        message:
-          "Stop hook already active — human review required. See .cursor/goal/agents/ disposition or run: cursor-goal explain",
+        message: formatDispositionMessage(
+          { ...runtimeState, loop_count: agentLoop },
+          cursorStopLoopFromInput(input),
+          repoTotal,
+          agentId,
+          repeatedSignatureCount >= 3 ? "repeated_failure" : "budget",
+        ),
       };
     }
-    return { kind: "idle" };
+    const hasCheckFailure =
+      ctx.failures.length > 0 &&
+      ctx.failures.some((f) => ctx.checkResults.some((c) => !c.ok && c.cmd === f));
+    const hasNonCheckFailure = ctx.failures.some(
+      (f) => !ctx.checkResults.some((c) => !c.ok && c.cmd === f),
+    );
+    if (hasCheckFailure && !hasNonCheckFailure && !ctx.unitsBlocked) {
+      return { kind: "idle" };
+    }
+    return {
+      kind: "continue",
+      message: governanceFollowupMessage(
+        ctx.followupMessage ??
+          "Prior stop followup may be stale; re-run cursor-goal next and fix the current blocker before relying on an older queued prompt.",
+      ),
+    };
   }
 
   if (dryRun) {
@@ -243,10 +340,11 @@ export async function runStopPipeline(
       phaseBlocked: ctx.phaseBlocked,
       unitsBlocked: ctx.unitsBlocked,
       blocked: true,
+      promptContext,
     });
     const budgetCtx = { ...ctx, loopCount: nextLoop };
     const followup = await resolveLoopBudgetMessage(budgetCtx, runtimeState);
-    const disposition = dispositionForLoop(budgetCtx, followup, nextLoop);
+    const disposition = dispositionForLoop(budgetCtx, followup, nextLoop, repeatedSignatureCount);
     if (disposition) {
       return {
         kind: "disposition",
@@ -268,6 +366,7 @@ export async function runStopPipeline(
     phaseBlocked: ctx.phaseBlocked,
     unitsBlocked: ctx.unitsBlocked,
     blocked: true,
+    promptContext,
   });
   const budgetCtx = { ...ctx, loopCount: nextLoop };
   const followup = await resolveLoopBudgetMessage(budgetCtx, runtimeState);
@@ -277,7 +376,8 @@ export async function runStopPipeline(
     ctx.loopCount,
     runtimeState,
     {
-      dispositionForLoop: (loop) => dispositionForLoop(budgetCtx, followup, loop),
+      dispositionForLoop: (loop) =>
+        dispositionForLoop(budgetCtx, followup, loop, repeatedSignatureCount),
     },
   );
   ctx.loopCount = agentLoop;
@@ -292,6 +392,7 @@ export async function runStopPipeline(
         cursorStopLoopFromInput(input),
         repoTotal,
         agentId,
+        repeatedSignatureCount >= 3 ? "repeated_failure" : "budget",
       ),
     };
   }

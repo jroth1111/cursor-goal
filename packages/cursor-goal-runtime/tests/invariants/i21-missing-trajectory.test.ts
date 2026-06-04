@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { runStopVerifier } from "../../src/lib/verify.js";
+import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 
 async function releaseReady(dir: string): Promise<void> {
   await writeFile(
@@ -35,6 +36,7 @@ describe("I21 missing trajectory blocks RELEASE", () => {
       "## Goal\nlong enough goal\n## Checks\n- `true`\n",
       "utf8",
     );
+    await compileGoalV2(p.dir);
     const r = await runStopVerifier({ status: "completed", loop_count: 0 });
     expect(r.kind).toBe("continue");
     expect(r.kind === "continue" && r.message).toMatch(/phase|DISCOVERY/i);
@@ -49,6 +51,7 @@ describe("I21 missing trajectory blocks RELEASE", () => {
       "## Goal\nlong enough goal\n## Checks\n- `true`\n",
       "utf8",
     );
+    await compileGoalV2(p.dir);
     await releaseReady(p.dir);
     const r = await runStopVerifier({ status: "completed", loop_count: 0 });
     expect(r.kind).toBe("release");

@@ -1,9 +1,11 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { markUnitDone } from "../../src/lib/work-units.js";
+import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 
 /** Minimal artifacts so runtime stop can RELEASE (I21 phase gate). */
 export async function seedReleaseReady(dir: string): Promise<void> {
+  await compileGoalV2(dir);
   await writeFile(
     path.join(dir, ".cursor/goal/trajectory.json"),
     JSON.stringify({ phase: "VERIFY" }),

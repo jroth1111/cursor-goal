@@ -74,7 +74,8 @@ describe("I56 multi-agent runtime state", () => {
     });
     const warnedOut = JSON.parse((warned.stdout ?? "{}").trim());
     expect(warnedOut.continue).toBe(true);
-    expect(String(warnedOut.agent_message ?? "")).toMatch(/blocker|blocked/i);
+    expect(warnedOut.agent_message).toBeUndefined();
+    expect(warnedOut.user_message).toBeUndefined();
 
     const allow = spawnSync("node", [hook], {
       cwd: p.dir,

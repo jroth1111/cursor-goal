@@ -11,7 +11,9 @@ export async function levelFreshProofBlocked(ctx: VerifierContext): Promise<Leve
   if (state.last_proof_tree && treeAtEnd !== state.last_proof_tree) {
     const checksOk =
       ctx.checkResults.length > 0 && ctx.checkResults.every((r) => r.ok);
-    if (!checksOk) {
+    const fastProfileSkippedAllChecks =
+      ctx.checkProfile === "fast" && ctx.checkResults.length === 0;
+    if (!checksOk && !fastProfileSkippedAllChecks) {
       ctx.failures.push(
         `stale-proof: edits since last proof (${state.last_proof_tree})`,
       );

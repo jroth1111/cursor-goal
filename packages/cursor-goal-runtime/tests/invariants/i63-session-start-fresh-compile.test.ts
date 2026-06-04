@@ -155,10 +155,14 @@ A
     });
 
     expectHookOk(r);
-    const out = JSON.parse((r.stdout || "{}").trim()) as { agent_message?: string };
-    expect(String(out.agent_message ?? "")).toMatch(/session ended without release|without RELEASE|SESSION_END/i);
-    expect(String(out.agent_message ?? "")).toMatch(/cursor-goal explain/i);
-    expect(String(out.agent_message ?? "")).toMatch(/cursor-goal next/i);
+    const out = JSON.parse((r.stdout || "{}").trim()) as {
+      additional_context?: string;
+      agent_message?: string;
+    };
+    expect(out.agent_message).toBeUndefined();
+    expect(String(out.additional_context ?? "")).toMatch(/session ended without release|without RELEASE|SESSION_END/i);
+    expect(String(out.additional_context ?? "")).toMatch(/cursor-goal explain/i);
+    expect(String(out.additional_context ?? "")).toMatch(/cursor-goal next/i);
   });
 
   it("compiles when session mode is governed even if default mode is chat", async () => {

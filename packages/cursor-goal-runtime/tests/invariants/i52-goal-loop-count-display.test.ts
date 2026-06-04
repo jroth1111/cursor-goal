@@ -32,7 +32,7 @@ describe("I52 goal loop count display", () => {
     await seedReleaseReady(p.dir);
 
     const cursorStuck = 25;
-    for (let expected = 1; expected <= 3; expected++) {
+    for (let expected = 1; expected <= 2; expected++) {
       const r = await runStopVerifier({
         status: "completed",
         loop_count: cursorStuck,

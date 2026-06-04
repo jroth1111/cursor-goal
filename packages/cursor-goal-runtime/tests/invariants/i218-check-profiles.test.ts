@@ -24,7 +24,7 @@ describe("I218 check profiles", () => {
     await mkdir(dir, { recursive: true });
     await writeFile(
       path.join(dir, "GOAL.md"),
-      "## Goal\nx\n## Checks\n- `[fast]` true\n- `[full]` false\n- npm test\n",
+      "## Goal\nx\n## Checks\n- `[fast] true`\n- `[full] false`\n- `npm test`\n",
       "utf8",
     );
     const parsed = await parseGoalMd(dir);

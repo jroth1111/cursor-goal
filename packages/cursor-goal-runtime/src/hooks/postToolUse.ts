@@ -7,6 +7,10 @@ import { hookJson } from "../lib/verify.js";
 import { readStdinJson } from "../lib/stdin.js";
 import { structuredWorkUnitId } from "../lib/work-units.js";
 import { resolveAgentId, readAgentHandoffRead } from "../lib/runtime-state.js";
+import { countRecentEdits, recordEditPath } from "../lib/edit-ledger.js";
+import { readTrajectory } from "../trajectory/fsm.js";
+import { readLoopLimit } from "../lib/loop-limit.js";
+import { readAgentLoopCount } from "../lib/agent-runtime-state.js";
 
 async function main(): Promise<void> {
   const input = await readStdinJson<{
@@ -28,6 +32,7 @@ async function main(): Promise<void> {
 
   if (isEdit) {
     await markEdit(root);
+    await recordEditPath(root, input, workUnitId);
   }
 
   // Only shell out to git for edit-class tools — Read/Grep/Glob don't need tree state.
@@ -59,8 +64,10 @@ async function main(): Promise<void> {
       const shouldNudge = !existsSync(handoffFlag);
       if (shouldNudge) {
         await writeFile(handoffFlag, new Date().toISOString(), "utf8");
+        const next = handoff.handoff.next_action;
+        const summary = [next.headline, next.detail].filter(Boolean).join(" — ");
         hookJson({
-          additional_context: `cursor-goal blocked: ${String(handoff.handoff.next_action).slice(0, 500)}`,
+          additional_context: `cursor-goal blocked: ${summary.slice(0, 500)}`,
         });
         return;
       }
@@ -69,6 +76,23 @@ async function main(): Promise<void> {
     }
   } catch {
     /* fail-open */
+  }
+
+  // Governance telemetry: emit phase/loop/edit context for edit-class tools.
+  // Only fires when the handoff nudge above didn't already emit additional_context.
+  if (isEdit) {
+    try {
+      const edits = await countRecentEdits(root);
+      const traj = await readTrajectory(root);
+      const loop = await readAgentLoopCount(root, agentId);
+      const limit = await readLoopLimit(root);
+      hookJson({
+        additional_context: `cursor-goal: phase=${traj.phase} loop=${loop}/${limit} edits_this_session=${edits}`,
+      });
+      return;
+    } catch {
+      /* fail-open */
+    }
   }
 
   hookJson({});

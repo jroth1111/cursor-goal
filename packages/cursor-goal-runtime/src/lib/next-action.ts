@@ -1,15 +1,18 @@
 import type { WorkUnitCompiled } from "../compile/compile-v2.js";
 import type { Phase } from "../trajectory/fsm.js";
 import { resolveQueueHead } from "./dispatch-queue.js";
-import { buildUnitTaskPrompt } from "./unit-task-prompt.js";
+import { buildUnitTaskPrompt, buildVerifyUnitDetail } from "./unit-task-prompt.js";
 import { findUnitById, pendingUnits, readWorkUnits } from "./work-units.js";
 import { readBlockedUnitEvidence } from "./unit-evidence.js";
+import { runUnitAcceptance } from "./unit-acceptance.js";
 import type { VerifierContext } from "../verifier/types.js";
+import type { PromptContext } from "./prompt-context.js";
 
 export type NextActionKind =
   | "phase"
   | "blocked_unit"
   | "dispatch_unit"
+  | "verify_unit"
   | "recover_session_end"
   | "fix_checks"
   | "fix_scope"
@@ -30,6 +33,9 @@ export type NextActionInput = {
   phaseBlocked?: boolean;
   unitsBlocked?: boolean;
   units?: WorkUnitCompiled[];
+  promptContext?: Partial<
+    Pick<PromptContext, "unit_ids" | "mentioned_units" | "unknown_units" | "out_of_scope_paths">
+  > | null;
 };
 
 type RankedCandidate = { priority: number; action: NextAction };
@@ -64,10 +70,15 @@ function otherFailures(ctx: VerifierContext): string[] {
 async function dispatchUnitAction(
   ctx: VerifierContext,
   open: WorkUnitCompiled[],
+  promptContext?: Partial<Pick<PromptContext, "unit_ids" | "mentioned_units">> | null,
 ): Promise<NextAction | null> {
   if (open.length === 0) return null;
+  const promptUnitIds = promptContext?.unit_ids?.length
+    ? promptContext.unit_ids
+    : promptContext?.mentioned_units ?? [];
   const head = await resolveQueueHead(ctx.root);
   const next =
+    (promptUnitIds.length ? open.find((u) => promptUnitIds.includes(u.id)) : undefined) ??
     (head ? findUnitById(open, head.item.unit_id) : undefined) ??
     open.find((u) => u.status === "pending") ??
     open[0];
@@ -90,6 +101,28 @@ async function dispatchUnitAction(
       detail: `Re-run acceptance or: cursor-goal units done ${u.id}`,
     };
   }
+
+  const unitRole = next.role ?? "implement";
+  const forceVerify = unitRole === "verify";
+  if (forceVerify || next.status === "pending" || next.status === "in_progress") {
+    const acc = await runUnitAcceptance(next, ctx.root);
+    if (forceVerify || acc.ok) {
+      const hasVerifier = Boolean(next.verified_by?.trim());
+      const headline =
+        forceVerify && !acc.ok
+          ? `Verify unit "${next.id}" (fix acceptance or artifacts)`
+          : hasVerifier
+            ? `Complete verification for unit "${next.id}" (acceptance already passes)`
+            : `Close unit "${next.id}" (acceptance already passes)`;
+      return {
+        kind: "verify_unit",
+        headline,
+        detail: buildVerifyUnitDetail(next),
+        taskPrompt: buildUnitTaskPrompt(next),
+      };
+    }
+  }
+
   return {
     kind: "dispatch_unit",
     headline: `Dispatch work unit "${next.id}"`,
@@ -117,6 +150,7 @@ export async function rankNextAction(input: NextActionInput): Promise<NextAction
   const open = units.filter((u) => u.status !== "done");
   const unitsBlocked = input.unitsBlocked ?? ctx.unitsBlocked;
   const phaseBlocked = input.phaseBlocked ?? ctx.phaseBlocked;
+  const promptContext = input.promptContext ?? null;
 
   const candidates: RankedCandidate[] = [];
 
@@ -134,9 +168,19 @@ export async function rankNextAction(input: NextActionInput): Promise<NextAction
     });
   }
 
-  if (unitsBlocked && open.length > 0) {
-    const action = await dispatchUnitAction(ctx, open);
-    if (action) candidates.push({ priority: 1, action });
+  const checkFails = ctx.checkResults.filter((r) => !r.ok);
+  const staleFails = staleProofFailures(ctx);
+  const scopeFails = scopeFailures(ctx);
+  const hasPromptScopeHint = (promptContext?.out_of_scope_paths?.length ?? 0) > 0;
+  if (scopeFails.length > 0) {
+    candidates.push({
+      priority: 1,
+      action: {
+        kind: "fix_scope",
+        headline: "Revert or justify out-of-scope edits",
+        detail: scopeFails[0],
+      },
+    });
   }
 
   const proxyFails = proxyFailures(ctx);
@@ -151,24 +195,16 @@ export async function rankNextAction(input: NextActionInput): Promise<NextAction
     });
   }
 
-  const staleFails = staleProofFailures(ctx);
-  if (staleFails.length > 0) {
-    candidates.push({
-      priority: 3,
-      action: {
-        kind: "fix_stale_proof",
-        headline: "Re-verify after working tree changes",
-        detail: staleFails[0],
-      },
-    });
+  if (unitsBlocked && open.length > 0) {
+    const action = await dispatchUnitAction(ctx, open, promptContext);
+    if (action) candidates.push({ priority: 4.5, action });
   }
 
-  const checkFails = ctx.checkResults.filter((r) => !r.ok);
   if (checkFails.length > 0) {
     const failed = checkFails[0];
     const output = failed.output?.trim();
     candidates.push({
-      priority: 4,
+      priority: hasPromptScopeHint ? 3 : unitsBlocked && open.length > 0 ? 5 : 3,
       action: {
         kind: "fix_checks",
         headline: `Fix failing check: \`${failed.cmd}\``,
@@ -179,26 +215,36 @@ export async function rankNextAction(input: NextActionInput): Promise<NextAction
     });
   }
 
-  const scopeFails = scopeFailures(ctx);
-  if (scopeFails.length > 0) {
+  if (staleFails.length > 0) {
     candidates.push({
-      priority: 5,
+      priority: checkFails.length > 0 ? 3.5 : 3.5,
+      action: {
+        kind: "fix_stale_proof",
+        headline: "Re-verify after working tree changes",
+        detail: staleFails[0],
+      },
+    });
+  }
+
+  if (scopeFails.length === 0 && hasPromptScopeHint) {
+    candidates.push({
+      priority: 4,
       action: {
         kind: "fix_scope",
-        headline: "Revert or justify out-of-scope edits",
-        detail: scopeFails[0],
+        headline: "Prompt references paths outside active GOAL scope",
+        detail: `Out-of-scope prompt paths: ${promptContext?.out_of_scope_paths?.join(", ")}`,
       },
     });
   }
 
   if (phaseBlocked && phase) {
-    candidates.push({ priority: 6, action: phaseAction(phase) });
+    candidates.push({ priority: 7, action: phaseAction(phase) });
   }
 
   const otherFails = otherFailures(ctx);
   if (otherFails.length > 0) {
     candidates.push({
-      priority: 7,
+      priority: 8,
       action: {
         kind: "fix_other",
         headline: "Resolve remaining blockers",
@@ -225,6 +271,7 @@ export function secondaryBlockers(state: {
   const kind = state.next_action.kind;
   return state.blockers.filter((b) => {
     const lower = b.toLowerCase();
+    if (lower.startsWith("phase:")) return false;
     if (headline.includes(lower.slice(0, Math.min(20, lower.length)))) return false;
     if (kind === "dispatch_unit" && (lower.includes("units") || lower.includes("mod-"))) return false;
     if (kind === "blocked_unit" && (lower.includes("units") || lower.includes("blocked"))) return false;
@@ -238,10 +285,20 @@ export function secondaryBlockers(state: {
   });
 }
 
-export function formatNextAction(action: NextAction | null): string {
+export function formatNextAction(
+  action: NextAction | null,
+  opts: { includeTaskPrompt?: boolean } = {},
+): string {
   if (!action) return "No blockers — ready for RELEASE.";
-  const lines = [`## Next action (do this first)`, "", action.headline, "", action.detail];
-  if (action.taskPrompt) {
+  const includeTaskPrompt = opts.includeTaskPrompt === true;
+  const detail = includeTaskPrompt
+    ? action.detail
+    : action.detail.replace(
+        /spawn one task\/subagent with the task[_ ]?prompt below(?:, or use supervisor for 2\+ units)?\.?/i,
+        "Run: cursor-goal dispatch --run, or inspect the full task prompt with cursor-goal next.",
+      );
+  const lines = [`## Next action (do this first)`, "", action.headline, "", detail];
+  if (includeTaskPrompt && action.taskPrompt) {
     lines.push("", "Task prompt:", "```", action.taskPrompt, "```");
   }
   return lines.join("\n");

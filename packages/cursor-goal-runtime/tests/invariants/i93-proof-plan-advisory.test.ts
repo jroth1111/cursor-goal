@@ -27,7 +27,7 @@ describe("I93 proof-plan advisory warnings", () => {
       "## Goal\nx\n## Checks\n- `echo advisory-check`\n",
       "utf8",
     );
-    await compileGoalV2(p.dir);
+    await seedReleaseReady(p.dir);
     await writeFile(
       path.join(p.dir, ".cursor/goal/proof-plan.json"),
       JSON.stringify({
@@ -37,7 +37,6 @@ describe("I93 proof-plan advisory warnings", () => {
       }),
       "utf8",
     );
-    await seedReleaseReady(p.dir);
     const parsed = await parseGoalMd(p.dir);
     const checkResults = await runChecks(p.dir, parsed.checks);
     const warnings = await levelProofPlanAdvisory({

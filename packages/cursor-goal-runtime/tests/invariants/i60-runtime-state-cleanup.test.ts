@@ -112,13 +112,13 @@ describe("I60 runtime-state cleanup", () => {
       "## Goal\nx\n## Checks\n- `false`\n",
       "utf8",
     );
-    const { compileGoalV2 } = await import("../../src/compile/compile-v2.js");
-    await compileGoalV2(p.dir);
     await writeFile(
       path.join(p.dir, ".cursor/goal/manifest.json"),
       JSON.stringify({ loop_limit: 40 }),
       "utf8",
     );
+    const { compileGoalV2 } = await import("../../src/compile/compile-v2.js");
+    await compileGoalV2(p.dir);
     const { runStopVerifier } = await import("../../src/lib/verify.js");
     const { hasAgentDisposition } = await import("../../src/lib/disposition.js");
     const { readAgentRuntimeState } = await import("../../src/lib/agent-runtime-state.js");

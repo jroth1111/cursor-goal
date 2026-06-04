@@ -48,6 +48,20 @@ export async function auditGovernanceMismatch(root: string): Promise<DoctorIssue
   const issues: DoctorIssue[] = [];
   const session = await readSessionMode(root);
 
+  if (session?.mode === "governed" && session.interaction_mode_hint === "chat") {
+    issues.push({
+      level: "warn",
+      message:
+        "session-mode=governed but interaction_mode_hint=chat — refresh mode with /goal or cursor-goal mode governed",
+    });
+  }
+  if (session?.mode && session.effective_mode && session.mode !== session.effective_mode) {
+    issues.push({
+      level: "warn",
+      message: `session mode diverges from effective_mode (${session.mode} vs ${session.effective_mode}) — run: cursor-goal mode ${session.effective_mode}`,
+    });
+  }
+
   const triage = await readLastTriageEntry(root);
   if (session?.mode === "chat" && triage?.classification?.forceGoverned) {
     issues.push({

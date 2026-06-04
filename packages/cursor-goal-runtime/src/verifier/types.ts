@@ -5,8 +5,13 @@ export type StopInput = {
   status?: string;
   loop_count?: number;
   conversation_id?: string;
+  transcript_path?: string | null;
   /** When true, Cursor is re-invoking stop from a prior followup_message — avoid infinite loops. */
   stop_hook_active?: boolean;
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_read_tokens?: number;
+  cache_write_tokens?: number;
 };
 
 export type PipelineOptions = {

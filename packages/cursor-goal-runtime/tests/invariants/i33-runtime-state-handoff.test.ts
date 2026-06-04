@@ -63,7 +63,8 @@ Module A
     expect(state?.next_action?.task_prompt).toMatch(/work_unit_id: mod-a/);
     if (r.kind === "continue") {
       expect(r.message).toMatch(/runtime-state\.json/);
-      expect(r.message).toMatch(/work_unit_id: mod-a/);
+      expect(r.message).not.toMatch(/work_unit_id: mod-a/);
+      expect(r.message).toMatch(/inspect the full task prompt with cursor-goal next/);
     }
   });
 

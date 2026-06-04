@@ -2,9 +2,10 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { goalDir } from "../lib/paths.js";
 import { listDiffFiles } from "../lib/git-state.js";
+import { listRecentEditedFiles } from "../lib/edit-ledger.js";
 import type { VerifierContext } from "./types.js";
 
-export function levelScope(ctx: VerifierContext): void {
+export async function levelScope(ctx: VerifierContext): Promise<void> {
   const scopeFile = path.join(goalDir(ctx.root), "scope.json");
   if (!existsSync(scopeFile)) return;
 
@@ -15,7 +16,11 @@ export function levelScope(ctx: VerifierContext): void {
   if (!scope.paths?.length || scope.enforce === false) return;
 
   const bad: string[] = [];
-  for (const f of listDiffFiles(ctx.root)) {
+  const files = new Set([
+    ...listDiffFiles(ctx.root),
+    ...(await listRecentEditedFiles(ctx.root)),
+  ]);
+  for (const f of files) {
     if (f === "GOAL.md" || f.startsWith(".cursor/goal/")) continue;
     const ok = scope.paths.some((p) => {
       if (p === "**") return true;

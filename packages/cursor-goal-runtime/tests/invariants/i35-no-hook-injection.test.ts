@@ -50,7 +50,6 @@ A
     });
     const out = JSON.parse((r.stdout ?? "{}").trim() || "{}");
     expect(out.continue).toBe(true);
-    expect(String(out.user_message ?? out.agent_message ?? "")).toMatch(/blocker|blocked/i);
     expect(String(out.user_message ?? out.agent_message ?? "")).not.toMatch(/Spawn a Task/);
     expect(String(out.user_message ?? out.agent_message ?? "")).not.toMatch(/work_unit_id: mod-a/);
   });

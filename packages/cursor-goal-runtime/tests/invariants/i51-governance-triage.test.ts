@@ -54,7 +54,10 @@ describe("I51 governance triage", () => {
     const r = runBeforeSubmit(p, "Implement auth middleware and make tests pass");
     const out = JSON.parse((r.stdout ?? "{}").trim());
     expect(out.continue).toBe(true);
-    expect(String(out.agent_message ?? "")).toMatch(/cursor-goal init/i);
+    expect(out.agent_message).toBeUndefined();
+    expect(out.user_message).toBeUndefined();
+    const raw = await readFile(path.join(p.dir, ".cursor/goal/triage-log.jsonl"), "utf8");
+    expect(raw).toMatch(/"mode":"nudge"/);
   });
 
   it("GOAL + checks → governed path warns when runtime blocked", async () => {
@@ -74,7 +77,8 @@ describe("I51 governance triage", () => {
     const r = runBeforeSubmit(p, "explain this");
     const out = JSON.parse((r.stdout ?? "{}").trim());
     expect(out.continue).toBe(true);
-    expect(String(out.agent_message ?? "")).toMatch(/blocker|blocked/i);
+    expect(out.agent_message).toBeUndefined();
+    expect(out.user_message).toBeUndefined();
   });
 
   it("coverage phrase + no GOAL → nudge mentions inventory", async () => {
@@ -85,7 +89,10 @@ describe("I51 governance triage", () => {
     const r = runBeforeSubmit(p, "Test every page on the site and report failures");
     const out = JSON.parse((r.stdout ?? "{}").trim());
     expect(out.continue).toBe(true);
-    expect(String(out.agent_message ?? "")).toMatch(/inventory|coverage/i);
+    expect(out.agent_message).toBeUndefined();
+    expect(out.user_message).toBeUndefined();
+    const raw = await readFile(path.join(p.dir, ".cursor/goal/triage-log.jsonl"), "utf8");
+    expect(raw).toMatch(/"mode":"nudge"/);
   });
 
   it("PAUSED is advisory and does not block prompt submit", async () => {
@@ -97,7 +104,8 @@ describe("I51 governance triage", () => {
     const r = runBeforeSubmit(p, "How does this work?");
     const out = JSON.parse((r.stdout ?? "{}").trim());
     expect(out.continue).toBe(true);
-    expect(String(out.agent_message ?? "")).toMatch(/paused/i);
+    expect(out.agent_message).toBeUndefined();
+    expect(out.user_message).toBeUndefined();
   });
 
   it("session chat + blocked runtime warns without blocking", async () => {
@@ -117,10 +125,11 @@ describe("I51 governance triage", () => {
     const r = runBeforeSubmit(p, "explain this");
     const out = JSON.parse((r.stdout ?? "{}").trim());
     expect(out.continue).toBe(true);
-    expect(String(out.agent_message ?? "")).toMatch(/blocker|blocked/i);
+    expect(out.agent_message).toBeUndefined();
+    expect(out.user_message).toBeUndefined();
   });
 
-  it("SESSION_END forces governed triage for the next prompt", async () => {
+  it("SESSION_END is advisory and does not force governed triage for ordinary prompts", async () => {
     const p = await mkGitProject("i51-session-end-governed");
     cleanup = p.cleanup;
     restore = withProjectEnv(p.dir).restore;
@@ -146,7 +155,7 @@ describe("I51 governance triage", () => {
     const raw = await readFile(triagePath, "utf8");
     const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     const last = JSON.parse(lines[lines.length - 1]!) as { mode?: string };
-    expect(last.mode).toBe("governed");
+    expect(last.mode).toBe("chat");
   });
 
   it("SESSION_END does not force governed without a governed contract", async () => {

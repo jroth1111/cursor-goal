@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { lstat, mkdir, rename, unlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Phase } from "../trajectory/fsm.js";
 import { resolveQueueHead } from "./dispatch-queue.js";
@@ -13,12 +13,24 @@ import {
 import { buildUnitTaskPrompt } from "./unit-task-prompt.js";
 import { allUnitsDone, findUnitById, readWorkUnits } from "./work-units.js";
 import { checkUnitCompletionEvidence } from "./unit-evidence.js";
+import {
+  unitDeliverablePath,
+  unitVerifierResultPath,
+  unitsRequiringAdversarial,
+} from "./adversarial-paths.js";
 import { goalDir, passportsDir, projectRoot, readJson } from "./paths.js";
 import { gitTreeId } from "./git-state.js";
 import { readTrajectory } from "../trajectory/fsm.js";
 import { readLoopLimit } from "./loop-limit.js";
 import type { CheckResult } from "./run-checks.js";
 import type { VerifierContext } from "../verifier/types.js";
+import type { PromptContext } from "./prompt-context.js";
+import {
+  blockedWorkContinuationBlurb,
+  isNearLoopBudget,
+  loopBudgetSteeringBlurb,
+  shouldShowContinuationBlurb,
+} from "./followup-steering.js";
 import {
   clearAgentBlockedState,
   clearAllAgentsBlockedState,
@@ -33,6 +45,7 @@ import { withGoalDirLock } from "./goal-dir-lock.js";
 import {
   clearAgentDispositionUnlocked,
   isAgentSubmitBlocked,
+  listAgentsInDisposition,
   readAgentDisposition,
   writeAgentDispositionUnlocked,
   type AgentDispositionFile,
@@ -97,6 +110,20 @@ export async function readReleasePassport(root?: string): Promise<ReleasePasspor
   return readJson<ReleasePassportFile>(path.join(passportsDir(r), "RELEASE.json")).catch(() => null);
 }
 
+async function hasFreshPassingVerifierResult(root: string, unitId: string): Promise<boolean> {
+  const deliverable = unitDeliverablePath(root, unitId);
+  const result = unitVerifierResultPath(root, unitId);
+  if (!existsSync(deliverable) || !existsSync(result)) return false;
+  try {
+    const [dStat, rStat] = await Promise.all([stat(deliverable), stat(result)]);
+    if (rStat.mtimeMs < dStat.mtimeMs) return false;
+    const data = JSON.parse(await readFile(result, "utf8")) as { passed?: boolean };
+    return data.passed === true;
+  } catch {
+    return false;
+  }
+}
+
 /** True when an on-disk RELEASE passport still matches tree, units, and phase gates. */
 export async function honorExistingReleasePassport(root: string): Promise<boolean> {
   const passport = await readReleasePassport(root);
@@ -109,6 +136,9 @@ export async function honorExistingReleasePassport(root: string): Promise<boolea
   for (const unit of unitsFile.units) {
     const evidence = await checkUnitCompletionEvidence(root, unit);
     if (!evidence.ok) return false;
+  }
+  for (const unit of unitsRequiringAdversarial(unitsFile.units)) {
+    if (!(await hasFreshPassingVerifierResult(root, unit.id))) return false;
   }
   const traj = await readTrajectory(root);
   if (traj.phase === "DISCOVERY" || traj.phase === "INTAKE") return false;
@@ -446,6 +476,9 @@ export async function releaseRuntimeState(
     await withGoalDirLock(root, async () => {
       await resetRepoBlockedStopTotalUnlocked(root);
       await clearAllAgentsBlockedState(root);
+      for (const agentId of listAgentsInDisposition(root)) {
+        await clearAgentDispositionUnlocked(root, agentId);
+      }
       await clearAgentDispositionUnlocked(root, releasingAgentId);
       await writeAgentAndRepoSummaryUnlocked(root, releasedState, releasingAgentId);
       await clearSessionEndMarkerUnlocked(root);
@@ -464,6 +497,9 @@ export type ComputeRuntimeStateInput = {
   unitsBlocked?: boolean;
   blocked: boolean;
   mode?: RuntimeStateMode;
+  promptContext?: Partial<
+    Pick<PromptContext, "mentioned_units" | "unit_ids" | "unknown_units" | "out_of_scope_paths">
+  > | null;
 };
 
 export async function computeRuntimeState(input: ComputeRuntimeStateInput): Promise<RuntimeStateFile> {
@@ -475,6 +511,7 @@ export async function computeRuntimeState(input: ComputeRuntimeStateInput): Prom
     phase,
     phaseBlocked: input.phaseBlocked ?? ctx.phaseBlocked,
     unitsBlocked: input.unitsBlocked ?? ctx.unitsBlocked,
+    promptContext: input.promptContext ?? null,
   });
 
   const head = await resolveQueueHead(ctx.root);
@@ -533,15 +570,32 @@ export function formatFollowupMessage(
   cursorIndex?: number | null,
   repoTotal?: number | null,
   agentId?: string,
+  phaseOverride?: string,
+  opts: { suppressLoopBudget?: boolean } = {},
 ): string {
   if (!state.blocked) {
     return "No blockers — ready for RELEASE.";
   }
+  const phase = phaseOverride ?? String(state.phase);
+  const primary = state.next_action?.kind ?? "none";
 
   const lines: string[] = [
+    `State: phase=${phase} blocked=${state.blocked} primary=${primary}`,
     formatGoalLoopLine(state.loop_count, state.loop_limit, cursorIndex, state.mode, repoTotal),
     "",
   ];
+
+  const effectiveLoop = Math.max(
+    state.loop_count,
+    cursorIndex ?? -1,
+    repoTotal ?? -1,
+  );
+  if (!opts.suppressLoopBudget && isNearLoopBudget(effectiveLoop, state.loop_limit)) {
+    lines.push(loopBudgetSteeringBlurb(effectiveLoop, state.loop_limit), "");
+  }
+  if (state.next_action && shouldShowContinuationBlurb(phase, state.next_action.kind)) {
+    lines.push(blockedWorkContinuationBlurb(phase, state.next_action.kind), "");
+  }
 
   if (state.next_action) {
     const action: NextAction = {
@@ -550,7 +604,7 @@ export function formatFollowupMessage(
       detail: state.next_action.detail,
       taskPrompt: state.next_action.task_prompt,
     };
-    lines.push(formatNextAction(action));
+    lines.push(formatNextAction(action, { includeTaskPrompt: false }));
   } else if (state.blockers.length) {
     lines.push("## Blockers", "", state.blockers.slice(0, 5).join("; "));
   }
@@ -559,7 +613,10 @@ export function formatFollowupMessage(
     lines.push("", "## Last check failure", "", `\`${state.last_check_fail.cmd}\``, "```", state.last_check_fail.output.trim() || "(empty)", "```");
   }
 
-  const also = secondaryBlockers(state).slice(0, 3);
+  const blockersForDisplay = state.blockers.filter(
+    (b) => !b.startsWith("phase:") || b === `phase:${phase}`,
+  );
+  const also = secondaryBlockers({ ...state, blockers: blockersForDisplay }).slice(0, 3);
   if (also.length) {
     lines.push("", "## Also blocked", "", also.join("; "));
   }
@@ -581,16 +638,23 @@ export function formatDispositionMessage(
   cursorIndex?: number | null,
   repoTotal?: number | null,
   agentId?: string,
+  reason: "budget" | "repeated_failure" | string = "budget",
 ): string {
   const id = agentId ?? "default";
+  const title =
+    reason === "repeated_failure"
+      ? "## Disposition — repeated failure"
+      : "## Disposition — loop budget exhausted";
   const lines = [
-    "## Disposition — loop budget exhausted",
+    title,
     "",
     formatGoalLoopLine(state.loop_count, state.loop_limit, cursorIndex, state.mode, repoTotal),
     "",
     `Human review required. See .cursor/goal/agents/${id}/DISPOSITION.md`,
     "",
-    formatFollowupMessage(state, cursorIndex, repoTotal, id),
+    formatFollowupMessage(state, cursorIndex, repoTotal, id, String(state.phase), {
+      suppressLoopBudget: true,
+    }),
   ];
   return lines.join("\n").trim();
 }

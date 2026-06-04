@@ -64,6 +64,12 @@ Task
         status: "completed",
         subagent_id: "sub-b",
         work_unit_id: "unit-a",
+        SUBAGENT_HANDOFF: {
+          files_read: ["src/b/foo.ts"],
+          claims: ["implemented feature"],
+          evidence: ["acceptance passed"],
+          uncertainty: [],
+        },
       }),
       encoding: "utf8",
       env: { ...process.env, CURSOR_PROJECT_DIR: dir },

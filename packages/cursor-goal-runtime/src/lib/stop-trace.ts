@@ -1,13 +1,27 @@
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { goalDir } from "./paths.js";
+import type { TranscriptTailEvidence } from "./transcript-tail.js";
+
+export type TokenUsage = {
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_read_tokens?: number;
+  cache_write_tokens?: number;
+};
 
 export type StopTraceEntry = {
   at: string;
+  agent_id?: string;
+  signature?: string;
   level_failed: string | null;
   failures: string[];
   pipeline_result: string;
+  terminal_status?: string;
+  honor_passport?: boolean;
+  transcript_tail?: TranscriptTailEvidence;
   dry_run?: boolean;
+  token_usage?: TokenUsage;
 };
 
 export function stopTracePath(root: string): string {
@@ -38,4 +52,19 @@ export async function readStopTraceTail(root: string, n = 20): Promise<StopTrace
     }
   }
   return out;
+}
+
+export function sumTokenUsage(entries: StopTraceEntry[]): { input: number; output: number; cache_read: number; cache_write: number } {
+  let input = 0;
+  let output = 0;
+  let cache_read = 0;
+  let cache_write = 0;
+  for (const e of entries) {
+    if (!e.token_usage) continue;
+    input += e.token_usage.input_tokens ?? 0;
+    output += e.token_usage.output_tokens ?? 0;
+    cache_read += e.token_usage.cache_read_tokens ?? 0;
+    cache_write += e.token_usage.cache_write_tokens ?? 0;
+  }
+  return { input, output, cache_read, cache_write };
 }

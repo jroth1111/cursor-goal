@@ -252,7 +252,8 @@ describe("I59 runtime-state multi-agent fixes", () => {
     });
     const warnedOut = JSON.parse((warned.stdout ?? "{}").trim());
     expect(warnedOut.continue).toBe(true);
-    expect(String(warnedOut.agent_message ?? "")).toMatch(/disposition/i);
+    expect(warnedOut.agent_message).toBeUndefined();
+    expect(warnedOut.user_message).toBeUndefined();
 
     const allow = spawnSync("node", [hook], {
       cwd: p.dir,
@@ -263,7 +264,7 @@ describe("I59 runtime-state multi-agent fixes", () => {
     expect(JSON.parse((allow.stdout ?? "{}").trim()).continue).toBe(true);
   });
 
-  it("minimal RELEASE clears blocked on other agents", async () => {
+  it("minimal fallback preserves blocked state on other agents when checks pass", async () => {
     const p = await mkGitProject("i59-minimal");
     cleanup = p.cleanup;
     restore = withProjectEnv(p.dir).restore;
@@ -297,9 +298,9 @@ describe("I59 runtime-state multi-agent fixes", () => {
     });
     expect(r.status).toBe(0);
     const b = await readAgentRuntimeState(p.dir, "agent-b");
-    expect(b?.blocked).toBe(false);
+    expect(b?.blocked).toBe(true);
     expect(b?.loop_count).toBe(5);
     const summary = await readRepoRuntimeSummary(p.dir);
-    expect(summary?.total_blocked_stops).toBe(0);
+    expect(summary?.total_blocked_stops ?? 0).toBe(0);
   });
 });

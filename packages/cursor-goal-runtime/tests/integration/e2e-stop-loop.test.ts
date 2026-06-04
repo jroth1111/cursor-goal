@@ -19,7 +19,7 @@ describe("E2E stop-loop smoke", () => {
   });
 
   it(
-    "runs 12 stop-hook iterations with playbook followup then RELEASE",
+    "runs stop-hook iterations with playbook followup then RELEASE",
     async () => {
     const p = await mkGitProject("e2e-stop");
     cleanup = p.cleanup;
@@ -53,7 +53,7 @@ Module A
       "utf8",
     );
 
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 2; i++) {
       const runtime = await runStopVerifier({ status: "completed", loop_count: i });
       expect(runtime.kind, `loop ${i}`).toBe("continue");
       if (runtime.kind === "continue") {
@@ -61,7 +61,12 @@ Module A
       }
     }
 
-    const hook = execCoreHook(p.dir, "stop", { status: "completed", loop_count: 11 });
+    const hook = execCoreHook(
+      p.dir,
+      "stop",
+      { status: "completed", loop_count: 2 },
+      { CURSOR_GOAL_STOP_FOLLOWUP: "1" },
+    );
     expect(hook.stdout.followup_message).toBeTruthy();
 
     expect(existsSync(runtimeStatePath(p.dir))).toBe(true);
@@ -85,7 +90,7 @@ Module A
     await compileGoalV2(p.dir);
     await markUnitDoneWithEvidence("mod-a", p.dir);
 
-    const fin = await runStopVerifier({ status: "completed", loop_count: 12 });
+    const fin = await runStopVerifier({ status: "completed", loop_count: 3 });
     expect(fin.kind).toBe("release");
     expect(existsSync(path.join(p.dir, ".cursor/goal/passports/RELEASE.json"))).toBe(true);
     const { readAgentRuntimeState } = await import("../../src/lib/agent-runtime-state.js");

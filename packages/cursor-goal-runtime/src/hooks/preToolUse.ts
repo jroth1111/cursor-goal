@@ -11,10 +11,13 @@ import {
 } from "../lib/work-units.js";
 import { isToolGovernancePassthrough } from "../lib/governance-active.js";
 import { resolveAgentId } from "../lib/runtime-state.js";
+import { readWritePolicy } from "../lib/governance-config.js";
 import {
   checkSubagentWriteGate,
   resolveSubagentUnitId,
 } from "../lib/subagent-write-gate.js";
+import { checkWriteGate, suggestScopeCorrection } from "../lib/write-gate.js";
+import { readWorkUnits, findUnitById } from "../lib/work-units.js";
 
 async function main(): Promise<void> {
 const input = await readStdinJson<{
@@ -83,8 +86,35 @@ if ((tool === "Write" || tool === "Edit" || tool === "MultiEdit") && filePath &&
     process.exit(0);
   }
   if (!gate.allowed) {
+    // Try path correction before hard-deny — correct absolute → relative etc.
+    const wu = await readWorkUnits(root);
+    const unit = unitId ? findUnitById(wu?.units ?? [], unitId) : undefined;
+    if (unit && unit.scope.length > 0) {
+      const corrected = suggestScopeCorrection(filePath, unit.scope, root);
+      if (corrected) {
+        hookJson({
+          permission: "allow",
+          updated_input: { file_path: corrected },
+        });
+        process.exit(0);
+      }
+    }
     hookJson({ permission: "deny", agent_message: gate.reason });
     process.exit(0);
+  }
+}
+
+if ((tool === "Write" || tool === "Edit" || tool === "MultiEdit") && filePath && !subagent) {
+  try {
+    if ((await readWritePolicy(root)) === "deny_out_of_scope") {
+      const gate = await checkWriteGate(filePath, root);
+      if (!gate.allowed) {
+        hookJson({ permission: "deny", agent_message: gate.reason });
+        process.exit(0);
+      }
+    }
+  } catch {
+    /* Primary write policy is advisory/fail-open on malformed state. */
   }
 }
 

@@ -6,6 +6,7 @@ import { passportsDir } from "./paths.js";
 export type SessionEndDiagnostics = {
   status?: string;
   reason?: string;
+  duration_ms?: number;
   failure_class?: string;
   why_no_release?: string;
   had_governed_contract?: boolean;
@@ -32,6 +33,7 @@ export function formatSessionEndDiagnostics(d: SessionEndDiagnostics | null): st
     `failure_class: ${d.failure_class ?? "unknown"}`,
     `reason: ${d.reason ?? "unknown"}`,
     `why: ${d.why_no_release ?? "unknown"}`,
+    ...(d.duration_ms != null ? [`duration_ms: ${d.duration_ms}`] : []),
     `had_governed_contract: ${d.had_governed_contract === true ? "true" : d.had_governed_contract === false ? "false" : "unknown"}`,
   ];
   if (d.root) lines.push(`root: ${d.root}`);

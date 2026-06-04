@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
+import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 
 describe("I208 status --json blocked_sources", () => {
   let cleanup: () => Promise<void>;
@@ -22,6 +23,7 @@ describe("I208 status --json blocked_sources", () => {
       "## Goal\nx\n## Checks\n- `false`\n",
       "utf8",
     );
+    await compileGoalV2(p.dir);
 
     const cli = path.resolve(import.meta.dirname, "../../dist/cli.js");
     const r = spawnSync("node", [cli, "status", "--json"], {

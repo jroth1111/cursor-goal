@@ -10,6 +10,7 @@ import {
 import { readRepoBlockedStopTotal } from "./goal-loop.js";
 import { countSubmitBlockedAgents } from "./agent-runtime-state.js";
 import {
+  hasAgentDisposition,
   countAgentsInDisposition,
   listAgentsInDisposition,
   sessionEndMarkerPath,
@@ -19,14 +20,14 @@ import { goalDir, goalMd, passportsDir, projectRoot } from "./paths.js";
 import { readAgentLoopCount } from "./agent-runtime-state.js";
 import { resolveAgentId, type AgentIdSource } from "./runtime-state.js";
 import { readLoopLimit } from "./loop-limit.js";
-import { parseGoalMd } from "./parse-goal-md.js";
-import { runChecks } from "./run-checks.js";
 import { pendingUnits, readWorkUnits } from "./work-units.js";
-import { readTrajectory, type Phase } from "../trajectory/fsm.js";
-import type { VerifierContext } from "../verifier/types.js";
-import { levelWorkUnitsBlocked } from "../verifier/l-work-units.js";
+import { readTrajectory } from "../trajectory/fsm.js";
 import { isRuntimeStateStale } from "./dispatch-cli.js";
 import { resolveDispatchHead } from "./dispatch-head.js";
+import { readPromptContext } from "./prompt-context.js";
+import { readStopTraceTail, sumTokenUsage } from "./stop-trace.js";
+import { acceptancePreflightForOpenUnits } from "./unit-acceptance-snapshot.js";
+import { buildStopAlignedContext } from "./stop-aligned-context.js";
 
 export type BlockedSources = {
   checks: boolean;
@@ -45,58 +46,12 @@ export type OperatorSnapshot = RuntimeStateFile & {
   runtime_state_stale?: boolean;
   blocked_sources?: BlockedSources;
   advisory_warnings?: string[];
+  acceptance_preflight?: Record<string, boolean>;
 };
 
 export type OperatorSnapshotOptions = {
   agentId?: string;
 };
-
-async function buildFreshContext(
-  root: string,
-  agentId?: string,
-): Promise<{
-  ctx: VerifierContext;
-  blocked: boolean;
-  phase: Phase;
-}> {
-  const parsed = await parseGoalMd(root);
-  const checkResults = await runChecks(root, parsed.checks);
-  const loopCount =
-    agentId != null
-      ? await readAgentLoopCount(root, agentId)
-      : await readRepoBlockedStopTotal(root);
-  const ctx: VerifierContext = {
-    root,
-    input: { status: "completed" },
-    parsed,
-    loopLimit: await readLoopLimit(root),
-    loopCount,
-    failures: [],
-    checkResults,
-    currentTree: "operator",
-    phaseBlocked: false,
-    unitsBlocked: false,
-  };
-
-  for (const c of checkResults) {
-    if (!c.ok) ctx.failures.push(c.cmd);
-  }
-
-  if (existsSync(sessionEndMarkerPath(root))) {
-    ctx.failures.push("SESSION_END");
-  }
-
-  ctx.unitsBlocked = await levelWorkUnitsBlocked(ctx);
-  const traj = await readTrajectory(root);
-  const phaseGate = await import("../verifier/l-trajectory.js").then((m) =>
-    m.levelTrajectoryBlocked(ctx),
-  );
-  ctx.phaseBlocked = phaseGate.blocked;
-  ctx.phase = traj.phase;
-
-  const blocked = ctx.failures.length > 0 || ctx.unitsBlocked || ctx.phaseBlocked;
-  return { ctx, blocked, phase: (ctx.phase ?? traj.phase) as Phase };
-}
 
 export async function buildOperatorSnapshot(
   root?: string,
@@ -112,18 +67,27 @@ export async function buildOperatorSnapshot(
   const stale = await isRuntimeStateStale(r);
 
   const { handoff, submitBlocked } = await readAgentHandoffRead(r, agentId);
-  const { ctx, blocked: liveBlocked, phase } = await buildFreshContext(r, agentId);
-  const blocked = liveBlocked || submitBlocked;
+  const dispositionBlocked = await hasAgentDisposition(r, agentId).catch(() => false);
+  let aligned: Awaited<ReturnType<typeof buildStopAlignedContext>>;
+  try {
+    aligned = await buildStopAlignedContext(r, { conversation_id: agentId });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : String(e) };
+  }
+  const { ctx, blocked: liveBlocked, phase } = aligned;
+  const promptContext = await readPromptContext(r, agentId).catch(() => null);
+  const blocked = liveBlocked || dispositionBlocked;
   const state = await computeRuntimeState({
     ctx,
     phase,
     phaseBlocked: ctx.phaseBlocked,
     unitsBlocked: ctx.unitsBlocked,
     blocked,
+    promptContext,
   });
 
   let merged: RuntimeStateFile = state;
-  if (submitBlocked) {
+  if (submitBlocked && blocked) {
     const blockers = handoff
       ? [...state.blockers, ...handoff.blockers]
       : [...state.blockers, "submit:blocked"];
@@ -150,7 +114,13 @@ export async function buildOperatorSnapshot(
     runtime_state_stale: stale,
     blocked_sources,
     advisory_warnings: [],
+    acceptance_preflight: await acceptancePreflightForOpenUnits(r).catch(() => ({})),
   };
+  if ((promptContext?.out_of_scope_paths?.length ?? 0) > 0) {
+    snap.advisory_warnings?.push(
+      `Prompt context references out-of-scope paths: ${promptContext?.out_of_scope_paths.join(", ")}`,
+    );
+  }
   const head = await resolveDispatchHead(r);
   if (head) {
     snap.dispatch_head = {
@@ -190,7 +160,7 @@ export async function buildOperatorNextAction(
       headline: snap.next_action.headline,
       detail: snap.next_action.detail,
       taskPrompt: snap.next_action.task_prompt,
-    });
+    }, { includeTaskPrompt: true });
   }
 
   return snap.blockers.join("; ") || "Blocked — see runtime-state.json";
@@ -230,6 +200,12 @@ export async function formatOperatorStatus(root?: string): Promise<string> {
     if (snap.blocked_sources.disposition) parts.push("disposition");
     if (snap.blocked_sources.submit) parts.push("submit");
     if (parts.length) lines.push(`blocked_because: ${parts.join(", ")}`);
+  }
+  const traces = await readStopTraceTail(r, 100);
+  const tokens = sumTokenUsage(traces);
+  if (tokens.input || tokens.output) {
+    const fmt = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}K` : String(n);
+    lines.push(`token_usage: in=${fmt(tokens.input)} out=${fmt(tokens.output)} cache_r=${fmt(tokens.cache_read)} cache_w=${fmt(tokens.cache_write)}`);
   }
   return lines.join("\n");
 }
