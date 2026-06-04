@@ -12,15 +12,16 @@ describe("I201 runtime missing warn once", () => {
     await cleanup?.();
   });
 
-  it("attaches runtime-missing note only once per session", async () => {
+  it("attaches runtime-missing note to sessionStart, not ignored beforeSubmitPrompt agent_message", async () => {
     const p = await mkGitProject("i201");
     cleanup = p.cleanup;
     restore = withProjectEnv(p.dir).restore;
     const env = { ...process.env, CURSOR_PROJECT_DIR: p.dir, CURSOR_GOAL_RUNTIME: "" };
-    execCoreHookBare(p.dir, "sessionStart", {}, env);
+    const session = execCoreHookBare(p.dir, "sessionStart", {}, env);
     const first = execCoreHookBare(p.dir, "beforeSubmitPrompt", {}, env);
     const second = execCoreHookBare(p.dir, "beforeSubmitPrompt", {}, env);
-    expect(String(first.stdout.agent_message ?? "")).toContain("runtime not built");
+    expect(String(session.stdout.additional_context ?? "")).toContain("runtime not built");
+    expect(first.stdout.agent_message).toBeUndefined();
     expect(second.stdout.agent_message ?? "").toBe("");
   });
 });

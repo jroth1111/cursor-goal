@@ -48,7 +48,11 @@ describe("I167 destructive stop checks", () => {
     );
     await seedReleaseReady(p.dir);
 
-    const r = execMinimalStop(p.dir, { status: "completed", loop_count: 0 });
+    const r = execMinimalStop(
+      p.dir,
+      { status: "completed", loop_count: 0 },
+      { CURSOR_GOAL_STOP_FOLLOWUP: "1" },
+    );
 
     expect(String(r.stdout.followup_message ?? "")).toMatch(/destructive/i);
     expect(existsSync(marker)).toBe(false);

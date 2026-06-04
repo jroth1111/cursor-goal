@@ -10,9 +10,10 @@
       {
         "command": ".cursor/hooks/goal-stop.sh",
         "loop_limit": 40,
-        "timeout": 120
+        "timeout": 600
       }
     ],
+    "afterAgentResponse": [{ "command": ".cursor/hooks/goal-after-response.sh" }],
     "subagentStop": [{ "command": ".cursor/hooks/goal-subagent-stop.sh" }],
     "sessionEnd": [{ "command": ".cursor/hooks/goal-session-end.sh" }]
   }

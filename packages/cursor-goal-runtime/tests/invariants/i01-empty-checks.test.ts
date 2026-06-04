@@ -38,7 +38,11 @@ describe("I01 empty checks no RELEASE", () => {
       "## Goal\nx\n## Checks\n\n",
       "utf8",
     );
-    const r = execMinimalStop(p.dir, { status: "completed", loop_count: 0 });
+    const r = execMinimalStop(
+      p.dir,
+      { status: "completed", loop_count: 0 },
+      { CURSOR_GOAL_STOP_FOLLOWUP: "1" },
+    );
     expect(r.stdout.followup_message).toBeTruthy();
     await expect(access(path.join(p.dir, ".cursor/goal/passports/RELEASE.json"))).rejects.toThrow();
   });

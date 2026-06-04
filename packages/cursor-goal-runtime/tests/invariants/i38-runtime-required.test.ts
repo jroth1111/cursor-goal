@@ -42,7 +42,8 @@ describe("I38 hooks fail open without runtime", () => {
 
     const r = execCoreHookBare(p.dir, "beforeSubmitPrompt", {});
     expect(r.stdout.continue).toBe(true);
-    expect(String(r.stdout.agent_message)).toMatch(/runtime not built/);
+    expect(r.stdout.agent_message).toBeUndefined();
+    expect(r.stdout.user_message).toBeUndefined();
   });
 
   it("beforeShellExecution still denies destructive shell when runtime is missing", async () => {

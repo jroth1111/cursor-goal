@@ -64,12 +64,14 @@ describe("I121 global install hook sync", () => {
 
     expect(r.status, r.stderr || r.stdout).toBe(0);
     const hooks = JSON.parse(await readFile(path.join(fakeCursorHome, "hooks.json"), "utf8")) as {
-      hooks?: { stop?: { command?: string }[] };
+      hooks?: { stop?: { command?: string; timeout?: number }[] };
     };
-    const stopCommands = hooks.hooks?.stop?.map((h) => h.command) ?? [];
+    const stopEntries = hooks.hooks?.stop ?? [];
+    const stopCommands = stopEntries.map((h) => h.command);
     expect(stopCommands).toContain("hooks/user-stop.sh");
     expect(stopCommands).toContain("hooks/goal-stop.sh");
     expect(stopCommands).not.toContain("hooks/goal-old.sh");
+    expect(stopEntries.find((h) => h.command === "hooks/goal-stop.sh")?.timeout).toBeGreaterThanOrEqual(600);
     expect(existsSync(path.join(fakeCursorHome, "hooks/user-stop.sh"))).toBe(true);
     expect(existsSync(path.join(fakeCursorHome, "hooks/goal-stop.sh"))).toBe(true);
     expect(existsSync(path.join(fakeCursorHome, "hooks/goal-old.sh"))).toBe(false);

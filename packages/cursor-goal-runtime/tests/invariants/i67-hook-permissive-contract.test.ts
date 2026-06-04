@@ -46,7 +46,12 @@ Unit A
     return p;
   }
 
-  function execRuntimeHookRaw(projectDir: string, hookName: string, input: string): HookExecResult {
+  function execRuntimeHookRaw(
+    projectDir: string,
+    hookName: string,
+    input: string,
+    extraEnv: Record<string, string | undefined> = {},
+  ): HookExecResult {
     const hook = path.resolve(import.meta.dirname, `../../dist/hook-${hookName}.mjs`);
     const r = spawnSync("node", [hook], {
       cwd: projectDir,
@@ -54,6 +59,7 @@ Unit A
       encoding: "utf8",
       env: {
         ...process.env,
+        ...extraEnv,
         CURSOR_PROJECT_DIR: projectDir,
         CURSOR_GOAL_RUNTIME: path.resolve(import.meta.dirname, "../../"),
       },
@@ -161,7 +167,8 @@ Unit A
       conversation_id: "default",
     });
     expect(blocked.stdout.continue).toBe(true);
-    expect(String(blocked.stdout.agent_message ?? "")).toMatch(/blocked|runtime-state/i);
+    expect(blocked.stdout.agent_message).toBeUndefined();
+    expect(blocked.stdout.user_message).toBeUndefined();
 
     await writeFile(path.join(p.dir, ".cursor/goal/PAUSED"), "", "utf8");
     const paused = execCoreHook(p.dir, "beforeSubmitPrompt", {
@@ -169,7 +176,8 @@ Unit A
       conversation_id: "default",
     });
     expect(paused.stdout.continue).toBe(true);
-    expect(String(paused.stdout.agent_message ?? "")).toMatch(/paused/i);
+    expect(paused.stdout.agent_message).toBeUndefined();
+    expect(paused.stdout.user_message).toBeUndefined();
   });
 
   it("beforeSubmitPrompt and sessionStart fail open on malformed governance state", async () => {
@@ -182,13 +190,15 @@ Unit A
     });
     expect(prompt.exitCode).toBe(0);
     expect(prompt.stdout.continue).toBe(true);
-    expect(String(prompt.stdout.agent_message ?? "")).toMatch(/continuing fail-open|warning/i);
+    expect(prompt.stdout.agent_message).toBeUndefined();
+    expect(prompt.stdout.user_message).toBeUndefined();
 
     const session = execCoreHook(p.dir, "sessionStart", {
       conversation_id: "default",
     });
     expect(session.exitCode).toBe(0);
-    expect(String(session.stdout.agent_message ?? "")).toMatch(/continuing fail-open|cursor-goal/i);
+    expect(session.stdout.agent_message).toBeUndefined();
+    expect(String(session.stdout.additional_context ?? "")).toMatch(/continuing fail-open|cursor-goal/i);
   });
 
   it("runtime hooks fail open on malformed hook stdin", async () => {
@@ -206,7 +216,15 @@ Unit A
 
     const stop = execRuntimeHookRaw(p.dir, "stop", "{");
     expect(stop.exitCode).toBe(0);
-    expect(String(stop.stdout.followup_message ?? "")).toMatch(/warning|fail-open|verifier error/i);
+    expect(stop.stdout.followup_message).toBeUndefined();
+
+    const stopOptIn = execRuntimeHookRaw(p.dir, "stop", "{", {
+      CURSOR_GOAL_STOP_FOLLOWUP: "1",
+    });
+    expect(stopOptIn.exitCode).toBe(0);
+    expect(String(stopOptIn.stdout.followup_message ?? "")).toMatch(
+      /warning|fail-open|verifier error/i,
+    );
   });
 
   it("minimal fallback is also fail-open for primary-agent work", async () => {

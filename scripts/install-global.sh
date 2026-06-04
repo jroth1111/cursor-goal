@@ -35,8 +35,10 @@ GLOBAL_TEMPLATES="$CURSOR_HOME/goal/templates"
 GLOBAL_HOOKS="$CURSOR_HOME/hooks"
 GLOBAL_MANIFEST="$CURSOR_HOME/cursor-goal/install-manifest.json"
 VERIFY_REPORT="$CURSOR_HOME/cursor-goal/install-verify.json"
+ROLLBACK_ARCHIVE="$CURSOR_HOME/cursor-goal/install-rollback.tgz"
 ENV_FILE="$CURSOR_HOME/cursor-goal.env"
 LOCAL_BIN="${HOME}/.local/bin"
+INSTALL_ROLLBACK_READY=0
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -60,6 +62,23 @@ GIT_SHA=""
 if git -C "$REPO_ROOT" rev-parse --short HEAD >/dev/null 2>&1; then
   GIT_SHA="$(git -C "$REPO_ROOT" rev-parse --short HEAD)"
 fi
+SOURCE_TREE=""
+SOURCE_DIRTY=false
+SOURCE_DIRTY_FILES='[]'
+
+refresh_source_metadata() {
+  local meta
+  if [[ ! -f "$SCRIPT_DIR/source-metadata.mjs" ]]; then
+    SOURCE_TREE="$GIT_SHA"
+    SOURCE_DIRTY=false
+    SOURCE_DIRTY_FILES='[]'
+    return 0
+  fi
+  meta="$(node "$SCRIPT_DIR/source-metadata.mjs" "$REPO_ROOT")"
+  SOURCE_TREE="$(jq -r '.source_tree // ""' <<<"$meta")"
+  SOURCE_DIRTY="$(jq -r '.source_dirty // false' <<<"$meta")"
+  SOURCE_DIRTY_FILES="$(jq -c '.source_dirty_files // []' <<<"$meta")"
+}
 
 write_install_manifest() {
   local dry_run="${1:-0}"
@@ -70,6 +89,9 @@ write_install_manifest() {
       --arg installed_at "$installed_at" \
       --arg source "$REPO_ROOT" \
       --arg git_sha "$GIT_SHA" \
+      --arg source_tree "$SOURCE_TREE" \
+      --argjson source_dirty "$SOURCE_DIRTY" \
+      --argjson source_dirty_files "$SOURCE_DIRTY_FILES" \
       --arg runtime "$GLOBAL_RUNTIME" \
       --arg schemas "$GLOBAL_SCHEMAS" \
       --arg templates "$GLOBAL_TEMPLATES" \
@@ -78,6 +100,9 @@ write_install_manifest() {
         installed_at: $installed_at,
         source: $source,
         git_sha: $git_sha,
+        source_tree: $source_tree,
+        source_dirty: $source_dirty,
+        source_dirty_files: $source_dirty_files,
         runtime: $runtime,
         schemas: $schemas,
         templates: $templates,
@@ -89,6 +114,9 @@ write_install_manifest() {
       --arg installed_at "$installed_at" \
       --arg source "$REPO_ROOT" \
       --arg git_sha "$GIT_SHA" \
+      --arg source_tree "$SOURCE_TREE" \
+      --argjson source_dirty "$SOURCE_DIRTY" \
+      --argjson source_dirty_files "$SOURCE_DIRTY_FILES" \
       --arg runtime "$GLOBAL_RUNTIME" \
       --arg schemas "$GLOBAL_SCHEMAS" \
       --arg templates "$GLOBAL_TEMPLATES" \
@@ -97,6 +125,9 @@ write_install_manifest() {
         installed_at: $installed_at,
         source: $source,
         git_sha: $git_sha,
+        source_tree: $source_tree,
+        source_dirty: $source_dirty,
+        source_dirty_files: $source_dirty_files,
         runtime: $runtime,
         schemas: $schemas,
         templates: $templates,
@@ -124,6 +155,53 @@ ensure_runtime_node_deps() {
   done
 }
 
+delete_managed_global_hooks() {
+  [[ -d "$GLOBAL_HOOKS" ]] || return 0
+  find "$GLOBAL_HOOKS" -maxdepth 1 \( -type f -o -type l \) \
+    \( -name 'goal-*.sh' -o -name '_cgr-lib.sh' -o -name 'handlers-minimal.sh' -o -name 'verify-minimal.sh' -o -name 'destructive-shell-policy.sh' \) \
+    -delete
+}
+
+snapshot_install_path() {
+  local src="$1"
+  local rel="$2"
+  local stage_root="$3"
+  if [[ -e "$src" || -L "$src" ]]; then
+    mkdir -p "$stage_root/$(dirname "$rel")"
+    cp -R "$src" "$stage_root/$rel"
+  fi
+}
+
+create_install_rollback_snapshot() {
+  local stage
+  stage="$CURSOR_HOME/cursor-goal/install-rollback.staging"
+  rm -rf "$stage"
+  mkdir -p "$stage/root" "$CURSOR_HOME/cursor-goal"
+  snapshot_install_path "$GLOBAL_RUNTIME" "cursor-goal-runtime" "$stage/root"
+  snapshot_install_path "$GLOBAL_SCHEMAS" "goal/schemas" "$stage/root"
+  snapshot_install_path "$GLOBAL_TEMPLATES" "goal/templates" "$stage/root"
+  snapshot_install_path "$GLOBAL_HOOKS" "hooks" "$stage/root"
+  snapshot_install_path "$GLOBAL_MANIFEST" "cursor-goal/install-manifest.json" "$stage/root"
+  snapshot_install_path "$VERIFY_REPORT" "cursor-goal/install-verify.json" "$stage/root"
+  snapshot_install_path "$ENV_FILE" "cursor-goal.env" "$stage/root"
+  (cd "$stage/root" && tar -czf "$ROLLBACK_ARCHIVE" .)
+  rm -rf "$stage"
+  INSTALL_ROLLBACK_READY=1
+}
+
+restore_install_rollback_snapshot() {
+  local exit_code="$?"
+  set +e
+  if [[ "$INSTALL_ROLLBACK_READY" -eq 1 && -f "$ROLLBACK_ARCHIVE" ]]; then
+    echo "Install failed; restoring previous cursor-goal global install from $ROLLBACK_ARCHIVE" >&2
+    rm -rf "$GLOBAL_RUNTIME" "$GLOBAL_SCHEMAS" "$GLOBAL_TEMPLATES"
+    delete_managed_global_hooks
+    rm -f "$GLOBAL_MANIFEST" "$VERIFY_REPORT" "$ENV_FILE"
+    tar -xzf "$ROLLBACK_ARCHIVE" -C "$CURSOR_HOME"
+  fi
+  exit "$exit_code"
+}
+
 verify_global_install() {
   local runtime_ok=false
   local manifest_ok=false
@@ -138,8 +216,16 @@ verify_global_install() {
   local ok=false
 
   [[ -f "$GLOBAL_RUNTIME/dist/hook-stop.mjs" && -f "$GLOBAL_RUNTIME/dist/cli.js" && -f "$GLOBAL_RUNTIME/package.json" ]] && runtime_ok=true
-  if jq -e --arg sha "$GIT_SHA" --arg rt "$GLOBAL_RUNTIME" --arg schemas "$GLOBAL_SCHEMAS" --arg templates "$GLOBAL_TEMPLATES" --arg hooks "$GLOBAL_HOOKS" \
-    '.git_sha == $sha and .runtime == $rt and .schemas == $schemas and .templates == $templates and .hooks == $hooks' \
+  if jq -e \
+    --arg sha "$GIT_SHA" \
+    --arg source_tree "$SOURCE_TREE" \
+    --argjson source_dirty "$SOURCE_DIRTY" \
+    --argjson source_dirty_files "$SOURCE_DIRTY_FILES" \
+    --arg rt "$GLOBAL_RUNTIME" \
+    --arg schemas "$GLOBAL_SCHEMAS" \
+    --arg templates "$GLOBAL_TEMPLATES" \
+    --arg hooks "$GLOBAL_HOOKS" \
+    '.git_sha == $sha and .source_tree == $source_tree and .source_dirty == $source_dirty and .source_dirty_files == $source_dirty_files and .runtime == $rt and .schemas == $schemas and .templates == $templates and .hooks == $hooks' \
     "$GLOBAL_MANIFEST" >/dev/null 2>&1; then
     manifest_ok=true
   fi
@@ -220,6 +306,7 @@ verify_global_install() {
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "DRY RUN — would install to $CURSOR_HOME"
   mkdir -p "$CURSOR_HOME/cursor-goal"
+  refresh_source_metadata
   write_install_manifest 1
   # shellcheck source=../core/lib/merge-hooks-json.sh
   source "$CORE_DIR/lib/merge-hooks-json.sh"
@@ -233,6 +320,8 @@ if [[ "$SKIP_BUILD" -eq 0 ]]; then
   (cd "$REPO_ROOT" && npm run build)
 fi
 
+refresh_source_metadata
+
 if [[ ! -f "$RUNTIME_SRC/dist/hook-stop.mjs" ]]; then
   echo "Runtime not built: $RUNTIME_SRC/dist/hook-stop.mjs" >&2
   exit 1
@@ -241,9 +330,9 @@ fi
 echo "Installing cursor-goal globally → $CURSOR_HOME"
 
 mkdir -p "$GLOBAL_HOOKS" "$CURSOR_HOME/cursor-goal" "$LOCAL_BIN"
-find "$GLOBAL_HOOKS" -maxdepth 1 \( -type f -o -type l \) \
-  \( -name 'goal-*.sh' -o -name '_cgr-lib.sh' -o -name 'handlers-minimal.sh' -o -name 'verify-minimal.sh' -o -name 'destructive-shell-policy.sh' \) \
-  -delete
+create_install_rollback_snapshot
+trap restore_install_rollback_snapshot ERR
+delete_managed_global_hooks
 
 # Runtime staging
 rm -rf "$GLOBAL_RUNTIME"
@@ -294,6 +383,7 @@ chmod +x "$SCRIPT_DIR/cursor-agent-goal.sh"
 
 write_install_manifest 0
 verify_global_install
+trap - ERR
 
 if [[ "$WRITE_PROFILE" -eq 1 ]]; then
   SNIPPET="source \"$ENV_FILE\""

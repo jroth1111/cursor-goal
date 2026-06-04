@@ -62,7 +62,14 @@ describe("I177 hook root boundary", () => {
     });
 
     expect(r.status, r.stderr || r.stdout).toBe(0);
-    expect(r.stdout).toMatch(/CURSOR_PROJECT_DIR|hooks directory/i);
+    const out = JSON.parse((r.stdout ?? "").trim() || "{}") as {
+      user_message?: string;
+      agent_message?: string;
+      additional_context?: string;
+    };
+    expect(out.user_message).toBeUndefined();
+    expect(out.agent_message).toBeUndefined();
+    expect(out.additional_context).toBeUndefined();
     expect(existsSync(path.join(hooksDir, ".cursor/goal"))).toBe(false);
   });
 
@@ -89,9 +96,14 @@ describe("I177 hook root boundary", () => {
     });
 
     expect(r.status, r.stderr || r.stdout).toBe(0);
-    const out = JSON.parse((r.stdout ?? "").trim() || "{}") as { continue?: boolean; agent_message?: string };
+    const out = JSON.parse((r.stdout ?? "").trim() || "{}") as {
+      continue?: boolean;
+      agent_message?: string;
+      user_message?: string;
+    };
     expect(out.continue).toBe(false);
-    expect(String(out.agent_message ?? "")).toMatch(/CURSOR_GOAL_STRICT|CURSOR_PROJECT_DIR|hooks directory/i);
+    expect(out.agent_message).toBeUndefined();
+    expect(String(out.user_message ?? "")).toMatch(/CURSOR_GOAL_STRICT|CURSOR_PROJECT_DIR|hooks directory/i);
     expect(existsSync(path.join(hooksDir, ".cursor/goal"))).toBe(false);
   });
 });

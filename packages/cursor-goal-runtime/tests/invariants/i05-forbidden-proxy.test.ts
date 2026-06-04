@@ -25,6 +25,11 @@ describe("I05 forbidden proxy", () => {
     const md = await readFile(path.join(fixtures, "adversarial-test-only.md"), "utf8");
     const { writeFile: wf } = await import("node:fs/promises");
     await wf(path.join(p.dir, "GOAL.md"), md, "utf8");
+    await wf(
+      path.join(p.dir, "package.json"),
+      JSON.stringify({ scripts: { test: "true" } }),
+      "utf8",
+    );
     await seedReleaseReady(p.dir);
     const r = await runStopVerifier({ status: "completed", loop_count: 0 });
     expect(r.kind).toBe("continue");

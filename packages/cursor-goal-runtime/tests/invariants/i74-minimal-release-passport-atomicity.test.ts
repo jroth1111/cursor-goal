@@ -1,13 +1,13 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { existsSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { readJson } from "../../src/lib/paths.js";
-import { writeAgentRuntimeState } from "../../src/lib/agent-runtime-state.js";
+import { readAgentRuntimeState, writeAgentRuntimeState } from "../../src/lib/agent-runtime-state.js";
 import { execMinimalStop } from "../hooks/exec-hook.js";
 
-describe("I74 minimal RELEASE passport atomicity", () => {
+describe("I74 minimal fallback release authority", () => {
   let cleanup: (() => Promise<void>) | undefined;
   let restore: (() => void) | undefined;
 
@@ -18,8 +18,18 @@ describe("I74 minimal RELEASE passport atomicity", () => {
     cleanup = undefined;
   });
 
-  it("does not leave RELEASE.json when the locked release reset fails", async () => {
-    const p = await mkGitProject("i74-failed-reset");
+  it("does not ship a minimal fallback release writer", async () => {
+    const script = await readFile(
+      path.resolve(import.meta.dirname, "../../../../core/.cursor/hooks/verify-minimal.sh"),
+      "utf8",
+    );
+    expect(script).not.toMatch(/\brelease_all_locked\b/);
+    expect(script).not.toMatch(/\bwrite_release_passport\b/);
+    expect(script).not.toMatch(/status:\s*"RELEASE"/);
+  });
+
+  it("does not attempt RELEASE reset when checks pass but runtime authority is unavailable", async () => {
+    const p = await mkGitProject("i74-no-release-reset");
     cleanup = p.cleanup;
     restore = withProjectEnv(p.dir).restore;
 
@@ -36,13 +46,13 @@ describe("I74 minimal RELEASE passport atomicity", () => {
       conversation_id: "agent-a",
     });
 
-    expect(r.exitCode).not.toBe(0);
+    expect(r.exitCode).toBe(0);
     expect(existsSync(path.join(p.dir, ".cursor/goal/passports/RELEASE.json"))).toBe(false);
     expect(existsSync(path.join(p.dir, ".cursor/goal/.lock"))).toBe(false);
   });
 
-  it("writes RELEASE.json after reset with loop_count 0", async () => {
-    const p = await mkGitProject("i74-release-loop-zero");
+  it("keeps blocked state and does not write RELEASE.json when checks pass", async () => {
+    const p = await mkGitProject("i74-no-release-loop-zero");
     cleanup = p.cleanup;
     restore = withProjectEnv(p.dir).restore;
 
@@ -63,17 +73,22 @@ describe("I74 minimal RELEASE passport atomicity", () => {
       updated_at: new Date().toISOString(),
     });
 
-    const r = execMinimalStop(p.dir, {
-      status: "completed",
-      loop_count: 0,
-      conversation_id: "agent-a",
-    });
+    const r = execMinimalStop(
+      p.dir,
+      {
+        status: "completed",
+        loop_count: 0,
+        conversation_id: "agent-a",
+      },
+      { CURSOR_GOAL_STOP_FOLLOWUP: "1" },
+    );
 
     expect(r.exitCode).toBe(0);
-    const release = await readJson<{ loop_count?: number }>(
-      path.join(p.dir, ".cursor/goal/passports/RELEASE.json"),
-    );
-    expect(release?.loop_count).toBe(0);
+    expect(existsSync(path.join(p.dir, ".cursor/goal/passports/RELEASE.json"))).toBe(false);
+    expect(String(r.stdout.followup_message ?? "")).toMatch(/runtime authority|release requires/i);
+    const state = await readAgentRuntimeState(p.dir, "agent-a");
+    expect(state?.blocked).toBe(true);
+    expect(state?.loop_count).toBe(5);
   });
 
   it("writes valid JSON disposition for raw conversation ids", async () => {

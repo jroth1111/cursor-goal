@@ -32,8 +32,8 @@ describe("I69 minimal verifier lock hygiene", () => {
     cleanup = undefined;
   });
 
-  it("RELEASE clears other agents, resets total, exits 0, and does not leak .lock", async () => {
-    const p = await mkGitProject("i69-release");
+  it("passing minimal checks preserve other agents, exit 0, and do not leak .lock", async () => {
+    const p = await mkGitProject("i69-no-release");
     cleanup = p.cleanup;
     restore = withProjectEnv(p.dir).restore;
     await writeFile(path.join(p.dir, "GOAL.md"), "## Goal\nx\n## Checks\n- `true`\n", "utf8");
@@ -53,22 +53,24 @@ describe("I69 minimal verifier lock hygiene", () => {
     expect(r.status).toBe(0);
 
     const b = await readAgentRuntimeState(p.dir, "agent-b");
-    expect(b?.blocked).toBe(false);
+    expect(b?.blocked).toBe(true);
     expect(b?.loop_count).toBe(5);
     expect(await readRepoBlockedStopTotal(p.dir)).toBe(0);
     expect(existsSync(path.join(p.dir, ".cursor/goal/.lock"))).toBe(false);
+    expect(existsSync(path.join(p.dir, ".cursor/goal/passports/RELEASE.json"))).toBe(false);
   });
 
-  it("releases .lock even when a locked RELEASE reset fails", async () => {
-    const p = await mkGitProject("i69-failing-reset");
+  it("does not enter locked RELEASE reset when the reset target is malformed", async () => {
+    const p = await mkGitProject("i69-no-reset");
     cleanup = p.cleanup;
     restore = withProjectEnv(p.dir).restore;
     await writeFile(path.join(p.dir, "GOAL.md"), "## Goal\nx\n## Checks\n- `true`\n", "utf8");
     await mkdir(path.join(p.dir, ".cursor/goal/runtime-state.json"), { recursive: true });
 
     const r = runMinimalStop(p.dir, { status: "completed", loop_count: 0, conversation_id: "agent-a" });
-    expect(r.status).not.toBe(0);
+    expect(r.status).toBe(0);
     expect(existsSync(path.join(p.dir, ".cursor/goal/.lock"))).toBe(false);
+    expect(existsSync(path.join(p.dir, ".cursor/goal/passports/RELEASE.json"))).toBe(false);
   });
 
   it("normalizes malformed loop totals instead of crashing under lock", async () => {

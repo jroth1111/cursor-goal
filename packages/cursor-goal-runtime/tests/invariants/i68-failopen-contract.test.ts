@@ -91,7 +91,8 @@ describe("I68 fail-open contract", { timeout: 30_000 }, () => {
       conversation_id: "default",
     });
     expect(paused.stdout.continue).toBe(true);
-    expect(String(paused.stdout.agent_message ?? "")).toMatch(/paused/i);
+    expect(paused.stdout.agent_message).toBeUndefined();
+    expect(paused.stdout.user_message).toBeUndefined();
   });
 
   it("5: runtime-missing fallback allows normal primary work", async () => {

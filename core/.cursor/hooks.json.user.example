@@ -12,11 +12,12 @@
     "beforeShellExecution": [{ "command": "hooks/goal-shell.sh" }],
     "preCompact": [{ "command": "hooks/goal-pre-compact.sh" }],
     "postToolUse": [{ "command": "hooks/goal-post-tool.sh" }],
+    "afterAgentResponse": [{ "command": "hooks/goal-after-response.sh" }],
     "stop": [
       {
         "command": "hooks/goal-stop.sh",
         "loop_limit": 40,
-        "timeout": 120
+        "timeout": 600
       }
     ],
     "subagentStop": [{ "command": "hooks/goal-subagent-stop.sh" }],

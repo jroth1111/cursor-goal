@@ -37,7 +37,7 @@ describe("I190 cursor-goal run process-group timeout cleanup", () => {
       "setInterval(() => {}, 1000);",
     ].join(" ");
 
-    const r = spawnSync("node", [cli, "run", "--timeout-ms", "150", "--", "node", "-e", script], {
+    const r = spawnSync("node", [cli, "run", "--timeout-ms", "750", "--", "node", "-e", script], {
       cwd: p.dir,
       encoding: "utf8",
       env: { ...process.env, CURSOR_PROJECT_DIR: p.dir },

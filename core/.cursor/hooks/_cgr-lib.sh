@@ -96,13 +96,13 @@ cgr_apply_strict_before_submit() {
   fi
   if command -v jq >/dev/null 2>&1; then
     local patched
-    patched="$(printf '%s' "$out" | jq '.continue = false | .agent_message = ((.agent_message // "") + "; CURSOR_GOAL_STRICT=1: runtime missing — run npm run build")' 2>/dev/null || true)"
+    patched="$(printf '%s' "$out" | jq '.continue = false | del(.agent_message) | .user_message = (((.user_message // "") | tostring) + "; CURSOR_GOAL_STRICT=1: runtime missing — run npm run build")' 2>/dev/null || true)"
     if [[ -n "$patched" ]]; then
       printf '%s\n' "$patched"
       return 0
     fi
   fi
-  printf '{"continue":false,"agent_message":"CURSOR_GOAL_STRICT=1: cursor-goal runtime not built. Run: npm run build"}\n'
+  printf '{"continue":false,"user_message":"CURSOR_GOAL_STRICT=1: cursor-goal runtime not built. Run: npm run build"}\n'
 }
 
 cgr_no_runtime_message() {
@@ -122,13 +122,13 @@ cgr_no_runtime_response() {
       ;;
     beforeSubmitPrompt)
       if cgr_strict_enabled; then
-        printf '{"continue":false,"agent_message":"CURSOR_GOAL_STRICT=1: %s"}\n' "$msg"
+        printf '{"continue":false,"user_message":"CURSOR_GOAL_STRICT=1: %s"}\n' "$msg"
       else
-        printf '{"continue":true,"agent_message":"%s"}\n' "$msg"
+        printf '{"continue":true}\n'
       fi
       ;;
     sessionStart)
-      printf '{"continue":true,"agent_message":"%s"}\n' "$msg"
+      printf '{"continue":true,"additional_context":"%s"}\n' "$msg"
       ;;
     stop)
       printf '{}\n'
@@ -168,13 +168,14 @@ cgr_e2e_trace() {
 cgr_attach_agent_message() {
   local out="$1"
   local msg="$2"
+  local field="${3:-agent_message}"
   if [[ -z "$msg" ]]; then
     printf '%s\n' "$out"
     return 0
   fi
   if command -v jq >/dev/null 2>&1; then
     local patched
-    patched="$(printf '%s' "$out" | jq --arg m "$msg" '.agent_message = (if (.agent_message? // "") == "" then $m else ((.agent_message | tostring) + "; " + $m) end)' 2>/dev/null || true)"
+    patched="$(printf '%s' "$out" | jq --arg f "$field" --arg m "$msg" '.[$f] = (if (.[$f]? // "") == "" then $m else ((.[$f] | tostring) + "; " + $m) end)' 2>/dev/null || true)"
     if [[ -n "$patched" ]]; then
       printf '%s\n' "$patched"
       return 0
@@ -225,6 +226,26 @@ try {
   else
     printf 'false'
   fi
+}
+
+cgr_stop_followup_enabled() {
+  case "${CURSOR_GOAL_STOP_FOLLOWUP:-}" in
+    1|true|TRUE|yes|YES|on|ON) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+cgr_emit_stop_followup() {
+  local msg="$1"
+  if ! cgr_stop_followup_enabled; then
+    printf '{}\n'
+    return 0
+  fi
+  if command -v jq >/dev/null 2>&1; then
+    jq -n --arg m "$msg" '{followup_message:$m}'
+    return 0
+  fi
+  printf '{"followup_message":"%s"}\n' "$msg"
 }
 
 cgr_normalize_path() {
@@ -408,23 +429,23 @@ cgr_root_resolution_response() {
   fi
   case "$step" in
     stop)
-      printf '{"followup_message":"cursor-goal: %s"}\n' "$msg"
+      cgr_emit_stop_followup "cursor-goal: $msg"
       ;;
     beforeSubmitPrompt)
       if cgr_strict_enabled; then
-        printf '{"continue":false,"agent_message":"CURSOR_GOAL_STRICT=1: cursor-goal: %s"}\n' "$msg"
+        printf '{"continue":false,"user_message":"CURSOR_GOAL_STRICT=1: cursor-goal: %s"}\n' "$msg"
       else
-        printf '{"continue":true,"agent_message":"cursor-goal: %s"}\n' "$msg"
+        printf '{"continue":true}\n'
       fi
       ;;
     preToolUse|beforeShellExecution)
       printf '{"permission":"allow","agent_message":"cursor-goal: %s"}\n' "$msg"
       ;;
     sessionStart)
-      printf '{"continue":true,"agent_message":"cursor-goal: %s"}\n' "$msg"
+      printf '{"continue":true}\n'
       ;;
     *)
-      printf '{"agent_message":"cursor-goal: %s"}\n' "$msg"
+      printf '{}\n'
       ;;
   esac
 }
@@ -467,7 +488,22 @@ cgr_minimal_response() {
     fi
     out="$(cgr_no_runtime_response "$step")"
   fi
-  out="$(cgr_attach_agent_message "$out" "$note")"
+  case "$step" in
+    sessionStart)
+      out="$(cgr_attach_agent_message "$out" "$note" "additional_context")"
+      ;;
+    preCompact)
+      out="$(cgr_attach_agent_message "$out" "$note" "user_message")"
+      ;;
+    beforeSubmitPrompt)
+      if cgr_strict_enabled; then
+        out="$(cgr_attach_agent_message "$out" "$note" "user_message")"
+      fi
+      ;;
+    *)
+      out="$(cgr_attach_agent_message "$out" "$note")"
+      ;;
+  esac
   cgr_apply_strict_before_submit "$step" "$out"
 }
 

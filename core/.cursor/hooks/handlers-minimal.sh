@@ -42,19 +42,23 @@ root_resolution_response() {
   local msg="CURSOR_PROJECT_DIR missing; refusing to use global hooks directory as project root."
   case "$STEP" in
     stop)
-      printf '{"followup_message":"cursor-goal: %s"}\n' "$msg"
+      cgr_emit_stop_followup "cursor-goal: $msg"
       ;;
     beforeSubmitPrompt)
-      printf '{"continue":true,"agent_message":"cursor-goal: %s"}\n' "$msg"
+      if cgr_strict_enabled; then
+        printf '{"continue":false,"user_message":"CURSOR_GOAL_STRICT=1: cursor-goal: %s"}\n' "$msg"
+      else
+        printf '{"continue":true}\n'
+      fi
       ;;
     preToolUse|beforeShellExecution)
       printf '{"permission":"allow","agent_message":"cursor-goal: %s"}\n' "$msg"
       ;;
     sessionStart)
-      printf '{"continue":true,"agent_message":"cursor-goal: %s"}\n' "$msg"
+      printf '{"continue":true}\n'
       ;;
     *)
-      printf '{"agent_message":"cursor-goal: %s"}\n' "$msg"
+      printf '{}\n'
       ;;
   esac
 }
@@ -201,8 +205,7 @@ case "$STEP" in
   beforeSubmitPrompt)
     # Minimal path: auto default — no GOAL required (full runtime does triage).
     if [[ -f "$GOAL_DIR/PAUSED" ]]; then
-      jq -n --arg u "Goal paused (.cursor/goal/PAUSED). Remove file or run: rm .cursor/goal/PAUSED" \
-        '{continue:true,agent_message:$u}'
+      echo '{"continue":true}'
       exit 0
     fi
     echo '{"continue":true}'

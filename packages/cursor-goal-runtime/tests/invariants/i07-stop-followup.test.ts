@@ -36,7 +36,11 @@ describe("I07 stop followup on failing checks", () => {
       "## Goal\nx\n## Checks\n- `false`\n",
       "utf8",
     );
-    const r = execMinimalStop(p.dir, { status: "completed", loop_count: 0 });
+    const r = execMinimalStop(
+      p.dir,
+      { status: "completed", loop_count: 0 },
+      { CURSOR_GOAL_STOP_FOLLOWUP: "1" },
+    );
     expect(r.stdout.followup_message).toBeTruthy();
   });
 });

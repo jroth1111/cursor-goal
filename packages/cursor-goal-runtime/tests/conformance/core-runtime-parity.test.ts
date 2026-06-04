@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
+import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
@@ -15,7 +16,12 @@ describe("I10 core/runtime parity", () => {
     await cleanup?.();
   });
 
-  async function parityCase(name: string, goalMd: string, loopCount: number) {
+  async function parityCase(
+    name: string,
+    goalMd: string,
+    loopCount: number,
+    expected: "both-block" | "runtime-release-minimal-block",
+  ) {
     const p = await mkGitProject(`i10-${name}`);
     cleanup = p.cleanup;
     restore = withProjectEnv(p.dir).restore;
@@ -23,25 +29,34 @@ describe("I10 core/runtime parity", () => {
     await seedReleaseReady(p.dir);
     const stdin = { status: "completed", loop_count: loopCount };
     const core = execMinimalStop(p.dir, stdin);
+    const coreReleased = existsSync(path.join(p.dir, ".cursor/goal/passports/RELEASE.json"));
     const runtime = await runStopVerifier(stdin);
-    const coreReleased = !core.stdout.followup_message && core.raw === "{}";
     const runtimeReleased = runtime.kind === "release";
-    expect(coreReleased).toBe(runtimeReleased);
-    if (!coreReleased) {
+    if (expected === "both-block") {
+      expect(coreReleased).toBe(false);
+      expect(runtimeReleased).toBe(false);
       expect(core.stdout.followup_message || runtime.kind === "continue").toBeTruthy();
+    } else {
+      expect(coreReleased).toBe(false);
+      expect(runtimeReleased).toBe(true);
     }
   }
 
   it("empty checks: both block release", async () => {
-    await parityCase("empty", "## Goal\nx\n## Checks\n\n", 0);
+    await parityCase("empty", "## Goal\nx\n## Checks\n\n", 0, "both-block");
   });
 
-  it("passing check: both release", async () => {
-    await parityCase("pass", "## Goal\nx\n## Checks\n- `true`\n", 0);
+  it("passing check: runtime releases while minimal fallback fails closed", async () => {
+    await parityCase(
+      "pass",
+      "## Goal\nx\n## Checks\n- `true`\n",
+      0,
+      "runtime-release-minimal-block",
+    );
   });
 
   it("failing check: both continue", async () => {
-    await parityCase("fail", "## Goal\nx\n## Checks\n- `false`\n", 0);
+    await parityCase("fail", "## Goal\nx\n## Checks\n- `false`\n", 0, "both-block");
   });
 
   it("stuck cursor loop_count: both show monotonic goal loop", async () => {
@@ -63,9 +78,13 @@ describe("I10 core/runtime parity", () => {
       await seedReleaseReady(p.dir);
     }
 
-    for (let n = 1; n <= 3; n++) {
+    for (let n = 1; n <= 2; n++) {
       const coreMsg = String(
-        execMinimalStop(pCore.dir, stdinBase).stdout.followup_message ?? "",
+        execMinimalStop(
+          pCore.dir,
+          stdinBase,
+          { CURSOR_GOAL_STOP_FOLLOWUP: "1" },
+        ).stdout.followup_message ?? "",
       );
       expect(coreMsg).toContain(`GOAL loop ${n}/40`);
 

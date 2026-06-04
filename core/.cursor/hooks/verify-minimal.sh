@@ -44,7 +44,7 @@ resolve_root() {
 }
 
 if ! ROOT="$(resolve_root)"; then
-  echo '{"followup_message":"cursor-goal: CURSOR_PROJECT_DIR missing; refusing to use global hooks directory as project root."}'
+  echo '{}'
   exit 0
 fi
 cd "$ROOT"
@@ -190,8 +190,24 @@ with_goal_lock() {
     sleep 0.05
     i=$((i + 1))
   done
-  echo '{"followup_message":"cursor-goal: goal directory lock timeout"}'
+  emit_stop_followup "cursor-goal: goal directory lock timeout"
   exit 0
+}
+
+stop_followup_enabled() {
+  case "${CURSOR_GOAL_STOP_FOLLOWUP:-}" in
+    1|true|TRUE|yes|YES|on|ON) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+emit_stop_followup() {
+  local msg="$1"
+  if stop_followup_enabled; then
+    jq -n --arg m "$msg" '{followup_message:$m}'
+  else
+    echo '{}'
+  fi
 }
 
 read_repo_total() {
@@ -358,89 +374,14 @@ clear_agent_disposition() {
   fi
 }
 
-reset_all_loops() {
-  local now blocked_n
-  now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  jq -n \
-    --argjson ll "$LOOP_LIMIT" \
-    --arg now "$now" \
-    '{total_blocked_stops:0,loop_limit:$ll,updated_at:$now}' >"$GOAL_LOOP_FILE"
-  clear_all_agents_blocked
-  clear_agent_disposition
-  if [[ -f "$AGENT_STATE" ]]; then
-    jq \
-      --arg now "$now" \
-      '.loop_count = 0 | .blocked = false | .blockers = [] | .next_action = null | .last_check_fail = null | .updated_at = $now' \
-      "$AGENT_STATE" >"${AGENT_STATE}.tmp" && mv "${AGENT_STATE}.tmp" "$AGENT_STATE"
-  fi
-  blocked_n="$(count_submit_blocked_agents)"
-  write_repo_summary 0 "$blocked_n"
-}
-
-write_release_passport() {
-  local now
-  now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-  if [[ -d "$PASSPORTS/RELEASE.json" ]]; then
-    return 1
-  fi
-  RELEASE_TMP="$PASSPORTS/.RELEASE.json.tmp.$$"
-  jq -n \
-    --arg now "$now" \
-    --arg conv "$CONV_ID" \
-    --argjson cursor "$CURSOR_LOOP" \
-    '{
-      status: "RELEASE",
-      at: $now,
-      mode: "minimal",
-      loop_count: 0,
-      cursor_stop_index: $cursor,
-      conversation_id: $conv
-    }' >"$RELEASE_TMP"
-}
-
-cleanup_release_tmp() {
-  if [[ -n "${RELEASE_TMP:-}" ]]; then
-    rm -f "$RELEASE_TMP" 2>/dev/null || true
-  fi
-}
-
-commit_release_passport() {
-  rm -f "$PASSPORTS/SESSION_END.json" "$PASSPORTS/SESSION_END.md"
-  mv "$RELEASE_TMP" "$PASSPORTS/RELEASE.json"
-  RELEASE_TMP=""
-}
-
-release_all_locked() {
-  if write_release_passport; then
-    :
-  else
-    local rc=$?
-    cleanup_release_tmp
-    return "$rc"
-  fi
-  if reset_all_loops; then
-    :
-  else
-    local rc=$?
-    cleanup_release_tmp
-    return "$rc"
-  fi
-  if commit_release_passport; then
-    :
-  else
-    local rc=$?
-    cleanup_release_tmp
-    return "$rc"
-  fi
-}
-
 if [[ ! -f GOAL.md ]]; then
   unblock_agent_state
-  echo '{"followup_message":"GOAL.md is missing. Create GOAL.md from .cursor/goal/templates/GOAL.md with ## Checks shell commands."}'
+  echo '{}'
   exit 0
 fi
 
 FAILURES=()
+CHECK_PARSE_ERRORS=()
 CHECK_COUNT=0
 IN_CHECKS=0
 while IFS= read -r line || [[ -n "$line" ]]; do
@@ -452,10 +393,24 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     break
   fi
   if [[ $IN_CHECKS -eq 1 ]] && [[ "$line" =~ ^-[[:space:]]+ ]]; then
-    cmd="${line#- }"
-    cmd="${cmd#\`}"
+    raw="${line#- }"
+    raw="$(echo "$raw" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    item="$raw"
+    if [[ "$item" =~ ^\[(fast|full)\][[:space:]]+(.+)$ ]]; then
+      item="${BASH_REMATCH[2]}"
+      item="$(echo "$item" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    fi
+    if [[ ! "$item" =~ ^\`[^\`]+\`$ ]]; then
+      CHECK_PARSE_ERRORS+=("$raw")
+      continue
+    fi
+    cmd="${item#\`}"
     cmd="${cmd%\`}"
     cmd="$(echo "$cmd" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    if [[ "$cmd" =~ ^\[(fast|full)\][[:space:]]+(.+)$ ]]; then
+      cmd="${BASH_REMATCH[2]}"
+      cmd="$(echo "$cmd" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    fi
     [[ -z "$cmd" ]] && continue
     CHECK_COUNT=$((CHECK_COUNT + 1))
     if destructive_shell "$cmd"; then
@@ -466,18 +421,22 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   fi
 done < GOAL.md
 
+if [[ ${#CHECK_PARSE_ERRORS[@]} -gt 0 ]]; then
+  unblock_agent_state
+  MSG="GOAL.md Checks entries must be backticked shell commands: ${CHECK_PARSE_ERRORS[*]}"
+  emit_stop_followup "$MSG"
+  exit 0
+fi
+
 if [[ "$CHECK_COUNT" -eq 0 ]]; then
   unblock_agent_state
   MSG="GOAL.md ## Checks is empty. Add at least one shell command (e.g. npm test) that must exit 0 before release."
-  jq -n --arg m "$MSG" '{followup_message:$m}'
+  emit_stop_followup "$MSG"
   exit 0
 fi
 
 if [[ ${#FAILURES[@]} -eq 0 ]]; then
-  if ! with_goal_lock release_all_locked; then
-    exit 1
-  fi
-  echo '{}'
+  emit_stop_followup "GOAL checks passed in minimal fallback, but RELEASE requires runtime authority. Run: npm run build && cursor-goal verify"
   exit 0
 fi
 
@@ -529,7 +488,7 @@ if [[ "$BUDGET" -ge $((LOOP_LIMIT - 2)) ]]; then
 $LOOP_LINE
 
 Human review required. See .cursor/goal/agents/$AGENT_ID/DISPOSITION.md"
-  jq -n --arg m "$DISP_MSG" '{followup_message:$m}'
+  emit_stop_followup "$DISP_MSG"
   exit 0
 fi
 
@@ -542,4 +501,4 @@ REASON=$(printf '%s; ' "${FAILURES[@]}")
 REASON="${REASON%; }"
 LOOP_LINE="$(goal_loop_line "$GOAL_LOOP" "$LOOP_LIMIT" "$CURSOR_LOOP" "$REPO_TOTAL")"
 MSG="$LOOP_LINE — checks failed: $REASON. Fix, run checks locally, update PROGRESS.md, continue toward GOAL.md."
-jq -n --arg m "$MSG" '{followup_message:$m}'
+emit_stop_followup "$MSG"

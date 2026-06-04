@@ -64,7 +64,8 @@ describe("I86 strict governance", () => {
     );
     const stdout = JSON.parse((r.stdout ?? "").trim() || "{}") as Record<string, unknown>;
     expect(stdout.continue).toBe(false);
-    expect(String(stdout.agent_message ?? "")).toMatch(/STRICT/i);
+    expect(stdout.agent_message).toBeUndefined();
+    expect(String(stdout.user_message ?? "")).toMatch(/STRICT/i);
   });
 
   it("core bash beforeSubmitPrompt blocks when strict and runtime missing", async () => {
@@ -82,7 +83,8 @@ describe("I86 strict governance", () => {
     try {
       const r = execCoreHookBare(p.dir, "beforeSubmitPrompt", { prompt: "go" });
       expect(r.stdout.continue).toBe(false);
-      expect(String(r.stdout.agent_message ?? "")).toMatch(/STRICT/i);
+      expect(r.stdout.agent_message).toBeUndefined();
+      expect(String(r.stdout.user_message ?? "")).toMatch(/STRICT/i);
     } finally {
       if (prev === undefined) delete process.env.CURSOR_GOAL_STRICT;
       else process.env.CURSOR_GOAL_STRICT = prev;

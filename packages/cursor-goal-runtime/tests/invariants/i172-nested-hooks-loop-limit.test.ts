@@ -63,7 +63,11 @@ describe("I172 nested hooks loop limit", () => {
     const dir = await seedNestedHooks(7);
     await writeFile(path.join(dir, "GOAL.md"), "## Goal\nx\n## Checks\n- `false`\n", "utf8");
 
-    const r = execMinimalStop(dir, { status: "completed", loop_count: 5 });
+    const r = execMinimalStop(
+      dir,
+      { status: "completed", loop_count: 5 },
+      { CURSOR_GOAL_STOP_FOLLOWUP: "1" },
+    );
 
     expect(r.exitCode, r.raw).toBe(0);
     expect(String(r.stdout.followup_message ?? "")).toMatch(/Disposition/);

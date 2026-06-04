@@ -3,6 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+const buildDist = process.env.CURSOR_GOAL_BUILD_DIST || "dist";
+const distDir = path.join(root, buildDist);
 const hooks = [
   "stop",
   "sessionStart",
@@ -10,12 +12,13 @@ const hooks = [
   "preToolUse",
   "beforeShellExecution",
   "postToolUse",
+  "afterAgentResponse",
   "subagentStop",
   "sessionEnd",
   "preCompact",
 ];
 
-await mkdir(path.join(root, "dist"), { recursive: true });
+await mkdir(distDir, { recursive: true });
 
 function fixImports(source) {
   return source
@@ -30,20 +33,23 @@ function fixImports(source) {
 }
 
 for (const name of hooks) {
-  const src = path.join(root, "dist", "hooks", `${name}.js`);
-  const dest = path.join(root, "dist", `hook-${name}.mjs`);
+  const src = path.join(distDir, "hooks", `${name}.js`);
+  const dest = path.join(distDir, `hook-${name}.mjs`);
   const content = fixImports(await readFile(src, "utf8"));
   await writeFile(dest, content, "utf8");
 }
 
-await chmod(path.join(root, "dist", "cli.js"), 0o755);
+await chmod(path.join(distDir, "cli.js"), 0o755);
 
 console.log("Linked hook-*.mjs for cursor-goal dispatch");
 
 try {
   const { spawnSync } = await import("node:child_process");
   const emit = path.join(root, "scripts/emit-unit-prompts.mjs");
-  const r = spawnSync("node", [emit], { stdio: "inherit" });
+  const r = spawnSync("node", [emit], {
+    stdio: "inherit",
+    env: { ...process.env, CURSOR_GOAL_BUILD_DIST: buildDist },
+  });
   if (r.status !== 0) process.exit(r.status ?? 1);
 } catch (e) {
   console.warn("emit-unit-prompts skipped:", e);

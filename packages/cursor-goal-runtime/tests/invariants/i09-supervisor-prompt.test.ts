@@ -8,7 +8,15 @@ import { buildAgentArgs, buildUnitTaskPrompt } from "../../../../supervisor/run-
 describe("I09 supervisor prompt argv", () => {
   it("buildAgentArgs includes --print --trust --force and prompt", () => {
     const args = buildAgentArgs("Ship feature X per GOAL.md", false);
-    expect(args).toEqual(["--print", "--trust", "--force", "Ship feature X per GOAL.md"]);
+    expect(args).toEqual([
+      "--print",
+      "--output-format",
+      "stream-json",
+      "--stream-partial-output",
+      "--trust",
+      "--force",
+      "Ship feature X per GOAL.md",
+    ]);
   });
 
   it("buildUnitTaskPrompt includes work_unit_id", () => {

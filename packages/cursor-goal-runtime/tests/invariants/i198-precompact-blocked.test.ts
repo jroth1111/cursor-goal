@@ -4,7 +4,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 
-describe("I198 preCompact emits context when blocked", () => {
+describe("I198 preCompact emits user-visible compaction context when blocked", () => {
   let cleanup: () => Promise<void>;
   let restore: () => void;
 
@@ -13,7 +13,7 @@ describe("I198 preCompact emits context when blocked", () => {
     await cleanup?.();
   });
 
-  it("includes additional_context when agent runtime-state is blocked", async () => {
+  it("includes user_message when agent runtime-state is blocked", async () => {
     const p = await mkGitProject("i198");
     cleanup = p.cleanup;
     restore = withProjectEnv(p.dir).restore;
@@ -44,8 +44,10 @@ describe("I198 preCompact emits context when blocked", () => {
     });
     const out = JSON.parse((r.stdout ?? "{}").trim() || "{}") as {
       additional_context?: string;
+      user_message?: string;
     };
-    expect(out.additional_context).toContain("cursor-goal compaction snapshot");
-    expect(out.additional_context).toContain("npm test");
+    expect(out.additional_context).toBeUndefined();
+    expect(out.user_message).toContain("cursor-goal compaction snapshot");
+    expect(out.user_message).toContain("npm test");
   }, 15000);
 });

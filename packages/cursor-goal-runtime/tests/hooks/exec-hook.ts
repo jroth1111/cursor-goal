@@ -13,6 +13,7 @@ export function execCoreHook(
   projectDir: string,
   step: string,
   stdin: Record<string, unknown>,
+  extraEnv: Record<string, string | undefined> = {},
 ): HookExecResult {
   const hooksDir = path.resolve(
     import.meta.dirname,
@@ -42,6 +43,7 @@ export function execCoreHook(
     encoding: "utf8",
     env: {
       ...process.env,
+      ...extraEnv,
       CURSOR_PROJECT_DIR: projectDir,
       CURSOR_GOAL_RUNTIME: runtimeRoot,
     },
@@ -62,6 +64,7 @@ export function execCoreHook(
 export function execMinimalStop(
   projectDir: string,
   stdin: Record<string, unknown>,
+  extraEnv: Record<string, string | undefined> = {},
 ): HookExecResult {
   const script = path.resolve(
     import.meta.dirname,
@@ -71,7 +74,7 @@ export function execMinimalStop(
     cwd: projectDir,
     input: JSON.stringify(stdin),
     encoding: "utf8",
-    env: { ...process.env, CURSOR_PROJECT_DIR: projectDir },
+    env: { ...process.env, ...extraEnv, CURSOR_PROJECT_DIR: projectDir },
   });
   const raw = (r.stdout ?? "").trim();
   let stdout: Record<string, unknown> = {};

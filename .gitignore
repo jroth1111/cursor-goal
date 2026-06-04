@@ -1,6 +1,7 @@
 node_modules/
 dist/
 packages/cursor-goal-runtime/dist/
+packages/cursor-goal-runtime/.dist-build/
 packages/cursor-goal-runtime/node_modules/
 build/
 out/

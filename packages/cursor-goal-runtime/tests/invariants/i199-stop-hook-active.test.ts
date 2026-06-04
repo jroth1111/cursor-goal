@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { mkGitProject, withProjectEnv } from "../helpers/git-fixture.js";
 import { runStopPipeline } from "../../src/verifier/pipeline.js";
+import { compileGoalV2 } from "../../src/compile/compile-v2.js";
 
 describe("I199 stop_hook_active suppresses followup", () => {
   let cleanup: () => Promise<void>;
@@ -22,6 +23,7 @@ describe("I199 stop_hook_active suppresses followup", () => {
       "## Goal\nx\n## Checks\n- `false`\n",
       "utf8",
     );
+    await compileGoalV2(p.dir);
     const result = await runStopPipeline(
       { status: "completed", stop_hook_active: true },
       { dryRun: false },
