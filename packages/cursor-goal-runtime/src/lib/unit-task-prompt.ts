@@ -31,3 +31,16 @@ export function buildUnitTaskPrompt(unit: WorkUnitCompiled): string {
     "- Stop after this unit's acceptance criteria are met",
   ].join("\n");
 }
+
+export function buildVerifyUnitDetail(unit: WorkUnitCompiled): string {
+  if (!unit.verified_by?.trim()) {
+    return [
+      `Run: cursor-goal units done ${unit.id}`,
+      "If acceptance fails, fix the cited artifact or command before marking the unit done.",
+    ].join("\n");
+  }
+  return [
+    `Run: cursor-goal dispatch --verify --unit ${unit.id}`,
+    "If acceptance fails, fix the cited artifact or command before marking the unit done.",
+  ].join("\n");
+}

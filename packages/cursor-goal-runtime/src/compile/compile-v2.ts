@@ -1,14 +1,18 @@
 import { existsSync } from "node:fs";
-import { mkdir, rename, stat, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ensureGoalDirs, goalDir, goalMd, projectRoot, readJson } from "../lib/paths.js";
-import { parseGoalMd } from "../lib/parse-goal-md.js";
+import { parseGoalMd, type WorkUnitRole } from "../lib/parse-goal-md.js";
 import { syncLoopLimitToManifest } from "../lib/loop-limit.js";
 import { buildDispatchQueue } from "../lib/dispatch-queue.js";
 import { invalidateRuntimeState } from "../lib/dispatch-cli.js";
 import { auditGoalAlignment } from "../lib/goal-alignment.js";
 import { validateAll } from "./schemas.js";
 import { defaultUnitAcceptance } from "../lib/unit-acceptance-defaults.js";
+import { writeUnitAcceptanceSnapshot } from "../lib/unit-acceptance-snapshot.js";
+
+export type { WorkUnitRole };
 
 export type CompiledArtifacts = {
   manifest: Record<string, unknown>;
@@ -30,6 +34,7 @@ export type WorkUnitCompiled = {
   status: "pending" | "in_progress" | "evidence_received" | "done";
   subagent_id: string | null;
   evidence_path: string;
+  role: WorkUnitRole;
   verified_by?: string | null;
   verify_prompt?: string | null;
 };
@@ -100,7 +105,8 @@ function isMergeableWorkUnit(value: unknown): value is WorkUnitCompiled {
     isStringArray(unit.acceptance) &&
     typeof unit.evidence_path === "string" &&
     ["pending", "in_progress", "evidence_received", "done"].includes(unit.status ?? "") &&
-    (typeof unit.subagent_id === "string" || unit.subagent_id === null)
+    (typeof unit.subagent_id === "string" || unit.subagent_id === null) &&
+    (unit.role == null || unit.role === "implement" || unit.role === "verify")
   );
 }
 
@@ -109,6 +115,7 @@ function sameWorkUnitDefinition(a: WorkUnitCompiled, b: WorkUnitCompiled): boole
     a.title === b.title &&
     sameStringArray(a.scope, b.scope) &&
     sameStringArray(a.acceptance, b.acceptance) &&
+    a.role === b.role &&
     sameNullableString(a.verified_by, b.verified_by) &&
     sameNullableString(a.verify_prompt, b.verify_prompt)
   );
@@ -161,6 +168,7 @@ async function mergeWorkUnits(
       ...u,
       status: prev.status,
       subagent_id: prev.subagent_id,
+      role: prev.role ?? u.role,
     };
   });
 }
@@ -174,6 +182,10 @@ async function compiledAtAfterGoalMtime(root: string): Promise<string> {
     /* GOAL existence is checked before compile. */
   }
   return new Date(minMs).toISOString();
+}
+
+async function goalFingerprint(root: string): Promise<string> {
+  return createHash("sha256").update(await readFile(goalMd(root))).digest("hex");
 }
 
 export async function buildCompiledArtifacts(root: string): Promise<CompiledArtifacts> {
@@ -197,6 +209,7 @@ export async function buildCompiledArtifacts(root: string): Promise<CompiledArti
     status: "pending" as const,
     subagent_id: null,
     evidence_path: `evidence/units/${u.id}.jsonl`,
+    role: u.role,
     verified_by: u.verified_by ?? null,
     verify_prompt: u.verify_prompt ?? null,
   }));
@@ -217,6 +230,7 @@ export async function buildCompiledArtifacts(root: string): Promise<CompiledArti
       loop_limit: loopLimit,
       runtime: "package",
       compiled_at: now,
+      goal_fingerprint: await goalFingerprint(root),
     },
     scope: scopePayload,
     checks: {
@@ -240,6 +254,7 @@ export async function buildCompiledArtifacts(root: string): Promise<CompiledArti
         title: u.title,
         scope: u.scope,
         acceptance: u.acceptance,
+        role: u.role,
         verified_by: u.verified_by ?? null,
         verify_prompt: u.verify_prompt ?? null,
       })),
@@ -263,6 +278,9 @@ export async function compileGoalV2(root?: string): Promise<void> {
   }
   await ensureGoalDirs(project);
   await mkdir(path.join(goalDir(project), "evidence", "units"), { recursive: true });
+  const priorManifest = await readJson<{ goal_fingerprint?: string }>(
+    path.join(goalDir(project), "manifest.json"),
+  ).catch(() => null);
 
   const alignment = await auditGoalAlignment(project);
   for (const a of alignment) {
@@ -306,6 +324,7 @@ export async function compileGoalV2(root?: string): Promise<void> {
   await atomicWriteJson(path.join(gd, "work-units.json"), artifacts.workUnits);
   await atomicWriteJson(path.join(gd, "proof-plan.json"), artifacts.proofPlan);
   await atomicWriteJson(path.join(gd, "dispatch-queue.json"), artifacts.dispatchQueue);
+  await writeUnitAcceptanceSnapshot(project);
 
   const trajPath = path.join(gd, "trajectory.json");
   if (!existsSync(trajPath)) {
@@ -328,5 +347,7 @@ export async function compileGoalV2(root?: string): Promise<void> {
     await atomicWriteJson(discPath, { completed: false, notes: "" });
   }
 
-  await invalidateRuntimeState(project);
+  await invalidateRuntimeState(project, {
+    preserveRelease: priorManifest?.goal_fingerprint === artifacts.manifest.goal_fingerprint,
+  });
 }

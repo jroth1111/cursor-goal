@@ -4,6 +4,7 @@ import path from "node:path";
 import type { WorkUnitCompiled } from "../compile/compile-v2.js";
 import { goalDir } from "./paths.js";
 import { subagentStatusOk } from "./subagent-status.js";
+import { unitAdversarialStatus } from "./adversarial-unit.js";
 
 export type UnitEvidenceRecord = Record<string, unknown>;
 
@@ -149,6 +150,8 @@ export async function checkUnitCompletionEvidence(
   }
   const blocked = evidenceBlockReason(unit, record);
   if (blocked) return { ok: false, reason: blocked, record };
+  const adversarial = await unitAdversarialStatus(root, unit);
+  if (!adversarial.ok) return { ok: false, reason: adversarial.hint ?? adversarial.reason, record };
   return { ok: true, record };
 }
 

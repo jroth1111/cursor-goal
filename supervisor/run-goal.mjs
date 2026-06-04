@@ -3,7 +3,7 @@
  * Optional Ring-3 supervisor — NOT loaded by hooks.
  * Spawns cursor-agent with --print --trust and polls passports.
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -35,7 +35,15 @@ function legacyEvidenceAllowed() {
 
 export function buildAgentArgs(prompt, interactive = false) {
   if (interactive) return [];
-  return ["--print", "--trust", "--force", prompt];
+  return [
+    "--print",
+    "--output-format",
+    "stream-json",
+    "--stream-partial-output",
+    "--trust",
+    "--force",
+    prompt,
+  ];
 }
 
 function rejectUnsupportedSupervisorArgs(args) {
@@ -163,6 +171,63 @@ async function pollUntil(done, timeoutMs, wallLabel) {
   await writeFile(done.pausedPath, "", "utf8");
   console.error(`Wall clock ${wallLabel} exceeded — wrote .cursor/goal/PAUSED`);
   done.finish();
+}
+
+async function waitForLifecycleOrChild(child, done, timeoutMs, wallLabel) {
+  const start = Date.now();
+  let childExitCode = null;
+  child.on("exit", (code) => {
+    childExitCode = code ?? 1;
+  });
+
+  while (Date.now() - start < timeoutMs) {
+    if (child.exitCode !== null) {
+      childExitCode = child.exitCode ?? 1;
+      return { reason: "child_exit", childExitCode };
+    }
+    if (done.check()) {
+      done.finish("lifecycle");
+      return { reason: "lifecycle", childExitCode };
+    }
+    if (childExitCode !== null) {
+      return { reason: "child_exit", childExitCode };
+    }
+    await new Promise((r) => setTimeout(r, Math.min(1000, timeoutMs)));
+  }
+
+  await writeFile(done.pausedPath, "", "utf8");
+  console.error(`Wall clock ${wallLabel} exceeded — wrote .cursor/goal/PAUSED`);
+  done.finish("timeout");
+  return { reason: "timeout", childExitCode };
+}
+
+export function runPostAgentVerification(root, rt) {
+  const cli = rt ? path.join(rt, "dist/cli.js") : null;
+  if (!cli || !existsSync(cli)) {
+    return {
+      status: 1,
+      stdout: "",
+      stderr: "post-agent verify skipped: runtime CLI unavailable\n",
+      skipped: true,
+    };
+  }
+
+  const r = spawnSync(process.execPath, [cli, "verify"], {
+    cwd: root,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      CURSOR_PROJECT_DIR: root,
+      CURSOR_GOAL_RUNTIME: rt,
+    },
+  });
+
+  return {
+    status: r.status ?? 1,
+    stdout: r.stdout ?? "",
+    stderr: r.stderr ?? "",
+    skipped: false,
+  };
 }
 
 async function readWorkUnits(root) {
@@ -394,20 +459,34 @@ export async function main(argv = process.argv) {
     const timeoutMs = wallSec > 0 ? wallSec * 1000 : wallMin * 60 * 1000;
     const wallLabel = wallSec > 0 ? `${wallSec}s` : `${wallMin}m`;
 
-    await new Promise((resolve) => {
-      pollUntil(
-        {
-          check: () => existsSync(release) || activeDispositionPaths(root).length > 0 || existsSync(paused),
-          finish: () => {
-            if (!child.killed) child.kill("SIGTERM");
-            resolve();
-          },
-          pausedPath: paused,
+    const wait = await waitForLifecycleOrChild(
+      child,
+      {
+        check: () => existsSync(release) || activeDispositionPaths(root).length > 0 || existsSync(paused),
+        finish: () => {
+          if (!child.killed) child.kill("SIGTERM");
         },
-        timeoutMs,
-        wallLabel,
-      );
-    });
+        pausedPath: paused,
+      },
+      timeoutMs,
+      wallLabel,
+    );
+
+    if (
+      wait.reason === "child_exit" &&
+      wait.childExitCode === 0 &&
+      !existsSync(release) &&
+      activeDispositionPaths(root).length === 0 &&
+      !existsSync(paused)
+    ) {
+      console.log("post-agent verify: running cursor-goal verify");
+      const verify = runPostAgentVerification(root, rt);
+      if (verify.stdout) process.stdout.write(verify.stdout);
+      if (verify.stderr) process.stderr.write(verify.stderr);
+      console.log(`post-agent verify: ${verify.status === 0 ? "release" : "blocked"}`);
+    } else if (wait.reason === "child_exit" && wait.childExitCode !== 0) {
+      console.error(`Headless agent exited ${wait.childExitCode}`);
+    }
   }
 
   const wuPath = path.join(root, ".cursor/goal/work-units.json");

@@ -2,11 +2,14 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { goalMd } from "./paths.js";
 
+export type WorkUnitRole = "implement" | "verify";
+
 export type WorkUnitDraft = {
   id: string;
   title: string;
   scope: string[];
   acceptance: string[];
+  role: WorkUnitRole;
   verified_by?: string | null;
   verify_prompt?: string | null;
 };
@@ -30,17 +33,24 @@ function parseChecksSection(text: string): { commands: string[]; tiers: Record<s
   for (const line of block.split("\n")) {
     const t = line.trim();
     if (!t.startsWith("-")) continue;
-    let item = t.slice(1).trim();
-    item = item.replace(/^`/, "").replace(/`$/, "");
+    const rawItem = t.slice(1).trim();
+    let item = rawItem;
     let tier: CheckTier = "full";
-    if (/^\[fast\]\s*/i.test(item)) {
-      tier = "fast";
-      item = item.replace(/^\[fast\]\s*/i, "");
-    } else if (/^\[full\]\s*/i.test(item)) {
-      tier = "full";
-      item = item.replace(/^\[full\]\s*/i, "");
+    const outsideTier = item.match(/^\[(fast|full)\]\s+(.+)$/i);
+    if (outsideTier) {
+      tier = outsideTier[1].toLowerCase() as CheckTier;
+      item = outsideTier[2].trim();
     }
-    item = item.replace(/^`/, "").replace(/`$/, "").trim();
+    const shell = item.match(/^`([^`]+)`$/);
+    if (!shell) {
+      throw new Error(`GOAL.md Checks entries must be backticked shell commands: ${rawItem}`);
+    }
+    item = shell[1].trim();
+    const insideTier = item.match(/^\[(fast|full)\]\s+(.+)$/i);
+    if (insideTier) {
+      tier = insideTier[1].toLowerCase() as CheckTier;
+      item = insideTier[2].trim();
+    }
     if (!item) continue;
     commands.push(item);
     tiers[item] = tier;
@@ -107,6 +117,13 @@ function normalizeScopePath(s: string): string {
   return normalized === "./" ? "." : normalized;
 }
 
+function normalizeScopeValues(s: string): string[] {
+  return s
+    .split(",")
+    .map((part) => normalizeScopePath(part.trim()))
+    .filter(Boolean);
+}
+
 function stripHtmlComments(s: string): string {
   return s.replace(/<!--[\s\S]*?-->/g, "");
 }
@@ -129,6 +146,7 @@ export function autoSliceWorkUnits(scope: string[], globalChecks: string[]): Wor
       title: `Work in ${path}`,
       scope: [path],
       acceptance: [],
+      role: "implement",
     };
   });
 }
@@ -153,6 +171,7 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
           title: idM[1].trim(),
           scope: [],
           acceptance: [],
+          role: "implement",
         };
         continue;
       }
@@ -164,12 +183,17 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
       }
       const scopeM = t.match(/^-\s*scope:\s*(.+)$/i);
       if (scopeM) {
-        current.scope.push(normalizeScopePath(scopeM[1]));
+        current.scope.push(...normalizeScopeValues(scopeM[1]));
         continue;
       }
       const accM = t.match(/^-\s*acceptance:\s*(.+)$/i);
       if (accM) {
         current.acceptance.push(unquote(accM[1]));
+        continue;
+      }
+      const roleM = t.match(/^-\s*role:\s*(implement|verify)$/i);
+      if (roleM) {
+        current.role = roleM[1].toLowerCase() as WorkUnitRole;
         continue;
       }
       const verifyByM = t.match(/^-\s*verified_by:\s*(.+)$/i);
@@ -201,6 +225,7 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
     let title = heading;
     const scope: string[] = [];
     const acceptance: string[] = [];
+    let role: WorkUnitRole = "implement";
     let verified_by: string | null = null;
     let verify_prompt: string | null = null;
     for (let i = 1; i < lines.length; i++) {
@@ -215,6 +240,11 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
         acceptance.push(unquote(accM[1]));
         continue;
       }
+      const roleM = body.match(/^role:\s*(implement|verify)$/i);
+      if (roleM) {
+        role = roleM[1].toLowerCase() as WorkUnitRole;
+        continue;
+      }
       const verifyByM = body.match(/^verified_by:\s*(.+)$/i);
       if (verifyByM) {
         verified_by = unquote(verifyByM[1]) || null;
@@ -227,12 +257,12 @@ export function parseWorkUnitsSection(text: string): WorkUnitDraft[] {
       }
       const scopeM = body.match(/^scope:\s*(.+)$/i);
       if (scopeM) {
-        scope.push(normalizeScopePath(scopeM[1]));
+        scope.push(...normalizeScopeValues(scopeM[1]));
         continue;
       }
       scope.push(normalizeScopePath(body));
     }
-    units.push({ id, title, scope, acceptance, verified_by, verify_prompt });
+    units.push({ id, title, scope, acceptance, role, verified_by, verify_prompt });
   }
   return units;
 }

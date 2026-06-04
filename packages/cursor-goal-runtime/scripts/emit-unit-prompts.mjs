@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const dist = path.join(root, "dist");
+const dist = path.join(root, process.env.CURSOR_GOAL_BUILD_DIST || "dist");
 
 const sampleUnit = {
   id: "sample-unit",
@@ -26,4 +26,4 @@ await writeFile(
   `${JSON.stringify(payload, null, 2)}\n`,
   "utf8",
 );
-console.log("Wrote dist/unit-task-prompt.json");
+console.log(`Wrote ${path.relative(root, path.join(dist, "unit-task-prompt.json"))}`);

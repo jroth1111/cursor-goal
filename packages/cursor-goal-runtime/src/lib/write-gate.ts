@@ -1,7 +1,6 @@
 import path from "node:path";
 import { existsSync, realpathSync } from "node:fs";
 import { goalDir, readJson } from "./paths.js";
-import { parseGoalMd } from "./parse-goal-md.js";
 
 export type WriteGateResult =
   | { allowed: true }
@@ -66,12 +65,6 @@ export async function checkWriteGate(
   let paths = scopeFile?.paths ?? [];
   let enforce = scopeFile?.enforce ?? false;
 
-  if (paths.length === 0 && !enforce) {
-    const parsed = await parseGoalMd(root);
-    paths = parsed.scope;
-    enforce = parsed.scope.length > 0;
-  }
-
   if (!enforce || paths.length === 0) return { allowed: true };
   if (pathInScope(filePath, paths, root)) return { allowed: true };
 
@@ -92,4 +85,37 @@ export function checkWriteGateSync(
     allowed: false,
     reason: `WriteGate: ${filePath} outside scope [${scopePaths.join(", ")}]`,
   };
+}
+
+/**
+ * Attempt to correct a path that failed the write gate.
+ * Returns a corrected relative path if the absolute path can be made scope-relative,
+ * or null if no correction is feasible (e.g., truly outside scope).
+ */
+export function suggestScopeCorrection(
+  filePath: string,
+  scopePaths: string[],
+  root?: string,
+): string | null {
+  if (!filePath) return null;
+  if (scopePaths.length === 0) return null;
+
+  // Try stripping absolute prefix to get root-relative path.
+  const norm = canonicalScopePath(filePath);
+  if (root) {
+    const rootNorm = canonicalAbsolutePath(root);
+    if (norm.startsWith(`${rootNorm}/`)) {
+      const rel = norm.slice(rootNorm.length + 1);
+      // Check if this relative path would be in scope
+      if (pathInScope(rel, scopePaths)) return rel;
+    }
+  }
+
+  // Try stripping leading ./ or redundant segments
+  const stripped = normalizePath(filePath).replace(/^\.\//, "");
+  if (stripped !== filePath && pathInScope(stripped, scopePaths, root)) {
+    return stripped;
+  }
+
+  return null;
 }

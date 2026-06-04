@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
-import { stat } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { goalDir, goalMd, readJson } from "./paths.js";
 
@@ -14,11 +15,15 @@ export async function isGoalStale(root?: string): Promise<boolean> {
   if (!existsSync(md)) return false;
   const manifestPath = path.join(goalDir(root), "manifest.json");
   if (!existsSync(manifestPath)) return true;
-  let manifest: { compiled_at?: string } | null;
+  let manifest: { compiled_at?: string; goal_fingerprint?: string } | null;
   try {
-    manifest = await readJson<{ compiled_at?: string }>(manifestPath);
+    manifest = await readJson<{ compiled_at?: string; goal_fingerprint?: string }>(manifestPath);
   } catch {
     return true;
+  }
+  if (manifest?.goal_fingerprint) {
+    const current = createHash("sha256").update(await readFile(md)).digest("hex");
+    if (current !== manifest.goal_fingerprint) return true;
   }
   if (!manifest?.compiled_at) return true;
   const goalStat = await stat(md);

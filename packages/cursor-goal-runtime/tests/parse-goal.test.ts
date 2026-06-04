@@ -7,9 +7,9 @@ import { parseGoalMd } from "../src/lib/parse-goal-md.js";
 describe("parseGoalMd", () => {
   it("extracts checks", async () => {
     const dir = await mkdtemp();
-    const md = `## Checks
+const md = `## Checks
 - \`npm test\`
-- npm run lint
+- \`npm run lint\`
 `;
     await writeFile(path.join(dir, "GOAL.md"), md, "utf8");
     process.env.CURSOR_PROJECT_DIR = dir;

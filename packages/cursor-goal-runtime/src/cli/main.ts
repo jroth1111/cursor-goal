@@ -20,6 +20,7 @@ import {
   handleStatus,
   handleUpgrade,
   handleVerify,
+  handleSessions,
 } from "./operator.js";
 import { handleMode } from "./mode.js";
 import { handleTriage } from "./triage.js";
@@ -66,6 +67,9 @@ export async function runCli(argv: string[]): Promise<void> {
       break;
     case "incidents":
       await handleIncidents(rest);
+      break;
+    case "sessions":
+      await handleSessions(rest);
       break;
     case "goal":
       await handleGoal(rest);

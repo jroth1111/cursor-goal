@@ -57,24 +57,32 @@ export function runSupervisorDispatch(
   };
 }
 
-export async function invalidateRuntimeState(root: string): Promise<void> {
+export async function invalidateRuntimeState(
+  root: string,
+  opts: { preserveRelease?: boolean } = {},
+): Promise<void> {
   const { withGoalDirLock } = await import("./goal-dir-lock.js");
   const { clearAllAgentsBlockedState } = await import("./agent-runtime-state.js");
   const { resetRepoBlockedStopTotalUnlocked } = await import("./goal-loop.js");
   const { rebuildRepoRuntimeSummaryUnlocked } = await import("./runtime-state.js");
 
   await withGoalDirLock(root, async () => {
-    await clearInvalidatedLifecyclePassports(root);
+    await clearInvalidatedLifecyclePassports(root, opts);
     await clearAllAgentsBlockedState(root);
     await resetRepoBlockedStopTotalUnlocked(root);
     await rebuildRepoRuntimeSummaryUnlocked(root);
   });
 }
 
-async function clearInvalidatedLifecyclePassports(root: string): Promise<void> {
+async function clearInvalidatedLifecyclePassports(
+  root: string,
+  opts: { preserveRelease?: boolean } = {},
+): Promise<void> {
   const passports = passportsDir(root);
-  await unlink(path.join(passports, "RELEASE.json")).catch(() => undefined);
-  await unlink(path.join(passports, "RELEASE.md")).catch(() => undefined);
+  if (!opts.preserveRelease) {
+    await unlink(path.join(passports, "RELEASE.json")).catch(() => undefined);
+    await unlink(path.join(passports, "RELEASE.md")).catch(() => undefined);
+  }
   await unlink(path.join(passports, "SESSION_END.json")).catch(() => undefined);
   await unlink(path.join(passports, "SESSION_END.md")).catch(() => undefined);
 }

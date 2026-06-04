@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { copyFile, mkdir } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import { compileGoalV2 } from "../compile/compile-v2.js";
 import { goalDir, goalMd, projectRoot } from "../lib/paths.js";
 import {
@@ -16,6 +17,7 @@ import { goalTemplatePath } from "../lib/template.js";
 import { applyDetectedChecks } from "../lib/goal-detect.js";
 import { startCompileWatch } from "../lib/compile-watch.js";
 import { previewInteractiveGoal, writeInteractiveGoal } from "../lib/init-interactive.js";
+import { parseGoalMd } from "../lib/parse-goal-md.js";
 
 const unitsUsage = "Usage: cursor-goal units list | cursor-goal units done <id>";
 const validDirectSetPhases = new Set<Phase>([
@@ -26,7 +28,7 @@ const validDirectSetPhases = new Set<Phase>([
   "VERIFY",
   "DONE",
 ]);
-const initOptions = new Set(["--compile", "--detect", "--interactive", "--force", "--dry-run"]);
+const initOptions = new Set(["--compile", "--detect", "--interactive", "--force", "--dry-run", "--probe-acceptance"]);
 const compileOptions = new Set(["--watch"]);
 const discoveryCompleteOptions = new Set(["--plan-only"]);
 
@@ -74,6 +76,7 @@ export async function handleInit(rest: string[]): Promise<void> {
   const forceInteractive = rest.includes("--interactive");
   const forceOverwrite = rest.includes("--force");
   const dryRun = rest.includes("--dry-run");
+  const probeAcceptance = rest.includes("--probe-acceptance");
 
   if (forceInteractive) {
     const dest = goalMd(projectRoot());
@@ -96,6 +99,7 @@ export async function handleInit(rest: string[]): Promise<void> {
     if (doDetect) {
       const detected = await applyDetectedChecks(projectRoot());
       console.log(`Detected checks from ${detected.source}: ${detected.commands.join(", ")}`);
+      await reportAcceptanceBootstrap(projectRoot(), probeAcceptance);
     }
     if (doCompile) {
       await compileGoalV2();
@@ -110,12 +114,44 @@ export async function handleInit(rest: string[]): Promise<void> {
   if (doDetect) {
     const detected = await applyDetectedChecks(projectRoot());
     console.log(`Detected checks from ${detected.source}: ${detected.commands.join(", ")}`);
+    await reportAcceptanceBootstrap(projectRoot(), probeAcceptance);
   }
   if (doCompile) {
     await compileGoalV2();
     console.log("Initialized GOAL.md and compiled artifacts");
   } else {
     console.log("Initialized GOAL.md — edit checks, then run: cursor-goal compile");
+  }
+}
+
+async function reportAcceptanceBootstrap(root: string, probeAcceptance: boolean): Promise<void> {
+  if (!probeAcceptance) {
+    console.log("Acceptance probes skipped by default; acceptance not probed.");
+    console.log("Suggested GOAL.md bootstrap: review scope-derived units and add explicit acceptance before compile.");
+    return;
+  }
+
+  const parsed = await parseGoalMd(root);
+  const commands = parsed.workUnits.flatMap((u) => u.acceptance);
+  if (commands.length === 0) {
+    console.log("Acceptance probes requested, but no unit acceptance commands were found.");
+    return;
+  }
+
+  const failures: string[] = [];
+  for (const cmd of commands) {
+    const r = spawnSync("bash", ["-lc", cmd], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    if ((r.status ?? 1) !== 0) failures.push(cmd);
+  }
+
+  if (failures.length === 0) {
+    console.log("acceptance would pass today");
+  } else {
+    console.log(`acceptance would fail today: ${failures.join(", ")}`);
   }
 }
 

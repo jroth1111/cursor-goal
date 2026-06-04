@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
-import { mkdir, writeFile, unlink } from "node:fs/promises";
+import { readdir, readFile, mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
+import { compileGoalV2 } from "../compile/compile-v2.js";
 import { runStopVerifier } from "../lib/verify.js";
 import { goalDir, projectRoot } from "../lib/paths.js";
 import {
@@ -44,8 +45,13 @@ const dispatchFlags = new Set(["--dry-run", "--run", "--verify", "--spawn"]);
 const dispatchValueOptions = new Set(["--unit", "--record-response", "--from"]);
 
 export async function handleVerify(rest: string[]): Promise<void> {
-  rejectUnexpectedArgs(rest);
-  const r = await runStopVerifier({ status: "completed", loop_count: 0 });
+  rejectUnsupportedOperatorArgs(rest, new Set(), conversationValueOptions);
+  await compileGoalV2(projectRoot()).catch(() => undefined);
+  const r = await runStopVerifier({
+    status: "completed",
+    loop_count: 0,
+    conversation_id: operatorOptionsFromArgv(rest)?.conversation_id,
+  });
   console.log(JSON.stringify(r, null, 2));
   process.exit(r.kind === "release" ? 0 : 1);
 }
@@ -493,4 +499,44 @@ export async function handleStatus(rest: string[]): Promise<void> {
   }
   rejectUnsupportedOperatorArgs(rest, statusOptions, new Set());
   console.log(await formatOperatorStatus());
+}
+
+export async function handleSessions(rest: string[]): Promise<void> {
+  rejectUnsupportedOptionOnlyArgs(rest, new Set(["--json"]));
+  const json = rest.includes("--json");
+  const root = projectRoot();
+  const sessionsDir = path.join(goalDir(root), "passports", "sessions");
+  if (!existsSync(sessionsDir)) {
+    if (json) console.log("[]");
+    else console.log("No session history found.");
+    process.exit(0);
+  }
+  const entries = await readdir(sessionsDir);
+  const sessionFiles = entries.filter((f) => f.startsWith("SESSION_END_") && f.endsWith(".json")).sort().reverse();
+  if (sessionFiles.length === 0) {
+    if (json) console.log("[]");
+    else console.log("No session history found.");
+    process.exit(0);
+  }
+  const sessions: Record<string, unknown>[] = [];
+  for (const f of sessionFiles.slice(0, 20)) {
+    try {
+      const data = JSON.parse(await readFile(path.join(sessionsDir, f), "utf8")) as Record<string, unknown>;
+      sessions.push(data);
+    } catch {
+      /* skip malformed */
+    }
+  }
+  if (json) {
+    console.log(JSON.stringify(sessions, null, 2));
+    process.exit(0);
+  }
+  for (const s of sessions) {
+    const at = typeof s.at === "string" ? s.at : "unknown";
+    const reason = typeof s.reason === "string" ? s.reason : "unknown";
+    const failure = typeof s.failure_class === "string" ? s.failure_class : "";
+    const duration = typeof s.duration_ms === "number" ? ` (${Math.round(s.duration_ms / 1000)}s)` : "";
+    console.log(`- ${at} | ${reason}${failure ? ` (${failure})` : ""}${duration}`);
+  }
+  process.exit(0);
 }

@@ -12,12 +12,16 @@ export type GoalState = {
   loop_count?: number;
 };
 
-function gitOutput(root: string, cmd: string): string {
+function gitRaw(root: string, cmd: string): string {
   return execSync(cmd, {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "ignore"],
-  }).trim();
+  });
+}
+
+function gitOutput(root: string, cmd: string): string {
+  return gitRaw(root, cmd).trim();
 }
 
 function hashString(s: string): string {
@@ -45,7 +49,7 @@ export function workingTreeFingerprint(root: string): string {
     const parts: string[] = [`head:${head}`];
 
     try {
-      const diff = gitOutput(
+      const diff = gitRaw(
         root,
         'git diff --binary HEAD -- . ":(exclude).cursor/goal"',
       );
@@ -55,7 +59,7 @@ export function workingTreeFingerprint(root: string): string {
     }
 
     try {
-      const staged = gitOutput(
+      const staged = gitRaw(
         root,
         'git diff --binary --cached HEAD -- . ":(exclude).cursor/goal"',
       );

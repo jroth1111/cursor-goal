@@ -23,6 +23,7 @@ export function dispatchQueuePath(root?: string): string {
 }
 
 export function buildDispatchQueue(units: WorkUnitCompiled[]): DispatchQueueFile {
+  const headIndex = units.findIndex((u) => u.status !== "done");
   return {
     items: units.map((u, order) => ({
       order,
@@ -31,7 +32,7 @@ export function buildDispatchQueue(units: WorkUnitCompiled[]): DispatchQueueFile
       scope: u.scope,
       acceptance: u.acceptance.length ? u.acceptance : ["true"],
     })),
-    head_index: 0,
+    head_index: headIndex >= 0 ? headIndex : units.length,
   };
 }
 
