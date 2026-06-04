@@ -90,7 +90,8 @@ describe("I168 default chat mode prompt governance", () => {
     expect(r.status, r.stderr || r.stdout).toBe(0);
     const out = JSON.parse((r.stdout ?? "{}").trim());
     expect(out.continue).toBe(true);
-    expect(String(out.agent_message ?? "")).toMatch(/blocked|blocker/i);
+    expect(out.agent_message).toBeUndefined();
+    expect(out.user_message).toBeUndefined();
   });
 
   it("keeps stop governance active only for blocked agents under default_mode chat", async () => {

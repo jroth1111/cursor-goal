@@ -49,7 +49,7 @@ describe("I214 governance mode matrix", () => {
     expect(r.mode).toBe("governed");
   });
 
-  it("auto default + delivery + GOAL checks → governed contract path", async () => {
+  it("auto default + delivery + GOAL checks → nudge without contract takeover", async () => {
     const p = await mkGitProject("i203-matrix-auto-delivery");
     cleanup = p.cleanup;
     restore = withProjectEnv(p.dir).restore;
@@ -63,7 +63,27 @@ describe("I214 governance mode matrix", () => {
       "Implement auth middleware and make tests pass",
       "a",
     );
-    expect(r.mode).toBe("governed");
-    expect(r.triageReasons).toContain("governed_contract_present");
+    expect(r.mode).toBe("nudge");
+    expect(r.nudgeKind).toBe("delivery");
+    expect(r.triageReasons ?? []).not.toContain("governed_contract_present");
+  });
+
+  it("auto default + read-only prompt + GOAL checks → chat", async () => {
+    const p = await mkGitProject("i203-matrix-auto-readonly");
+    cleanup = p.cleanup;
+    restore = withProjectEnv(p.dir).restore;
+    await writeFile(
+      path.join(p.dir, "GOAL.md"),
+      "## Goal\nx\n## Checks\n- `true`\n",
+      "utf8",
+    );
+
+    const r = await resolveEffectiveMode(
+      p.dir,
+      "Review only: explain the current design without editing",
+      "a",
+    );
+    expect(r.mode).toBe("chat");
+    expect(r.interactionModeHint).toBe("chat");
   });
 });

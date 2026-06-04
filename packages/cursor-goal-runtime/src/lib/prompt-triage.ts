@@ -3,11 +3,12 @@ import path from "node:path";
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import { readGovernanceConfig, readSessionMode, type GovernanceMode } from "./governance-config.js";
 import { goalDir, goalMd, readJson } from "./paths.js";
-import { isAgentSubmitBlocked, sessionEndMarkerPath } from "./disposition.js";
+import { isAgentSubmitBlocked } from "./disposition.js";
 import { resolveAgentId } from "./runtime-state.js";
 import { hashPrompt } from "./explain-stop.js";
 
 export type EffectiveMode = "chat" | "nudge" | "governed";
+export type InteractionModeHint = "chat" | "delivery";
 
 export type PromptClassification = {
   chatScore: number;
@@ -25,7 +26,20 @@ const DELIVERY =
   /\b(implement|fix|add|migrate|refactor|ship|build|wire up|until .+ pass|must pass|before merge)\b/i;
 const COVERAGE =
   /\b(every|all|each|full|entire|complete coverage)\b.+\b(page|pages|route|routes|endpoint|endpoints|screen|screens|url|urls)\b|\b(test|audit|verify).+\b(every|all|each)\b/i;
-const FORCE_GOVERNED = /(?:^|\s)\/goal\b|\bcursor-goal\s+govern\b/i;
+export type GoalSlashAction = "pause" | "resume" | "continue" | "govern" | "none";
+
+export function parseGoalSlashAction(prompt: string): GoalSlashAction {
+  const text = prompt.trim();
+  const m = text.match(/^\/goal(?:\s+(.+))?$/i);
+  if (!m) return "none";
+  const rest = (m[1] ?? "").trim().toLowerCase();
+  if (!rest) return "govern";
+  const verb = rest.split(/\s+/)[0];
+  if (verb === "pause") return "pause";
+  if (verb === "resume") return "resume";
+  if (verb === "continue") return "continue";
+  return "govern";
+}
 
 export function classifyPrompt(prompt: string): PromptClassification {
   const text = prompt.trim();
@@ -39,9 +53,14 @@ export function classifyPrompt(prompt: string): PromptClassification {
     return { chatScore: 1, deliveryScore: 0, coverageScore: 0, forceGoverned: false, reasons: ["empty"] };
   }
 
-  if (FORCE_GOVERNED.test(text)) {
+  const goalSlashAction = parseGoalSlashAction(text);
+  if (goalSlashAction === "continue" || goalSlashAction === "govern") {
     forceGoverned = true;
     reasons.push("explicit-governed");
+  }
+  if (/\bcursor-goal\s+govern\b/i.test(text)) {
+    forceGoverned = true;
+    reasons.push("cursor-goal-govern");
   }
   if (/\bcursor-goal\s+init\b/i.test(text)) {
     forceGoverned = true;
@@ -110,13 +129,8 @@ export function shouldPersistGovernedSession(
 ): boolean {
   if (resolvedMode === "governed") return true;
   if (classified.forceGoverned) return true;
-  if (
-    config.default_mode === "auto" &&
-    classified.deliveryScore >= 2 &&
-    hasContract
-  ) {
-    return true;
-  }
+  void config;
+  void hasContract;
   return false;
 }
 
@@ -124,7 +138,19 @@ export type ResolveModeResult = {
   mode: EffectiveMode;
   nudgeKind?: "delivery" | "coverage";
   triageReasons?: string[];
+  interactionModeHint: InteractionModeHint;
 };
+
+function result(
+  mode: EffectiveMode,
+  extra: Omit<ResolveModeResult, "mode" | "interactionModeHint"> = {},
+): ResolveModeResult {
+  return {
+    mode,
+    ...extra,
+    interactionModeHint: mode === "chat" ? "chat" : "delivery",
+  };
+}
 
 export async function resolveEffectiveMode(
   root: string,
@@ -137,76 +163,52 @@ export async function resolveEffectiveMode(
   const agentId = resolveAgentId(conversationId);
   const blocked = await isBlockedRuntime(root, agentId);
 
-  // Universal future-proofing:
-  // If the repo has a `SESSION_END.json`, the previous governed session ended
-  // without a RELEASE passport. Default to governed mode so the next chat
-  // resumes governance instead of silently falling back to chat mode.
-  if (existsSync(sessionEndMarkerPath(root))) {
-    // Allow explicit opt-out via read-only/no-goal wording.
-    if (classified.reasons.includes("read-only-opt-out") || classified.reasons.includes("opt-out")) {
-      return { mode: "chat" };
-    }
-    if (classified.reasons.includes("empty")) {
-      return { mode: "chat" };
-    }
-
-    // Only force governed if the repo is actually governed (prevents stale SESSION_END from
-    // unexpectedly turning ordinary Q&A into governance in repos without a GOAL contract).
-    const diag = await readJson<{ had_governed_contract?: boolean }>(sessionEndMarkerPath(root)).catch(() => null);
-    const governed = (diag?.had_governed_contract ?? null) === true || (await hasGovernedContract(root));
-    if (governed) {
-      return { mode: "governed", triageReasons: ["session_end_present"] };
-    }
-  }
-
   if (shouldForceGovernedSession(classified)) {
-    return { mode: "governed", triageReasons: ["explicit_governed"] };
+    return result("governed", { triageReasons: ["explicit_governed"] });
   }
 
   if (session?.mode === "chat") {
     if (blocked) {
-      return { mode: "governed", triageReasons: ["blocked_runtime"] };
+      return result("governed", { triageReasons: ["blocked_runtime"] });
     }
-    return { mode: "chat" };
+    return result("chat");
   }
 
   if (session?.mode === "governed") {
-    return { mode: "governed" };
+    return result("governed");
   }
 
   if (config.default_mode === "governed") {
-    return { mode: "governed" };
+    return result("governed");
   }
 
   if (blocked) {
-    return { mode: "governed", triageReasons: ["blocked_runtime"] };
+    return result("governed", { triageReasons: ["blocked_runtime"] });
   }
 
   if (config.default_mode === "chat") {
-    return { mode: "chat" };
-  }
-
-  if (await hasGovernedContract(root)) {
-    return { mode: "governed", triageReasons: ["governed_contract_present"] };
+    return result("chat");
   }
 
   if (classified.reasons.includes("read-only-opt-out") || classified.reasons.includes("opt-out")) {
-    return { mode: "chat" };
+    return result("chat");
   }
 
   if (classified.chatScore >= 2 && classified.deliveryScore === 0) {
-    return { mode: "chat" };
+    return result("chat");
   }
 
   if (classified.coverageScore >= 2) {
-    return { mode: "nudge", nudgeKind: "coverage" };
+    return result("nudge", { nudgeKind: "coverage" });
   }
 
   if (classified.deliveryScore >= 2) {
-    return { mode: "nudge", nudgeKind: "delivery" };
+    return result("nudge", { nudgeKind: "delivery" });
   }
 
-  return { mode: "chat" };
+  // In auto mode, a compiled GOAL contract is a release contract, not prompt
+  // authority. It should not turn ordinary chat into governed execution.
+  return result("chat");
 }
 
 export function nudgeMessage(kind: "delivery" | "coverage"): string {
@@ -240,6 +242,7 @@ export type TriageLogEntry = {
   classification: PromptClassification;
   reasons: string[];
   prompt_hash: string;
+  interaction_mode_hint?: InteractionModeHint;
 };
 
 function triageLogPath(root: string): string {
@@ -252,6 +255,7 @@ export async function appendTriageLog(
   mode: EffectiveMode,
   conversationId?: string,
   extraReasons?: string[],
+  interactionModeHint?: InteractionModeHint,
 ): Promise<void> {
   const classification = classifyPrompt(prompt);
   const reasons = extraReasons?.length
@@ -264,6 +268,7 @@ export async function appendTriageLog(
     classification,
     reasons,
     prompt_hash: hashPrompt(prompt),
+    ...(interactionModeHint ? { interaction_mode_hint: interactionModeHint } : {}),
   };
   const file = triageLogPath(root);
   await mkdir(path.dirname(file), { recursive: true });
