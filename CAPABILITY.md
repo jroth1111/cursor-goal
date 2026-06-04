@@ -13,7 +13,7 @@ Only claim what invariant tests prove.
 | I07 | stop followup on fail | yes | yes | — | i07-stop-followup | tested |
 | I08 | DISPOSITION on max(goal, cursor) budget | yes | yes | — | i08-disposition-budget | tested |
 | I09 | Supervisor prompt argv | — | — | yes | i09-supervisor-prompt | tested |
-| I10 | Minimal/runtime stop parity (incl. stuck loop_count) | yes | yes | — | core-runtime-parity | tested |
+| I10 | Core/runtime stop parity except runtime-only RELEASE authority | yes | yes | — | core-runtime-parity | tested |
 | I11 | Edit marker on Write/Edit | yes | yes | — | i11-edit-marker | tested |
 | I13 | Schema-valid compile | — | yes | — | i13-schema-compile | tested |
 | I14 | Work units from scope | — | yes | — | i14-work-units-required | tested |
@@ -40,7 +40,7 @@ Only claim what invariant tests prove.
 | I35 | Hooks do not inject Task prompts | — | yes | — | i35-no-hook-injection | tested |
 | I36 | dispatch-queue.json at compile | — | yes | — | i36-dispatch-queue-compile | tested |
 | I37 | Supervisor auto-dispatch open units | — | — | yes | i37-supervisor-auto-dispatch | tested |
-| I38 | Runtime-missing hooks fail open with minimal safety fallback | yes | — | — | i38-runtime-required | tested |
+| I38 | Runtime-missing hooks fail open with minimal safety fallback; RELEASE remains runtime-only | yes | — | — | i38-runtime-required | tested |
 | I39 | next_action ranks units above phase | — | yes | — | i39-next-action-ranking | tested |
 | I40 | Secondary blockers in stop followup | — | yes | — | i40-secondary-blockers | tested |
 | I41 | Stale-proof gate on tree drift | — | yes | — | i41-stale-proof | tested |
@@ -63,11 +63,11 @@ Only claim what invariant tests prove.
 | I66 | `cursor-goal next` blocks instead of redispatching latest blocked unit evidence | — | yes | — | i66-blocked-unit-next-action | tested |
 | I67 | Hook permissiveness contract | yes | yes | — | i67-hook-permissive-contract | tested |
 | I68 | Consolidated fail-open hook contract | yes | yes | — | i68-failopen-contract | tested |
-| I69 | Minimal verifier lock hygiene | yes | — | — | i69-minimal-lock-hygiene | tested |
+| I69 | Minimal verifier lock hygiene without RELEASE authority | yes | — | — | i69-minimal-lock-hygiene | tested |
 | I70 | Optional per-check timeout | — | yes | — | i70-check-timeout | tested |
 | I72 | dispatch-queue head_index lock discipline | — | yes | — | i72-dispatch-queue-lock | tested |
 | I73 | Stale lifecycle passports invalidated on compile | — | yes | — | i73-runtime-state-passport-invalidation | tested |
-| I74 | Minimal RELEASE passport atomicity and JSON safety | yes | — | — | i74-minimal-release-passport-atomicity | tested |
+| I74 | Minimal fallback never writes RELEASE; failing diagnostics remain JSON-safe | yes | — | — | i74-minimal-release-passport-atomicity | tested |
 | I75 | Same-agent blocked-stop loop atomicity | — | yes | — | i75-agent-loop-atomicity | tested |
 | I76 | RELEASE/session terminal lifecycle consistency | yes | yes | — | i76-release-session-lifecycle | tested |
 | I77 | Standalone package boundary and no legacy runtime aliases | yes | yes | — | i77-standalone-boundary | tested |
@@ -107,7 +107,7 @@ Only claim what invariant tests prove.
 | I118 | Supervisor rejects unsupported flags before deriving launch options | — | — | yes | i118-supervisor-strict-args | tested |
 | I119 | Supervisor rejects invalid wall-clock values before deriving timeout behavior | — | — | yes | i119-supervisor-wall-value | tested |
 | I120 | Global install removes stale schema and template files before copying current artifacts | yes | — | — | i120-install-global-sync | tested |
-| I121 | Global install removes stale cursor-goal hook entries and files while preserving user hooks | yes | — | — | i121-install-global-hook-sync | tested |
+| I121 | Global install removes stale cursor-goal hook entries, preserves user hooks, and upgrades stop timeout | yes | — | — | i121-install-global-hook-sync | tested |
 | I159 | Global install hook merges preserve non-hook top-level config fields | yes | — | — | i159-install-hook-metadata | tested |
 | I122 | Capability verifier fails when a registered invariant is missing from CAPABILITY.md | — | yes | — | i122-capability-missing-row | tested |
 | I123 | Root npm run check includes repository claim verifiers | — | yes | — | i123-root-check-claims | tested |
@@ -170,7 +170,7 @@ Only claim what invariant tests prove.
 | I178 | Doctor strict mode errors on stale global install manifests | — | yes | — | i178-doctor-strict-stale-install | tested |
 | I179 | Session-end without release records diagnostics | — | yes | — | i179-session-end-diagnostics | tested |
 | I180 | Stop-time checks have finite default timeout | — | yes | — | i180-default-check-timeout | tested |
-| I181 | Global install writes installed-snapshot verification report | yes | — | — | i181-install-global-verification-report | tested |
+| I181 | Global install writes installed-snapshot verification report and restores previous snapshot on failed mutation | yes | — | — | i181-install-global-verification-report | tested |
 | I182 | Explain session-end diagnostics | — | yes | — | i182-explain-session-end | tested |
 | I183 | cursor-goal run command wrapper proof logging | — | yes | — | i183-command-wrapper-proof-run | tested |
 | I184 | Green checks without RELEASE classified | — | yes | — | i184-session-end-green-unreleased | tested |
@@ -203,11 +203,61 @@ Only claim what invariant tests prove.
 | I211 | Stop hook honors existing RELEASE without re-blocking | — | yes | — | i211-stop-honors-release-passport | tested |
 | I212 | `/goal` escalates session from chat; failing checks → stop `continue` | — | yes | — | i212-goal-escalates-session | tested |
 | I213 | `isGovernanceActive` after `forceGoverned` triage despite session chat | — | yes | — | i213-governance-active-force-goal | tested |
-| I214 | Governance mode matrix: `/goal` and delivery beat session chat pin | — | yes | — | i214-governance-mode-matrix | tested |
+| I214 | Governance mode matrix: explicit `/goal` governs; auto contracts chat or nudge | — | yes | — | i214-governance-mode-matrix | tested |
 | I215 | Doctor governance mismatch warnings | — | yes | — | i215-doctor-governance-mismatch | tested |
 | I216 | Orchestrator CLI lifecycle | — | yes | — | i216-orchestrator-cli | tested |
 | I217 | Orchestrator check script marker guard | — | yes | — | i217-orchestrator-check-script | tested |
 | I218 | Check tiers `[fast]`/`[full]` and stop profiles | — | yes | — | i218-check-profiles | tested |
+| I219 | Verify-first dispatch when unit acceptance already passes | — | yes | — | i219-verify-first-dispatch | tested |
+| I220 | units done preserves adversarial verification requirements | — | yes | — | i220-units-done-adversarial | tested |
+| I221 | Blocked followups remain clear and bounded | — | yes | — | i221-followup-clarity | tested |
+| I222 | Verify-role units route to verification | — | yes | — | i222-unit-role | tested |
+| I223 | Goal continue playbook supports blocked-loop recovery | — | yes | — | i223-goal-continue-playbook | tested |
+| I224 | init --detect bootstraps GOAL from project files | — | yes | — | i224-init-detect-bootstrap | tested |
+| I225 | Acceptance probes stay executable shell commands | — | yes | — | i225-acceptance-probe | tested |
+| I226 | Fast stale-proof blocks missing fresh proof | — | yes | — | i226-stale-proof-fast-profile | tested |
+| I227 | Governed submit header summarizes goal, mode, loop, and queue | — | yes | — | i227-governed-submit-header | tested |
+| I228 | Stop steering emits continuation guidance near loop pressure | — | yes | — | i228-loop-steering-continuation | tested |
+| I229 | Goal pause/resume lifecycle | — | yes | — | i229-goal-pause-resume | tested |
+| I230 | Repeated identical failures escalate to disposition | — | yes | — | i230-repeated-failure-disposition | tested |
+| I231 | Verify conversations clear their own blocked state | — | yes | — | i231-verify-conversation-clears-agent | tested |
+| I232 | Operator snapshots prefer live blocked evidence | — | yes | — | i232-operator-snapshot-prefers-live | tested |
+| I233 | stop_hook_active prevents stale repeated followups | — | yes | — | i233-stop-hook-active-anti-stale | tested |
+| I234 | Compile synchronizes dispatch queue head | — | yes | — | i234-compile-syncs-queue-head | tested |
+| I235 | Compile preserves release when contract is unchanged | — | yes | — | i235-compile-preserve-release | tested |
+| I237 | Stop trace honors release passport state | — | yes | — | i237-stop-trace-honor-release | tested |
+| I238 | Passing checks synchronize proof state | — | yes | — | i238-proof-sync-on-passing-checks | tested |
+| I239 | Verify conversations include stop-trace evidence | — | yes | — | i239-verify-conversation-stop-trace | tested |
+| I240 | next_action prefers failing checks over stale proof | — | yes | — | i240-next-action-checks-before-stale | tested |
+| I241 | Operator and stop dry-run agree on next action | — | yes | — | i241-operator-stop-next-parity | tested |
+| I242 | eb326fc6 transcript control-flow incident remains covered | — | yes | — | i242-transcript-eb326fc6-flow | tested |
+| I243 | Global install records dirty source provenance and runtime fingerprint parity | — | yes | — | i243-install-source-provenance | tested |
+| I244 | Today transcript incident corpus stays governed and redacted | — | yes | — | i244-today-transcript-incidents | tested |
+| I245 | Edgeflo incident hardening suite | — | yes | — | i245-edgeflo-incident-hardening | tested |
+| I250 | Missing GOAL stop bootstrap idles without followup injection | — | yes | — | i250-missing-goal-stop-bootstrap | tested |
+| I251 | Stop release authority uses compiled contract and full gates | — | yes | — | i251-stop-release-authority | tested |
+| I252 | Operator snapshots and post-tool nudges use stop-aligned blockers | — | yes | — | i252-operator-stop-parity-and-nudges | tested |
+| I253 | GOAL Checks require backticked shell commands; minimal parser parity | yes | yes | — | i253-goal-checks-strict-shell | tested |
+| I254 | Hooks use Cursor-native response channels | — | yes | — | i254-cursor-native-hook-channels | tested |
+| I255 | Stop followups are completed-only compact signed queued prompts | — | yes | — | i255-stop-followup-cursor-queue | tested |
+| I256 | Stop trace records bounded transcript-tail evidence | — | yes | — | i256-stop-transcript-evidence | tested |
+| I257 | Doctor audits Cursor hook semantics and stop timeout | — | yes | — | i257-doctor-cursor-hook-semantics | tested |
+| I258 | Supervisor headless mode uses Cursor `--print` stream-json and post-run verify | — | — | yes | i258-supervisor-headless-stream-json | tested |
+| I259 | Core bash fallback uses Cursor-native channels | yes | — | — | i259-core-fallback-cursor-native-channels | tested |
+| I260 | Runtime build stages output before publishing into live `dist` | — | yes | — | i260-build-dist-publication | tested |
+| I261 | Prompt context captures structured refs, validation, and mode hints | — | yes | — | i261-prompt-context-structured | tested |
+| I262 | Stop, operator, and next-action ranking consume prompt context | — | yes | — | i262-next-action-prompt-context | tested |
+| I263 | Governed session mode records delivery interaction hints | — | yes | — | i263-governance-interaction-hint | tested |
+| I264 | Incident reports cluster canonical signatures | — | yes | — | i264-incidents-signature-clusters | tested |
+| I265 | next_action prefers live evidence over stale prompt hints | — | yes | — | i265-live-evidence-ranking | tested |
+| I266 | Pre-dispatch intent gate reports unknown units and out-of-scope paths | — | yes | — | i266-pre-dispatch-intent-gate | tested |
+| I267 | Stop followup user-turn injection is explicit opt-in | yes | yes | — | i267-stop-followup-opt-in | tested |
+| I268 | Runtime hook stdout is sanitized to Cursor response schemas | — | yes | — | i268-hook-response-schema-validation | tested |
+| I269 | afterAgentResponse is linked and installed in user hooks | yes | yes | — | i269-after-agent-response-install-link | tested |
+| I270 | preCompact summarizes compiled checks and RELEASE status | — | yes | — | i270-precompact-compiled-summary | tested |
+| I271 | Doctor warns on duplicate cursor-goal hooks in Claude settings | — | yes | — | i271-doctor-claude-hook-conflicts | tested |
+| I272 | Stop root-resolution fallback followup is explicit opt-in | yes | — | — | i272-stop-root-resolution-followup | tested |
+| I273 | Prompt scope ignores metric/prose slash tokens and generated cursor-goal context while preserving explicit path blocks | — | yes | — | i273-prompt-scope-token-classification | tested |
 | I210 | Governance file edits require acknowledgment (strict optional) | — | yes | — | i210-governance-diff-guard | tested |
 
 ## Multi-agent runtime state (one repo, many parent conversations)
@@ -241,7 +291,7 @@ Agent id: sanitized `conversation_id` from hook stdin, else `CURSOR_CONVERSATION
 
 ## Effective loop
 
-1. `bash core/install.sh` and `npm run build` (recommended; missing runtime uses fail-open minimal safety fallback — I38)
+1. `bash core/install.sh` and `npm run build` (recommended; missing runtime uses fail-open minimal safety fallback with no RELEASE authority — I38/I74)
 2. `cursor-goal init && cursor-goal compile` — re-run after GOAL edits (I19/I42); emits `dispatch-queue.json` (I36)
 3. `cursor-goal discovery complete "notes"` — advances to IMPLEMENT
 4. Open units: `cursor-goal dispatch --run` or `node supervisor/run-goal.mjs` (I37/I46); in-IDE: `cursor-goal dispatch`
@@ -250,7 +300,7 @@ Agent id: sanitized `conversation_id` from hook stdin, else `CURSOR_CONVERSATION
 7. Hooks advise primary agents and enforce only narrow safety/isolation gates (I67); steer via stop, `cursor-goal next [--json]` (I44), dispatch CLI
 8. Stale-proof blocks release on tree drift during verify (I41)
 
-If the runtime is missing, hooks use the minimal safety fallback automatically.
+If the runtime is missing, hooks use the minimal safety fallback automatically. Minimal fallback may report failing checks and block destructive shell, but RELEASE requires the TypeScript runtime authority path.
 
 ## Proven vs not proven (CI)
 

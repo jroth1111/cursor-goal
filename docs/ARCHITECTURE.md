@@ -4,7 +4,7 @@
 
 | Layer | Path | Role |
 |-------|------|------|
-| Core | `core/` | Bash hook dispatch, minimal stop verifier, templates |
+| Core | `core/` | Bash hook dispatch, minimal safety/diagnostic fallback, templates |
 | Runtime | `packages/cursor-goal-runtime/` | TypeScript L-pipeline, compile, CLI |
 | Supervisor | `supervisor/` | Optional wall-clock `cursor-agent` wrapper (not hook-loaded) |
 
@@ -13,7 +13,7 @@
 ```
 Cursor → core/.cursor/hooks/goal-*.sh
        → _cgr-lib.sh resolves CURSOR_GOAL_RUNTIME
-       → dist/hook-<event>.mjs (or bash fallback if missing — I38)
+       → dist/hook-<event>.mjs (or bash safety fallback if missing — I38/I74)
 ```
 
 Events: `stop`, `sessionStart`, `beforeSubmitPrompt`, `preToolUse`, `beforeShellExecution`, `postToolUse`, `subagentStop`, `sessionEnd`.

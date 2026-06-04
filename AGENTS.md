@@ -26,7 +26,7 @@ Multi-phase orchestrator runs: `cursor-goal orchestrator start` + `.cursor/goal/
 
 ## Release authority
 
-- **Core:** bash hooks + minimal stop verifier.
+- **Core:** bash hooks + minimal safety/diagnostic fallback; no RELEASE authority.
 - **Runtime:** TypeScript L-pipeline.
 - **Supervisor:** wall-clock wrapper only; never loaded by hooks.
 

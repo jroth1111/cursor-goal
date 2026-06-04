@@ -66,7 +66,7 @@
     },
     {
       "id": "I10",
-      "description": "Minimal bash stop parity with runtime on basic fixtures (I01-I08 smoke only)",
+      "description": "Minimal bash stop blocks unsafe/failing fixtures but runtime alone owns RELEASE",
       "layers": ["core", "runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/conformance/core-runtime-parity.test.ts"
@@ -234,7 +234,7 @@
     },
     {
       "id": "I38",
-      "description": "Hooks fail open without built runtime via minimal safety fallback; destructive shell remains denied",
+      "description": "Hooks fail open without built runtime via minimal safety fallback; destructive shell remains denied and RELEASE remains runtime-only",
       "layers": ["core"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i38-runtime-required.test.ts"
@@ -416,7 +416,7 @@
     },
     {
       "id": "I69",
-      "description": "Minimal verifier releases goal-dir lock on failures and reset clears agents without process substitution",
+      "description": "Minimal verifier releases goal-dir lock on blocked paths and never enters RELEASE reset",
       "layers": ["core"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i69-minimal-lock-hygiene.test.ts"
@@ -444,7 +444,7 @@
     },
     {
       "id": "I74",
-      "description": "Minimal RELEASE passport is written only after successful reset and uses valid JSON",
+      "description": "Minimal fallback never writes RELEASE and keeps failing diagnostics JSON-safe",
       "layers": ["core"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i74-minimal-release-passport-atomicity.test.ts"
@@ -773,7 +773,7 @@
     },
     {
       "id": "I121",
-      "description": "Global install removes stale cursor-goal hook entries and files while preserving user hooks",
+      "description": "Global install removes stale cursor-goal hook entries, preserves user hooks, and upgrades stop timeout",
       "layers": ["core"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i121-install-global-hook-sync.test.ts"
@@ -1193,7 +1193,7 @@
     },
     {
       "id": "I181",
-      "description": "Global install writes an installed-snapshot verification report",
+      "description": "Global install writes an installed-snapshot verification report and restores the previous snapshot on failed mutation",
       "layers": ["core"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i181-install-global-verification-report.test.ts"
@@ -1403,7 +1403,7 @@
     },
     {
       "id": "I214",
-      "description": "Governance mode matrix: /goal and delivery beat session chat pin",
+      "description": "Governance mode matrix: explicit /goal governs while auto contract prompts chat or nudge without takeover",
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i214-governance-mode-matrix.test.ts"
@@ -1435,6 +1435,356 @@
       "layers": ["runtime"],
       "release_blocking": true,
       "test": "packages/cursor-goal-runtime/tests/invariants/i218-check-profiles.test.ts"
+    },
+    {
+      "id": "I219",
+      "description": "Next-action dispatch prefers verification when unit acceptance already passes",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i219-verify-first-dispatch.test.ts"
+    },
+    {
+      "id": "I220",
+      "description": "units done preserves adversarial verification requirements",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i220-units-done-adversarial.test.ts"
+    },
+    {
+      "id": "I221",
+      "description": "Followup messages are clear and bounded for blocked governance loops",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i221-followup-clarity.test.ts"
+    },
+    {
+      "id": "I222",
+      "description": "Work-unit role verify routes to verification even when acceptance currently fails",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i222-unit-role.test.ts"
+    },
+    {
+      "id": "I223",
+      "description": "Goal continue playbook is available for blocked-loop recovery",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i223-goal-continue-playbook.test.ts"
+    },
+    {
+      "id": "I224",
+      "description": "init --detect can bootstrap GOAL from project files",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i224-init-detect-bootstrap.test.ts"
+    },
+    {
+      "id": "I225",
+      "description": "Acceptance probes are preserved as executable shell commands",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i225-acceptance-probe.test.ts"
+    },
+    {
+      "id": "I226",
+      "description": "Fast-profile stale proof blocks release when fresh proof is missing",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i226-stale-proof-fast-profile.test.ts"
+    },
+    {
+      "id": "I227",
+      "description": "Governed submit headers summarize goal, mode, loop, and queue context",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i227-governed-submit-header.test.ts"
+    },
+    {
+      "id": "I228",
+      "description": "Loop steering emits continuation guidance for blocked implementation and verification",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i228-loop-steering-continuation.test.ts"
+    },
+    {
+      "id": "I229",
+      "description": "Goal pause and resume lifecycle is explicit and reversible",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i229-goal-pause-resume.test.ts"
+    },
+    {
+      "id": "I230",
+      "description": "Repeated identical failures escalate to disposition instead of infinite followups",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i230-repeated-failure-disposition.test.ts"
+    },
+    {
+      "id": "I231",
+      "description": "Verification conversations clear only their own blocked agent state",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i231-verify-conversation-clears-agent.test.ts"
+    },
+    {
+      "id": "I232",
+      "description": "Operator snapshots prefer live blocked evidence over stale dispatch defaults",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i232-operator-snapshot-prefers-live.test.ts"
+    },
+    {
+      "id": "I233",
+      "description": "stop_hook_active anti-stale guard prevents repeated queued followups",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i233-stop-hook-active-anti-stale.test.ts"
+    },
+    {
+      "id": "I234",
+      "description": "Compile synchronizes dispatch queue head with compiled work units",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i234-compile-syncs-queue-head.test.ts"
+    },
+    {
+      "id": "I235",
+      "description": "Compile preserves valid release state when the contract has not changed",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i235-compile-preserve-release.test.ts"
+    },
+    {
+      "id": "I237",
+      "description": "Stop trace honors release passport state",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i237-stop-trace-honor-release.test.ts"
+    },
+    {
+      "id": "I238",
+      "description": "Passing checks synchronize proof state for release",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i238-proof-sync-on-passing-checks.test.ts"
+    },
+    {
+      "id": "I239",
+      "description": "Verification conversations include stop-trace evidence",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i239-verify-conversation-stop-trace.test.ts"
+    },
+    {
+      "id": "I240",
+      "description": "Next-action ranking prefers failing checks over stale-proof blockers",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i240-next-action-checks-before-stale.test.ts"
+    },
+    {
+      "id": "I241",
+      "description": "Operator and stop dry-run agree on the primary next action",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i241-operator-stop-next-parity.test.ts"
+    },
+    {
+      "id": "I242",
+      "description": "Transcript eb326fc6 control-flow incident remains covered",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i242-transcript-eb326fc6-flow.test.ts"
+    },
+    {
+      "id": "I243",
+      "description": "Global install records dirty source provenance, matches runtime fingerprints, and doctor detects source-tree drift",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i243-install-source-provenance.test.ts"
+    },
+    {
+      "id": "I244",
+      "description": "Today transcript incidents stay governed and operator-only for raw prompts",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i244-today-transcript-incidents.test.ts"
+    },
+    {
+      "id": "I245",
+      "description": "Edgeflo incident hardening covers edit ledger, strict writes, release cleanup, compiled stop authority, and scope warnings",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i245-edgeflo-incident-hardening.test.ts"
+    },
+    {
+      "id": "I250",
+      "description": "Missing GOAL stop bootstrap idles without followup injection",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i250-missing-goal-stop-bootstrap.test.ts"
+    },
+    {
+      "id": "I251",
+      "description": "Stop release authority uses compiled contracts and full gates before release",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i251-stop-release-authority.test.ts"
+    },
+    {
+      "id": "I252",
+      "description": "Operator snapshots and post-tool nudges use stop-aligned next actions",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i252-operator-stop-parity-and-nudges.test.ts"
+    },
+    {
+      "id": "I253",
+      "description": "GOAL Checks entries require backticked shell commands with minimal parser parity",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i253-goal-checks-strict-shell.test.ts"
+    },
+    {
+      "id": "I254",
+      "description": "Hooks use Cursor-native response channels",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i254-cursor-native-hook-channels.test.ts"
+    },
+    {
+      "id": "I255",
+      "description": "Stop followups are completed-only compact signed queued prompts",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i255-stop-followup-cursor-queue.test.ts"
+    },
+    {
+      "id": "I256",
+      "description": "Stop trace records bounded transcript-tail evidence when Cursor provides transcript_path",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i256-stop-transcript-evidence.test.ts"
+    },
+    {
+      "id": "I257",
+      "description": "Doctor audits Cursor-native hook semantics including duplicate stop hooks and stop timeout",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i257-doctor-cursor-hook-semantics.test.ts"
+    },
+    {
+      "id": "I258",
+      "description": "Supervisor headless mode uses Cursor --print stream-json and verifies after agent exit",
+      "layers": ["supervisor"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i258-supervisor-headless-stream-json.test.ts"
+    },
+    {
+      "id": "I259",
+      "description": "Core bash fallback uses Cursor-native response channels",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i259-core-fallback-cursor-native-channels.test.ts"
+    },
+    {
+      "id": "I260",
+      "description": "Runtime build stages output before publishing into dist so live CLI/hook entrypoints are not deleted during rebuild",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i260-build-dist-publication.test.ts"
+    },
+    {
+      "id": "I261",
+      "description": "Prompt context captures paths, rules, commands, units, unknown units, role mismatches, out-of-scope paths, and mode hints",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i261-prompt-context-structured.test.ts"
+    },
+    {
+      "id": "I262",
+      "description": "Next-action, stop, and operator steering consume structured prompt context",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i262-next-action-prompt-context.test.ts"
+    },
+    {
+      "id": "I263",
+      "description": "Governed session mode refreshes record delivery interaction hints so doctor remediation clears stale mode warnings",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i263-governance-interaction-hint.test.ts"
+    },
+    {
+      "id": "I264",
+      "description": "Incident reports cluster failures by stable canonical signatures instead of path-specific noise",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i264-incidents-signature-clusters.test.ts"
+    },
+    {
+      "id": "I265",
+      "description": "Next-action ranking prefers live check and stale-proof evidence over stale prompt-context hints",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i265-live-evidence-ranking.test.ts"
+    },
+    {
+      "id": "I266",
+      "description": "Pre-dispatch intent gate reports unknown units, out-of-scope paths, and a concrete correction command",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i266-pre-dispatch-intent-gate.test.ts"
+    },
+    {
+      "id": "I267",
+      "description": "Stop hooks do not queue Cursor followup user turns unless explicitly enabled",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i267-stop-followup-opt-in.test.ts"
+    },
+    {
+      "id": "I268",
+      "description": "Hook responses are sanitized to Cursor event schemas before stdout",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i268-hook-response-schema-validation.test.ts"
+    },
+    {
+      "id": "I269",
+      "description": "afterAgentResponse hook is emitted by the runtime linker and installed in user hooks",
+      "layers": ["core", "runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i269-after-agent-response-install-link.test.ts"
+    },
+    {
+      "id": "I270",
+      "description": "preCompact includes compiled checks and RELEASE passport status",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i270-precompact-compiled-summary.test.ts"
+    },
+    {
+      "id": "I271",
+      "description": "Doctor warns when Claude settings also define cursor-goal hooks",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i271-doctor-claude-hook-conflicts.test.ts"
+    },
+    {
+      "id": "I272",
+      "description": "Stop root-resolution fallback does not queue Cursor followup user turns unless explicitly enabled",
+      "layers": ["core"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i272-stop-root-resolution-followup.test.ts"
+    },
+    {
+      "id": "I273",
+      "description": "Prompt scope gate ignores metric/prose slash tokens and generated cursor-goal context while preserving explicit path blocks",
+      "layers": ["runtime"],
+      "release_blocking": true,
+      "test": "packages/cursor-goal-runtime/tests/invariants/i273-prompt-scope-token-classification.test.ts"
     }
   ]
 }
