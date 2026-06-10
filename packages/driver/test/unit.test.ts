@@ -57,6 +57,19 @@ describe("schema validation", () => {
     const g = { tasks: [{ id: "a", title: "a", kind: "implement", deps: ["missing"], acceptance_checks: ["true"], acceptance_prose: "" }] };
     expect(validateGraphSemantics(g as unknown as TaskGraph)).toMatch(/unknown/);
   });
+  it("accepts a planner task that omits acceptance_prose (real-world shape)", () => {
+    // The live plan-mode agent returns acceptance_checks but no acceptance_prose;
+    // requiring it forced the single-task fallback and lost the decomposition.
+    const g = {
+      tasks: [
+        { id: "t1", title: "build", kind: "implement", deps: [], acceptance_checks: ["test -f x"] },
+        { id: "t2", title: "verify", kind: "verify", deps: ["t1"], acceptance_checks: [] },
+      ],
+    };
+    expect(validateTaskGraph(g)).toBe(true);
+    expect(validateGraphSemantics(g as unknown as TaskGraph)).toBeNull();
+  });
+
   it("validates a verdict", () => {
     expect(
       validateVerdict({ task_complete: true, confidence: 0.9, blockers: [], next_action: { kind: "none", instruction: "" } }),

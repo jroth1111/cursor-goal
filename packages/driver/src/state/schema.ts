@@ -88,7 +88,10 @@ const taskGraphSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "title", "kind", "deps", "acceptance_checks", "acceptance_prose"],
+        // Only identity + kind are required; deps/acceptance_* default in coerceGraph.
+        // Real planners routinely omit acceptance_prose — rejecting on it collapsed
+        // multi-task graphs to the single-task fallback (found in live testing).
+        required: ["id", "title", "kind"],
         properties: {
           id: { type: "string", minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9_.-]+$" },
           title: { type: "string", minLength: 1, maxLength: 200 },
