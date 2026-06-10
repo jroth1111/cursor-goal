@@ -26,7 +26,9 @@ import { getVerdict } from "./verdict.js";
 import { replanTask } from "./replan.js";
 import { isOscillating, pushFingerprint } from "./progress.js";
 import { checkIntegrity } from "./integrity.js";
+import { reviewGoal, materialFindings } from "./review.js";
 import { checkBudgets, decide, onAgentFailure, type Decision } from "./strategy.js";
+import type { ReviewFinding } from "../state/schema.js";
 
 export type LoopOptions = {
   root: string;
@@ -80,6 +82,30 @@ function appendRemediationTasks(
     evidence: { proof_ptrs: [], tree: null },
   };
   return { tasks: [...graph.tasks, task] };
+}
+
+/** Turn each material review finding into a remediation task carrying its fix. */
+function appendReviewRemediation(graph: TaskGraph, findings: ReviewFinding[]): TaskGraph {
+  let tasks = [...graph.tasks];
+  findings.forEach((f, i) => {
+    tasks = [
+      ...tasks,
+      {
+        id: `review.${graph.tasks.length + i + 1}`,
+        title: `[${f.severity}/${f.area}] ${f.issue.slice(0, 80)}`,
+        kind: "remediate",
+        deps: [],
+        acceptance_checks: f.check ? [f.check] : [],
+        acceptance_prose: f.fix,
+        status: "pending",
+        attempts: 0,
+        approach: "default",
+        last_failure: `${f.issue} — fix: ${f.fix}`,
+        evidence: { proof_ptrs: [], tree: null },
+      },
+    ];
+  });
+  return { tasks };
 }
 
 /** Returns the task to work this turn: the active in-progress task if still ready, else the next ready one. */
@@ -327,6 +353,34 @@ export async function runGoal(opts: LoopOptions): Promise<RunState> {
         const goalIntegrity = checkIntegrity(root, listDiffFiles(root), run.goal_spec.scope);
         const checksOk = !goalAcceptance.objective || goalAcceptance.allPass;
         if (checksOk && goalIntegrity.length === 0) {
+          // ── excellence gate: adversarial review until satisfied or rounds exhausted ──
+          if (run.budgets.review_rounds > 0 && run.review_rounds_done < run.budgets.review_rounds) {
+            const { review, source } = await reviewGoal(run.goal_spec, root, call);
+            run.review_rounds_done += 1;
+            const material = source === "llm" && !review.satisfied ? materialFindings(review) : [];
+            if (material.length) {
+              graph = appendReviewRemediation(graph, material);
+              run.active_task = null;
+              await saveGraph(root, graph);
+              await appendJournal(root, {
+                at: new Date().toISOString(),
+                kind: "lifecycle",
+                note: `review round ${run.review_rounds_done}: ${material.length} material finding(s) → remediation (${material
+                  .map((f) => `${f.severity}/${f.area}`)
+                  .join(", ")})`,
+              });
+              await saveRun(root, run);
+              continue; // drive the remediation tasks, then re-review
+            }
+            await appendJournal(root, {
+              at: new Date().toISOString(),
+              kind: "lifecycle",
+              note:
+                source === "skip"
+                  ? "review skipped (reviewer unavailable)"
+                  : `review round ${run.review_rounds_done}: satisfied — shipping`,
+            });
+          }
           run.status = "done";
           run.active_task = null;
           await appendJournal(root, {

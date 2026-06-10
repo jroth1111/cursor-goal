@@ -10,6 +10,7 @@ export type Scenario = {
   plan?: unknown;
   replan?: unknown;
   verdicts?: unknown[];
+  reviews?: unknown[];
   turns?: Array<{
     mutate?: Array<{ file?: string; content?: string; rm?: string; append?: string }>;
     delta?: string;

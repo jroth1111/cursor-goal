@@ -47,6 +47,7 @@ export function initRun(spec: GoalSpec): RunState {
     fingerprint_ring: [],
     session_map: {},
     active_task: null,
+    review_rounds_done: 0,
     escalation_reason: null,
     started_at: nowIso(),
     updated_at: nowIso(),

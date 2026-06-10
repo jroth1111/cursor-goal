@@ -63,6 +63,14 @@ const state = loadState();
 // ── read-only modes (decompose, replan, verdict all use --mode ask) ───────────
 // Route by prompt content, not mode: decompose and verdict both run in ask mode.
 if (mode === "ask" || mode === "plan") {
+  const isReview = /staff engineer|quality review|adversarial/i.test(prompt);
+  if (isReview) {
+    const reviews = scenario.reviews ?? [];
+    const r = reviews[Math.min(state.review ?? 0, reviews.length - 1)] ?? { satisfied: true, findings: [] };
+    state.review = (state.review ?? 0) + 1;
+    saveState(state);
+    emitResult(JSON.stringify(r), { sessionId: "review-sess" });
+  }
   const isDecompose = /Decompose the GOAL|ordered task graph/i.test(prompt);
   const isReplan = /STUCK TASK|broken into smaller subtasks|stuck|subtask/i.test(prompt);
   if (isReplan && scenario.replan !== undefined) {

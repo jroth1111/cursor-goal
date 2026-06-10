@@ -60,7 +60,9 @@ export function buildInstruction(
   }
   lines.push(
     "",
-    "Stay within the goal's scope. Do not commit. When you believe the task is complete, stop and say so.",
+    "Aim for production quality, not the minimum that passes a check: handle edge cases and",
+    "errors, write meaningful tests, and keep the code clear. Stay within the goal's scope.",
+    "Do not commit. When you believe the task is complete, stop and say so.",
   );
   return lines.join("\n");
 }

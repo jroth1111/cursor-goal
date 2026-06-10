@@ -88,6 +88,40 @@ describe("driver outer loop", () => {
     expect(result.status).toBe("escalated"); // never satisfies the goal check
   });
 
+  it("excellence gate: a material review finding spawns remediation, then ships when satisfied", async () => {
+    const p = project(["test -f impl.txt"]);
+    const scenario: Scenario = {
+      plan: { tasks: [task("t1", ["test -f impl.txt"])] },
+      reviews: [
+        { satisfied: false, findings: [{ severity: "high", area: "tests", issue: "no tests", fix: "add a test", check: "test -f test_impl.txt" }] },
+        { satisfied: true, findings: [] },
+      ],
+      turns: [
+        { mutate: [{ file: "impl.txt", content: "x" }], delta: "impl" },
+        { mutate: [{ file: "test_impl.txt", content: "t" }], delta: "added test" },
+      ],
+    };
+    const result = await run(p.root, scenario, { review_rounds: 3, global_turns: 8 });
+    expect(result.status).toBe("done");
+    expect(result.review_rounds_done).toBe(2);
+    expect(existsSync(path.join(p.root, "test_impl.txt"))).toBe(true);
+    const journal = await readJournalTail(p.root, 80);
+    expect(journal.some((e) => /review round 1: 1 material finding/.test(e.note ?? ""))).toBe(true);
+    expect(journal.some((e) => /review round 2: satisfied/.test(e.note ?? ""))).toBe(true);
+  });
+
+  it("--fast (review_rounds 0) ships on acceptance without a review", async () => {
+    const p = project(["test -f impl.txt"]);
+    const scenario: Scenario = {
+      plan: { tasks: [task("t1", ["test -f impl.txt"])] },
+      reviews: [{ satisfied: false, findings: [{ severity: "critical", area: "x", issue: "i", fix: "f" }] }],
+      turns: [{ mutate: [{ file: "impl.txt", content: "x" }] }],
+    };
+    const result = await run(p.root, scenario, { review_rounds: 0, global_turns: 6 });
+    expect(result.status).toBe("done");
+    expect(result.review_rounds_done).toBe(0); // review never ran
+  });
+
   it("non-objective task: honors a clean verdict of complete", async () => {
     const p = project([]); // no goal-level checks
     const scenario: Scenario = {

@@ -32,6 +32,8 @@ async function cmdRun(flags: Record<string, string | boolean>, rest: string[]): 
   const goalInput = rest.join(" ");
   const budgets: Record<string, number> = {};
   if (typeof flags["max-turns"] === "string") budgets.global_turns = Number(flags["max-turns"]);
+  if (typeof flags["review-rounds"] === "string") budgets.review_rounds = Number(flags["review-rounds"]);
+  if (flags.fast) budgets.review_rounds = 0; // skip the excellence gate, ship on acceptance
 
   if (flags["dry-run"]) {
     const spec = await intake(goalInput, root);
@@ -144,7 +146,8 @@ async function main(): Promise<void> {
     default:
       process.stdout.write(
         "Usage: agent-driver <run|next|status|verify|doctor> [goal...]\n" +
-          "  run [goal]         decompose and drive cursor-agent to the goal (flags: --max-turns N --model M --dry-run)\n" +
+          "  run [goal]         decompose and drive cursor-agent to the goal\n" +
+          "                     flags: --max-turns N --model M --dry-run --review-rounds N --fast\n" +
           "  next               print {followup_message?} for an interactive stop hook (flag: --loop-count N)\n" +
           "  status             show run + task graph\n" +
           "  verify             run goal-level acceptance checks\n" +

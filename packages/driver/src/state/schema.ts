@@ -31,6 +31,23 @@ export type Budgets = {
   task_attempts: number;
   token_budget: number;
   wall_ms: number;
+  /** max adversarial review rounds after acceptance passes (0 = skip, quality off). */
+  review_rounds: number;
+};
+
+export type ReviewSeverity = "critical" | "high" | "medium" | "low";
+
+export type ReviewFinding = {
+  severity: ReviewSeverity;
+  area: string;
+  issue: string;
+  fix: string;
+  check?: string;
+};
+
+export type ReviewResult = {
+  satisfied: boolean;
+  findings: ReviewFinding[];
 };
 
 export type GoalSpec = {
@@ -53,6 +70,7 @@ export type RunState = {
   fingerprint_ring: string[];
   session_map: Record<string, string>;
   active_task: string | null;
+  review_rounds_done: number;
   escalation_reason: string | null;
   started_at: string;
   updated_at: string;
@@ -128,18 +146,47 @@ const verdictSchema = {
   },
 } as const;
 
+// ── Review output: the adversarial quality reviewer's findings ────────────────
+const reviewSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["satisfied", "findings"],
+  properties: {
+    satisfied: { type: "boolean" },
+    findings: {
+      type: "array",
+      maxItems: 20,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["severity", "area", "issue", "fix"],
+        properties: {
+          severity: { enum: ["critical", "high", "medium", "low"] },
+          area: { type: "string", maxLength: 60 },
+          issue: { type: "string", maxLength: 500 },
+          fix: { type: "string", maxLength: 600 },
+          check: { type: "string", maxLength: 400 },
+        },
+      },
+    },
+  },
+} as const;
+
 export const validateTaskGraph: ValidateFunction = ajv.compile(taskGraphSchema);
 export const validateVerdict: ValidateFunction = ajv.compile(verdictSchema);
+export const validateReview: ValidateFunction = ajv.compile(reviewSchema);
 
 export function ajvErrorText(v: ValidateFunction): string {
   return (v.errors ?? []).map((e) => `${e.instancePath || "/"} ${e.message ?? ""}`.trim()).join("; ");
 }
 
 export const DEFAULT_BUDGETS: Budgets = {
-  global_turns: 40,
-  task_attempts: 4,
-  token_budget: 2_000_000,
-  wall_ms: 2 * 60 * 60 * 1000,
+  // Quality-first defaults: token cost is not the constraint, the product is.
+  global_turns: 80,
+  task_attempts: 5,
+  token_budget: 50_000_000,
+  wall_ms: 6 * 60 * 60 * 1000,
+  review_rounds: 3,
 };
 
 /** Acyclic + every dep resolvable + each non-verify task has acceptance. */
