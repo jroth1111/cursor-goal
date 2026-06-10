@@ -2,19 +2,28 @@ import { extractJsonObject } from "../lib/json-extract.js";
 import { runTurn, type TurnResult } from "../agent/runner.js";
 import { ajvErrorText, validateVerdict, type Task, type Verdict } from "../state/schema.js";
 import type { CheckResult } from "../lib/checks.js";
+import { PREVIEW, PROOF_RUNS_ARTIFACT, revealForPrompt } from "../lib/progressive-reveal.js";
+import { formatToolRunsForVerdict, readToolRunsSince, type ToolRunRow } from "../lib/tool-runs.js";
 import type { ContextWindow } from "./context-window.js";
 import type { AgentCall } from "./decompose.js";
 
-function verdictPrompt(
+export function verdictPrompt(
   task: Task,
   ctx: ContextWindow,
   checks: CheckResult[],
   agentSummary: string,
   diffFiles: string[],
+  toolRuns: ToolRunRow[] = [],
 ): string {
   const checkLines = checks.length
     ? checks
-        .map((c) => `  - [${c.ok ? "PASS" : "FAIL"}] \`${c.cmd}\`${c.ok ? "" : `\n      ${(c.output ?? "").slice(-400)}`}`)
+        .map((c) =>
+          `  - [${c.ok ? "PASS" : "FAIL"}] \`${c.cmd}\`${
+            c.ok
+              ? ""
+              : `\n      ${revealForPrompt(c.output ?? "", { maxChars: PREVIEW.VERDICT_CHECK, tail: true }, PROOF_RUNS_ARTIFACT)}`
+          }`,
+        )
         .join("\n")
     : "  (no machine checks for this task)";
   return [
@@ -28,16 +37,21 @@ function verdictPrompt(
     "Acceptance check results:",
     checkLines,
     "",
+    "Tool runs this turn (hook-captured ground truth; open output_artifact paths for full output):",
+    formatToolRunsForVerdict(toolRuns),
+    "",
     `Files changed this turn: ${diffFiles.length ? diffFiles.join(", ") : "(none)"}`,
-    `Agent's own summary: ${(agentSummary || "(empty)").slice(0, 800)}`,
+    `Agent's own summary: ${revealForPrompt(agentSummary || "(empty)", { maxChars: PREVIEW.VERDICT_SUMMARY, tail: false })}`,
     ctx.tried_approaches.length ? `Already tried: ${ctx.tried_approaches.join("; ")}` : "",
     "",
     "next_action.kind meanings: continue (same session, do the instruction next);",
     "replan (the task is wrong/too big — break it down); switch_approach (retry fresh with a",
     "different tactic); escalate (a human is needed); none (task is complete).",
     "",
+    "In evidence_seen, list artifact paths you relied on (e.g. tool output_artifact, proof-runs.jsonl).",
+    "",
     "Respond with ONLY this JSON object, no prose, no code fence:",
-    '{"task_complete":false,"confidence":0.0,"blockers":[],"next_action":{"kind":"continue","instruction":"...","rationale":"..."}}',
+    '{"task_complete":false,"confidence":0.0,"blockers":[],"next_action":{"kind":"continue","instruction":"...","rationale":"..."},"evidence_seen":[".cursor/goal/driver/evidence/..."]}',
   ]
     .filter(Boolean)
     .join("\n");
@@ -84,16 +98,18 @@ export async function getVerdict(
   diffFiles: string[],
   root: string,
   progressed: boolean,
+  turnStartedAtMs: number,
   call: AgentCall = runTurn,
 ): Promise<VerdictResult> {
+  const toolRuns = await readToolRunsSince(root, turnStartedAtMs);
   let lastErr = "";
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     const note =
       attempt === 0 ? "" : "\n\nYour previous response was not valid JSON. Return ONLY the JSON object.";
     let result: TurnResult;
     try {
       result = await call({
-        instruction: verdictPrompt(task, ctx, checks, agentSummary, diffFiles) + note,
+        instruction: verdictPrompt(task, ctx, checks, agentSummary, diffFiles, toolRuns) + note,
         mode: "ask",
         root,
         timeoutMs: 3 * 60 * 1000,

@@ -46,7 +46,7 @@ agent-driver verify      # run the goal-level acceptance checks now
 | `task-graph.json` | tasks, deps, acceptance, status, attempts — human-editable between runs |
 | `journal.jsonl` | every turn + decision (append-only) |
 | `context/<id>.json` | per-task accumulated context (what was tried, last failure) |
-| `evidence/` | check outputs (`proof-runs.jsonl`), tool runs (`tool-runs.jsonl`) |
+| `evidence/` | check outputs (`proof-runs.jsonl`), tool-run index (`tool-runs.jsonl` + full `tool-outputs/`), turn failures (`turn-failures/`) |
 | `ESCALATION.json` | written when a run escalates |
 
 ## When a run escalates

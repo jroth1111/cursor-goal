@@ -13,16 +13,18 @@ A driver process drives the stock `cursor-agent` CLI to fully realize a goal. It
 
 - `driver/loop.ts` — the outer loop. Owns continuation via `--resume`.
 - `driver/intake.ts` — `GOAL.md` or prompt → goal spec.
-- `driver/decompose.ts` — `--mode plan` call → ajv-validated task graph (acyclic, deps resolvable). Falls back to a single task if the planner can't produce valid output.
+- `driver/decompose.ts` — `--mode ask` call → ajv-validated task graph (acyclic, deps resolvable; no arbitrary size caps). Falls back to a single task if the planner can't produce valid output.
 - `driver/instruct.ts` — builds the per-turn instruction from the task + accumulated context (the fix for context starvation).
-- `driver/verdict.ts` — `--mode ask` call judging driver-supplied evidence; objective checks are preferred and the LLM is skipped when they decide it; malformed JSON falls back to an objective decision.
+- `driver/verdict.ts` — `--mode ask` call judging driver-supplied evidence (acceptance results + hook-captured tool runs from `tool-runs.jsonl` with artifact pointers); objective checks are preferred and the LLM is skipped when they decide it; malformed JSON falls back to an objective decision.
 - `driver/strategy.ts` — budgets + the ladder: retry → replan → switch_approach → escalate.
 - `driver/progress.ts` — no-progress and oscillation detection over the working-tree fingerprint.
 - `driver/replan.ts` — break a stuck task into subtasks the parent then depends on.
 - `agent/runner.ts` + `agent/stream.ts` — spawn cursor-agent, parse the NDJSON stream, capture `session_id`, usage, and terminal status.
 - `state/` — ajv schema, atomic store, crash recovery.
 - `lib/` — git fingerprint, POSIX lock, check runner, journal, shell policy.
-- `hooks/safety-net.ts` + `bridge/hook-next.ts` — the thin hook and the interactive `driver next` bridge.
+- `hooks/safety-net.ts` + `bridge/hook-next.ts` — the thin 3-event hook net (destructive-shell deny, tool evidence capture, interactive stop nudge) and the `driver next` bridge. Hooks are a net, not a dependency: the headless loop owns continuation via `--resume` even if hooks never fire.
+- `lib/progressive-reveal.ts` — bulky evidence (tool output, check logs, turn failures) is stored in full under `evidence/`; LLM prompts get a preview plus an artifact path. Acceptance criteria, goals, and steering text stay entire.
+- `lib/tool-runs.ts` — reads `tool-runs.jsonl` rows since turn start; feeds the verdict prompt and appends `output_artifact` paths to `task.evidence.proof_ptrs`.
 
 ## The loop
 
@@ -41,7 +43,7 @@ Budgets (turns, attempts, tokens, wall-clock), a no-progress streak, and an osci
 
 ## State (`.cursor/goal/driver/`)
 
-`run.json` (status, budgets, consumed, session map, fingerprint ring), `task-graph.json`, `journal.jsonl`, `context/<taskId>.json`, `evidence/`. All writes are atomic; a crashed run resumes from disk and re-verifies any task whose recorded tree no longer matches.
+`run.json` (status, budgets, consumed, session map, fingerprint ring), `task-graph.json`, `journal.jsonl`, `context/<taskId>.json` (full failure text + artifact paths), `evidence/` (`proof-runs.jsonl`, `tool-runs.jsonl`, `tool-outputs/`, `turn-failures/`). All writes are atomic; a crashed run resumes from disk and re-verifies any task whose recorded tree no longer matches.
 
 ## Two surfaces, one engine
 

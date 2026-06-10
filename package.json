@@ -9,7 +9,8 @@
     "check": "npm run check -w @cursor-goal/driver",
     "install:global": "bash scripts/install-global.sh",
     "install:repo": "bash core/install.sh",
-    "uninstall:global": "bash scripts/uninstall-global.sh"
+    "uninstall:global": "bash scripts/uninstall-global.sh",
+    "package:dist": "bash scripts/package-dist.sh"
   },
   "engines": {
     "node": ">=22.19.0"

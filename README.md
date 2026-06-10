@@ -54,7 +54,29 @@ npm test                 # build + run the deterministic test suite
 npm run check            # typecheck
 npm run install:global   # stage under ~/.cursor
 npm run uninstall:global # remove from ~/.cursor
+npm run package:dist     # zip a portable bundle under dist/ for another machine
 ```
+
+## Distribution zip (another machine)
+
+```bash
+npm run package:dist
+# → dist/agent-driver-0.1.0.zip
+
+# on the target host:
+unzip agent-driver-0.1.0.zip && cd agent-driver-0.1.0
+bash install.sh --profile
+source ~/.cursor/cursor-goal.env
+agent-driver doctor
+
+# optional per-repo hook:
+bash install-repo.sh /path/to/project
+
+# remove:
+bash uninstall.sh
+```
+
+See `scripts/dist/README.md` in the bundle for details.
 
 ## Layout
 

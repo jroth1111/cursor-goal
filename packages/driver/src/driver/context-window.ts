@@ -11,6 +11,8 @@ export type ContextWindow = {
   tried_approaches: string[];
   open_blockers: string[];
   last_failure: string;
+  /** Relative path to the full last_failure payload when it was spilled to evidence/. */
+  last_failure_artifact: string;
   /** steering instruction for the next turn, set by the prior turn's decision. */
   next_step: string;
 };
@@ -30,12 +32,15 @@ export function emptyContext(taskId: string): ContextWindow {
     tried_approaches: [],
     open_blockers: [],
     last_failure: "",
+    last_failure_artifact: "",
     next_step: "",
   };
 }
 
 export async function loadContext(root: string, taskId: string): Promise<ContextWindow> {
-  return (await readJson<ContextWindow>(contextPath(root, taskId))) ?? emptyContext(taskId);
+  const ctx = (await readJson<ContextWindow>(contextPath(root, taskId))) ?? emptyContext(taskId);
+  ctx.last_failure_artifact ??= "";
+  return ctx;
 }
 
 export async function saveContext(root: string, ctx: ContextWindow): Promise<void> {
@@ -44,6 +49,4 @@ export async function saveContext(root: string, ctx: ContextWindow): Promise<voi
 
 export function recordAttempt(ctx: ContextWindow, attempt: AttemptRecord): void {
   ctx.attempts.push(attempt);
-  // keep the window bounded; the server holds full history via --resume
-  if (ctx.attempts.length > 10) ctx.attempts = ctx.attempts.slice(-10);
 }

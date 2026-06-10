@@ -1,5 +1,6 @@
 import type { ContextWindow } from "./context-window.js";
 import type { GoalSpec, Task } from "../state/schema.js";
+import { PREVIEW, formatFailureForPrompt } from "../lib/progressive-reveal.js";
 
 function acceptanceBlock(task: Task): string {
   const lines: string[] = [];
@@ -16,12 +17,21 @@ function acceptanceBlock(task: Task): string {
 function historyBlock(ctx: ContextWindow): string {
   if (!ctx.attempts.length && !ctx.last_failure) return "";
   const lines: string[] = ["", "What has already been tried (do not repeat failed approaches):"];
-  for (const a of ctx.attempts.slice(-3)) {
+  const recent = ctx.attempts.slice(-PREVIEW.HISTORY_ATTEMPTS);
+  const omitted = ctx.attempts.length - recent.length;
+  for (const a of recent) {
     const fails = a.check_fails.length ? ` — failed: ${a.check_fails.join(", ")}` : "";
     lines.push(`  - turn ${a.turn} [${a.terminal}] ${a.instruction_summary}${fails}`);
   }
+  if (omitted > 0) {
+    lines.push(`  - (${omitted} earlier attempt(s) omitted; see .cursor/goal/driver/context/${ctx.task_id}.json)`);
+  }
   if (ctx.last_failure) {
-    lines.push("", "Most recent failure detail:", ctx.last_failure.slice(-1200));
+    lines.push(
+      "",
+      "Most recent failure detail:",
+      formatFailureForPrompt(ctx.last_failure, ctx.last_failure_artifact || undefined),
+    );
   }
   if (ctx.open_blockers.length) {
     lines.push("", `Open blockers: ${ctx.open_blockers.join("; ")}`);
@@ -71,5 +81,5 @@ export function buildInstruction(
 
 export function summarizeInstruction(instruction: string): string {
   const taskLine = instruction.split("\n").find((l) => l.startsWith("CURRENT TASK"));
-  return (taskLine ?? instruction.split("\n")[0] ?? "").slice(0, 120);
+  return taskLine ?? instruction.split("\n")[0] ?? "";
 }

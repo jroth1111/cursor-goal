@@ -18,16 +18,17 @@ export type Decision = {
 
 export type BudgetBreach = { breached: boolean; reason?: string };
 
-/** Hard ceilings checked before every turn. Any breach stops the run. */
+/** Circuit breakers checked before every turn. `null` = unlimited (the default for cost). */
 export function checkBudgets(run: RunState): BudgetBreach {
-  if (run.global_turns >= run.budgets.global_turns) {
-    return { breached: true, reason: `global turn budget exhausted (${run.budgets.global_turns})` };
+  const b = run.budgets;
+  if (b.global_turns != null && run.global_turns >= b.global_turns) {
+    return { breached: true, reason: `global turn circuit-breaker hit (${b.global_turns})` };
   }
-  if (run.consumed.tokens >= run.budgets.token_budget) {
-    return { breached: true, reason: `token budget exhausted (${run.budgets.token_budget})` };
+  if (b.token_budget != null && run.consumed.tokens >= b.token_budget) {
+    return { breached: true, reason: `token budget exhausted (${b.token_budget})` };
   }
-  if (run.consumed.wall_ms >= run.budgets.wall_ms) {
-    return { breached: true, reason: `wall-clock budget exhausted (${run.budgets.wall_ms}ms)` };
+  if (b.wall_ms != null && run.consumed.wall_ms >= b.wall_ms) {
+    return { breached: true, reason: `wall-clock budget exhausted (${b.wall_ms}ms)` };
   }
   return { breached: false };
 }

@@ -38,7 +38,10 @@ function decomposePrompt(spec: GoalSpec): string {
     "goal didn't name them.",
     "",
     "Rules:",
-    "- Up to ~14 tasks. Each task is a unit of work a single agent turn can plausibly attempt.",
+    "- Use as many tasks as the goal genuinely warrants — one coherent deliverable, behavior,",
+    "  edge-case-hardening concern, test module, or doc per task. There is NO small target:",
+    "  a large goal should produce a large plan. Do not pad with trivial steps, and do not cram",
+    "  unrelated work into one task. Each task is a unit a single focused agent turn can attempt.",
     "- Order via deps (ids of prerequisite tasks). The graph must be acyclic.",
     "- kind is one of: implement | verify | integrate | remediate.",
     "- Every non-verify task needs acceptance: prefer acceptance_checks (runnable shell commands);",
@@ -69,7 +72,7 @@ export function fallbackGraph(spec: GoalSpec): TaskGraph {
     tasks: [
       {
         id: "goal",
-        title: spec.goal_text.slice(0, 120),
+        title: spec.goal_text,
         kind: "implement",
         deps: [],
         acceptance_checks: spec.acceptance_checks,
@@ -80,6 +83,7 @@ export function fallbackGraph(spec: GoalSpec): TaskGraph {
         attempts: 0,
         approach: "default",
         last_failure: null,
+        last_failure_artifact: null,
         evidence: { proof_ptrs: [], tree: null },
       },
     ],
@@ -95,7 +99,7 @@ export async function decompose(
   call: AgentCall = runTurn,
 ): Promise<DecomposeResult> {
   let lastErr = "";
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     const note =
       attempt === 0
         ? ""

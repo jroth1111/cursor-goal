@@ -5,6 +5,13 @@ import path from "node:path";
 import { driverDir, evidenceDir } from "./paths.js";
 import { gitTreeId } from "./git.js";
 import { matchDestructiveRule } from "./shell-allow.js";
+import {
+  PREVIEW,
+  PROOF_RUNS_ARTIFACT,
+  progressiveReveal,
+  revealForPrompt,
+  withArtifactRef,
+} from "./progressive-reveal.js";
 
 export type CheckResult = { cmd: string; ok: boolean; tree: string; output?: string };
 
@@ -15,9 +22,9 @@ function captureExecError(err: unknown): string {
   if (err && typeof err === "object") {
     const e = err as { stderr?: string; stdout?: string; message?: string };
     const text = [e.stderr, e.stdout, e.message].filter(Boolean).join("\n");
-    if (text) return text.slice(0, 4000);
+    if (text) return text;
   }
-  return String(err).slice(0, 4000);
+  return String(err);
 }
 
 export function checkTimeoutMs(): number {
@@ -135,12 +142,17 @@ export function allPass(results: CheckResult[]): boolean {
   return results.length > 0 && results.every((r) => r.ok);
 }
 
-/** Last failing check output, truncated — fed into the next turn's instruction. */
-export function failingTail(results: CheckResult[], max = 1500): string {
+/** Last failing check output — preview for the agent; full rows live in proof-runs.jsonl. */
+export function failingTail(results: CheckResult[]): string {
   const failed = results.filter((r) => !r.ok);
   if (!failed.length) return "";
-  return failed
-    .map((r) => `$ ${r.cmd}\n${(r.output ?? "").slice(-max)}`)
-    .join("\n---\n")
-    .slice(-max * 2);
+  const chunks = failed.map((r) => {
+    const cmd = `$ ${r.cmd}`;
+    const body = revealForPrompt(r.output ?? "", { maxChars: PREVIEW.CHECK_FAIL, tail: true }, PROOF_RUNS_ARTIFACT);
+    return `${cmd}\n${body}`;
+  });
+  const joined = chunks.join("\n---\n");
+  const total = progressiveReveal(joined, { maxChars: PREVIEW.FAILING_TAIL_TOTAL, tail: true });
+  if (!total.truncated) return joined;
+  return withArtifactRef(total.preview, PROOF_RUNS_ARTIFACT, true, total.byteCount);
 }

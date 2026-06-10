@@ -9,7 +9,7 @@ export type NextActionResult = { followup_message?: string };
 function buildFollowup(goalText: string, taskTitle: string, taskId: string, accept: string[], failTail: string, nextStep: string): string {
   const lines = [`[governance] Goal: ${goalText}`, `Current task (${taskId}): ${taskTitle}`];
   if (accept.length) lines.push(`Acceptance: ${accept.map((c) => `\`${c}\``).join(", ")}`);
-  if (failTail) lines.push(`Last failure:\n${failTail.slice(-800)}`);
+  if (failTail) lines.push(`Last failure:\n${failTail}`);
   if (nextStep) lines.push(`Next step: ${nextStep}`);
   else lines.push("Continue toward the acceptance above, then stop.");
   return lines.join("\n");
@@ -28,8 +28,9 @@ export async function computeNext(root: string, loopCount: number): Promise<Next
     if (!run || !graph) return {}; // no governed run — stay out of the way
     if (run.status === "done" || run.status === "escalated") return {};
 
-    // honor the same global turn budget as the headless loop (runaway backstop)
-    if (loopCount >= run.budgets.global_turns || run.global_turns >= run.budgets.global_turns) {
+    // honor the same global turn circuit-breaker as the headless loop (null = unlimited)
+    const cap = run.budgets.global_turns;
+    if (cap != null && (loopCount >= cap || run.global_turns >= cap)) {
       return {};
     }
 

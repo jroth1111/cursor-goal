@@ -66,7 +66,7 @@ describe("driver outer loop", () => {
     };
     const result = await run(p.root, scenario, { global_turns: 3, task_attempts: 10 });
     expect(result.status).toBe("escalated");
-    expect(result.escalation_reason).toMatch(/global turn budget/);
+    expect(result.escalation_reason).toMatch(/global turn/);
     expect(result.global_turns).toBe(3);
   });
 
@@ -108,6 +108,37 @@ describe("driver outer loop", () => {
     const journal = await readJournalTail(p.root, 80);
     expect(journal.some((e) => /review round 1: 1 material finding/.test(e.note ?? ""))).toBe(true);
     expect(journal.some((e) => /review round 2: satisfied/.test(e.note ?? ""))).toBe(true);
+  });
+
+  it("review convergence: stops and ships with residual when findings stop decreasing", async () => {
+    const p = project(["test -f impl.txt"]);
+    // every round reports the same single material finding; remediation "completes"
+    // (check `true`) but the reviewer keeps finding it — i.e. no real convergence.
+    const stuck = { satisfied: false, findings: [{ severity: "high", area: "x", issue: "persistent", fix: "f", check: "true" }] };
+    const scenario: Scenario = {
+      plan: { tasks: [task("t1", ["test -f impl.txt"])] },
+      reviews: [stuck, stuck, stuck, stuck],
+      turns: [{ mutate: [{ file: "impl.txt", content: "x" }] }, { mutate: [{ file: "noop.txt", content: "y" }] }],
+    };
+    const result = await run(p.root, scenario, { review_rounds: 12, global_turns: 20 });
+    expect(result.status).toBe("done"); // ships rather than looping all 12 rounds
+    expect(result.review_rounds_done).toBeLessThan(12);
+    expect(result.residual_findings.length).toBe(1);
+    const journal = await readJournalTail(p.root, 80);
+    expect(journal.some((e) => /not converging/.test(e.note ?? ""))).toBe(true);
+  });
+
+  it("unlimited (null) token/wall budgets do not trip the circuit breaker", async () => {
+    const p = project(["test -f made.txt"]);
+    const scenario: Scenario = {
+      plan: { tasks: [task("t1", ["test -f made.txt"])] },
+      turns: [{ mutate: [{ file: "made.txt", content: "hi" }] }],
+    };
+    // defaults already set token_budget/wall_ms to null; assert a clean finish.
+    const result = await run(p.root, scenario);
+    expect(result.status).toBe("done");
+    expect(result.budgets.token_budget).toBeNull();
+    expect(result.budgets.wall_ms).toBeNull();
   });
 
   it("--fast (review_rounds 0) ships on acceptance without a review", async () => {
@@ -187,9 +218,9 @@ describe("verdict robustness", () => {
     const p = mkGitProject();
     cleanups.push(p.cleanup);
     const scenario: Scenario = { verdicts: [{ not: "a-valid-verdict" } as unknown as Record<string, unknown>] };
-    const t = { ...task("t1", []), status: "in_progress" as const, attempts: 1, approach: "default", last_failure: null, evidence: { proof_ptrs: [], tree: null } };
+    const t = { ...task("t1", []), status: "in_progress" as const, attempts: 1, approach: "default", last_failure: null, last_failure_artifact: null, evidence: { proof_ptrs: [], tree: null } };
     const vr = await withEnv(scenarioEnv(p.root, scenario, "v"), () =>
-      getVerdict(t, emptyContext("t1"), [], "agent said done", [], p.root, true),
+      getVerdict(t, emptyContext("t1"), [], "agent said done", [], p.root, true, 0),
     );
     expect(vr.source).toBe("fallback");
   });

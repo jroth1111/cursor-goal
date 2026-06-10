@@ -15,6 +15,7 @@ export type Task = {
   attempts: number;
   approach: string;
   last_failure: string | null;
+  last_failure_artifact: string | null;
   evidence: { proof_ptrs: string[]; tree: string | null };
 };
 
@@ -26,12 +27,19 @@ export type TaskDraft = Pick<
   "id" | "title" | "kind" | "deps" | "acceptance_checks" | "acceptance_prose"
 >;
 
+/**
+ * Budgets are circuit breakers, not targets. The real guards against runaway are
+ * content-based (no-progress, oscillation, review convergence). These exist only to
+ * stop a genuinely pathological loop, and are set far above any legitimate need.
+ * `null` means UNLIMITED — the default for cost (tokens/wall), which is not a constraint.
+ */
 export type Budgets = {
-  global_turns: number;
+  global_turns: number | null;
   task_attempts: number;
-  token_budget: number;
-  wall_ms: number;
-  /** max adversarial review rounds after acceptance passes (0 = skip, quality off). */
+  token_budget: number | null;
+  wall_ms: number | null;
+  /** safety cap on adversarial review rounds (0 = skip review). Review normally stops on
+   *  satisfaction or diminishing returns well before this. */
   review_rounds: number;
 };
 
@@ -75,6 +83,12 @@ export type RunState = {
   session_map: Record<string, string>;
   active_task: string | null;
   review_rounds_done: number;
+  /** material-finding count from the previous review round (for convergence detection). */
+  review_prev_material: number;
+  /** consecutive review rounds that failed to reduce material findings. */
+  review_stall: number;
+  /** material findings the run shipped with when review stopped converging. */
+  residual_findings: ReviewFinding[];
   escalation_reason: string | null;
   started_at: string;
   updated_at: string;
@@ -106,7 +120,6 @@ const taskGraphSchema = {
     tasks: {
       type: "array",
       minItems: 1,
-      maxItems: 40,
       items: {
         type: "object",
         additionalProperties: false,
@@ -115,12 +128,12 @@ const taskGraphSchema = {
         // multi-task graphs to the single-task fallback (found in live testing).
         required: ["id", "title", "kind"],
         properties: {
-          id: { type: "string", minLength: 1, maxLength: 64, pattern: "^[A-Za-z0-9_.-]+$" },
-          title: { type: "string", minLength: 1, maxLength: 200 },
+          id: { type: "string", minLength: 1, pattern: "^[A-Za-z0-9_.-]+$" },
+          title: { type: "string", minLength: 1 },
           kind: { enum: ["implement", "verify", "integrate", "remediate"] },
-          deps: { type: "array", items: { type: "string" }, maxItems: 40 },
-          acceptance_checks: { type: "array", items: { type: "string", maxLength: 400 }, maxItems: 12 },
-          acceptance_prose: { type: "string", maxLength: 800 },
+          deps: { type: "array", items: { type: "string" } },
+          acceptance_checks: { type: "array", items: { type: "string" } },
+          acceptance_prose: { type: "string" },
         },
       },
     },
@@ -135,18 +148,18 @@ const verdictSchema = {
   properties: {
     task_complete: { type: "boolean" },
     confidence: { type: "number", minimum: 0, maximum: 1 },
-    blockers: { type: "array", items: { type: "string", maxLength: 400 }, maxItems: 8 },
+    blockers: { type: "array", items: { type: "string" } },
     next_action: {
       type: "object",
       additionalProperties: false,
       required: ["kind", "instruction"],
       properties: {
         kind: { enum: ["continue", "replan", "switch_approach", "escalate", "none"] },
-        instruction: { type: "string", maxLength: 1200 },
-        rationale: { type: "string", maxLength: 400 },
+        instruction: { type: "string" },
+        rationale: { type: "string" },
       },
     },
-    evidence_seen: { type: "array", items: { type: "string", maxLength: 200 }, maxItems: 12 },
+    evidence_seen: { type: "array", items: { type: "string" } },
   },
 } as const;
 
@@ -159,19 +172,18 @@ const reviewSchema = {
     satisfied: { type: "boolean" },
     findings: {
       type: "array",
-      maxItems: 20,
       items: {
         type: "object",
         additionalProperties: false,
         required: ["severity", "area", "issue", "fix"],
         properties: {
           severity: { enum: ["critical", "high", "medium", "low"] },
-          area: { type: "string", maxLength: 60 },
-          issue: { type: "string", maxLength: 500 },
-          fix: { type: "string", maxLength: 600 },
-          evidence: { type: "string", maxLength: 300 },
-          impact: { type: "string", maxLength: 300 },
-          check: { type: "string", maxLength: 400 },
+          area: { type: "string" },
+          issue: { type: "string" },
+          fix: { type: "string" },
+          evidence: { type: "string" },
+          impact: { type: "string" },
+          check: { type: "string" },
         },
       },
     },
@@ -187,12 +199,15 @@ export function ajvErrorText(v: ValidateFunction): string {
 }
 
 export const DEFAULT_BUDGETS: Budgets = {
-  // Quality-first defaults: token cost is not the constraint, the product is.
-  global_turns: 80,
-  task_attempts: 5,
-  token_budget: 50_000_000,
-  wall_ms: 6 * 60 * 60 * 1000,
-  review_rounds: 3,
+  // Cost is not the constraint, the product is. Tokens and wall-clock are UNLIMITED by
+  // default; turns/attempts/rounds are far-off circuit breakers, not tuning targets — the
+  // run normally ends via content guards (acceptance, no-progress, oscillation, review
+  // convergence) long before any of these.
+  global_turns: 1000,
+  task_attempts: 15,
+  token_budget: null,
+  wall_ms: null,
+  review_rounds: 12,
 };
 
 /** Acyclic + every dep resolvable + each non-verify task has acceptance. */

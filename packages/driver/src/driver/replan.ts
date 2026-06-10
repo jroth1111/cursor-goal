@@ -2,6 +2,7 @@ import { extractJsonObject } from "../lib/json-extract.js";
 import { runTurn } from "../agent/runner.js";
 import { validateTaskGraph, type GoalSpec, type Task, type TaskGraph } from "../state/schema.js";
 import type { AgentCall } from "./decompose.js";
+import { formatFailureForPrompt } from "../lib/progressive-reveal.js";
 
 function replanPrompt(spec: GoalSpec, task: Task, reason: string): string {
   return [
@@ -10,11 +11,16 @@ function replanPrompt(spec: GoalSpec, task: Task, reason: string): string {
     "",
     `GOAL: ${spec.goal_text}`,
     `STUCK TASK (${task.id}): ${task.title}`,
-    task.acceptance_prose ? `Its acceptance: ${task.acceptance_prose}` : "",
+    task.acceptance_checks.length
+      ? `Its acceptance checks:\n${task.acceptance_checks.map((c) => `  - \`${c}\``).join("\n")}`
+      : "",
+    task.acceptance_prose ? `Its acceptance (prose): ${task.acceptance_prose}` : "",
     `Why it is stuck: ${reason}`,
-    task.last_failure ? `Last failure: ${task.last_failure.slice(-600)}` : "",
+    task.last_failure
+      ? `Last failure: ${formatFailureForPrompt(task.last_failure, task.last_failure_artifact ?? undefined)}`
+      : "",
     "",
-    "Return 2 to 5 smaller subtasks. Each needs runnable acceptance_checks where possible.",
+    "Return smaller subtasks — as many as needed. Each needs runnable acceptance_checks where possible.",
     "Subtask ids are short slugs. They will run before the parent task is re-attempted.",
     "",
     "Respond with ONLY this JSON object, no prose:",
@@ -52,7 +58,7 @@ export async function replanTask(
   const obj = extractJsonObject(result.finalText);
   if (!obj || !validateTaskGraph(obj)) return null;
   const sub = (obj as TaskGraph).tasks;
-  if (!sub.length || sub.length > 5) return null;
+  if (!sub.length) return null;
 
   const existingIds = new Set(graph.tasks.map((t) => t.id));
   const newTasks: Task[] = [];
@@ -73,6 +79,7 @@ export async function replanTask(
       attempts: 0,
       approach: "default",
       last_failure: null,
+      last_failure_artifact: null,
       evidence: { proof_ptrs: [], tree: null },
     });
   }
@@ -86,6 +93,7 @@ export async function replanTask(
       status: "pending" as const,
       attempts: 0,
       last_failure: null,
+      last_failure_artifact: null,
     };
   });
 

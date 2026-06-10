@@ -3,6 +3,7 @@ import { listDiffFiles } from "../lib/git.js";
 import { runTurn, type TurnResult } from "../agent/runner.js";
 import { ajvErrorText, validateReview, type GoalSpec, type ReviewResult } from "../state/schema.js";
 import type { AgentCall } from "./decompose.js";
+import { formatChangedFilesForPrompt } from "../lib/progressive-reveal.js";
 
 function reviewPrompt(spec: GoalSpec, changedFiles: string[]): string {
   return [
@@ -15,7 +16,7 @@ function reviewPrompt(spec: GoalSpec, changedFiles: string[]): string {
     "",
     `GOAL: ${spec.goal_text}`,
     spec.non_goals.length ? `NON-GOALS: ${spec.non_goals.join("; ")}` : "",
-    changedFiles.length ? `Changed files: ${changedFiles.slice(0, 40).join(", ")}` : "",
+    changedFiles.length ? `Changed files: ${formatChangedFilesForPrompt(changedFiles)}` : "",
     "",
     "Review across these lenses (skip any that don't apply to this domain):",
     "1. REAL-BOUNDARY TESTS — do the tests exercise the real entry point a user hits (CLI",
@@ -64,7 +65,7 @@ export async function reviewGoal(
 ): Promise<ReviewOutcome> {
   const changed = listDiffFiles(root);
   let lastErr = "";
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     const note = attempt === 0 ? "" : "\n\nYour previous response was not valid JSON. Return ONLY the JSON object.";
     let result: TurnResult;
     try {

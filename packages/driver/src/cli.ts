@@ -49,7 +49,17 @@ async function cmdRun(flags: Record<string, string | boolean>, rest: string[]): 
     budgets: Object.keys(budgets).length ? budgets : undefined,
   });
   process.stdout.write(
-    `${JSON.stringify({ status: run.status, turns: run.global_turns, escalation: run.escalation_reason }, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        status: run.status,
+        turns: run.global_turns,
+        review_rounds: run.review_rounds_done,
+        escalation: run.escalation_reason,
+        residual_findings: run.residual_findings.map((f) => `${f.severity}/${f.area}: ${f.issue}`),
+      },
+      null,
+      2,
+    )}\n`,
   );
   return run.status === "done" ? 0 : run.status === "escalated" ? 2 : 1;
 }
@@ -73,9 +83,16 @@ async function cmdStatus(): Promise<number> {
   const taskLines = (graph?.tasks ?? [])
     .map((t) => `  ${t.status === "done" ? "✓" : "○"} ${t.id} [${t.status}] ${t.title} (attempts ${t.attempts})`)
     .join("\n");
+  const cap = run.budgets.global_turns == null ? "∞" : String(run.budgets.global_turns);
+  const residual = run.residual_findings.length
+    ? `residual findings (shipped, unresolved):\n` +
+      run.residual_findings.map((f) => `  ! ${f.severity}/${f.area}: ${f.issue}`).join("\n") +
+      "\n"
+    : "";
   process.stdout.write(
-    `goal: ${run.goal_spec.goal_text}\nstatus: ${run.status}  turns: ${run.global_turns}/${run.budgets.global_turns}  tokens: ${run.consumed.tokens}\n` +
+    `goal: ${run.goal_spec.goal_text}\nstatus: ${run.status}  turns: ${run.global_turns}/${cap}  review rounds: ${run.review_rounds_done}  tokens: ${run.consumed.tokens}\n` +
       (run.escalation_reason ? `escalation: ${run.escalation_reason}\n` : "") +
+      residual +
       `tasks:\n${taskLines}\n`,
   );
   return 0;

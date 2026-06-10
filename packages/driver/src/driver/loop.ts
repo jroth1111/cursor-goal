@@ -2,6 +2,8 @@ import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { listDiffFiles, workingTreeFingerprint } from "../lib/git.js";
 import { appendJournal } from "../lib/journal.js";
+import { formatCheckFailuresFull, writeTurnFailureArtifact } from "../lib/progressive-reveal.js";
+import { mergeProofPtrs, readToolRunsSince } from "../lib/tool-runs.js";
 import { withDriverLock } from "../lib/lock.js";
 import { atomicWriteJson, ensureDriverDirs, escalationPath } from "../lib/paths.js";
 import { runTurn, usageTokens } from "../agent/runner.js";
@@ -79,6 +81,7 @@ function appendRemediationTasks(
     attempts: 0,
     approach: "default",
     last_failure: prose || null,
+    last_failure_artifact: null,
     evidence: { proof_ptrs: [], tree: null },
   };
   return { tasks: [...graph.tasks, task] };
@@ -92,7 +95,7 @@ function appendReviewRemediation(graph: TaskGraph, findings: ReviewFinding[]): T
       ...tasks,
       {
         id: `review.${graph.tasks.length + i + 1}`,
-        title: `[${f.severity}/${f.area}] ${f.issue.slice(0, 80)}`,
+        title: `[${f.severity}/${f.area}] ${f.issue}`,
         kind: "remediate",
         deps: [],
         acceptance_checks: f.check ? [f.check] : [],
@@ -100,6 +103,7 @@ function appendReviewRemediation(graph: TaskGraph, findings: ReviewFinding[]): T
         status: "pending",
         attempts: 0,
         approach: "default",
+        last_failure_artifact: null,
         last_failure: [
           `Issue: ${f.issue}`,
           f.evidence ? `Where: ${f.evidence}` : "",
@@ -213,6 +217,8 @@ export async function runGoal(opts: LoopOptions): Promise<RunState> {
       const postTree = workingTreeFingerprint(root);
       const progressed = postTree !== preTree;
       task.evidence.tree = postTree;
+      const turnToolRuns = await readToolRunsSince(root, turnStart);
+      task.evidence.proof_ptrs = mergeProofPtrs(task.evidence.proof_ptrs, turnToolRuns);
 
       await appendJournal(root, {
         at: new Date().toISOString(),
@@ -229,8 +235,11 @@ export async function runGoal(opts: LoopOptions): Promise<RunState> {
       let checkFails: string[] = [];
 
       if (result.terminal !== "success") {
-        ctx.last_failure = result.finalText.slice(-1500);
-        task.last_failure = ctx.last_failure;
+        const failArtifact = await writeTurnFailureArtifact(root, task.id, run.global_turns, result.finalText);
+        ctx.last_failure = result.finalText;
+        ctx.last_failure_artifact = failArtifact;
+        task.last_failure = result.finalText;
+        task.last_failure_artifact = failArtifact;
         decision = onAgentFailure(run, task);
       } else {
         const acceptance = await runTaskAcceptance(root, task);
@@ -255,6 +264,7 @@ export async function runGoal(opts: LoopOptions): Promise<RunState> {
             diffFiles,
             root,
             progressed,
+            turnStart,
             call,
           );
           verdict = vr.verdict;
@@ -262,12 +272,7 @@ export async function runGoal(opts: LoopOptions): Promise<RunState> {
 
         const failNotes: string[] = [];
         if (acceptance.results.some((r) => !r.ok)) {
-          failNotes.push(
-            acceptance.results
-              .filter((r) => !r.ok)
-              .map((r) => `$ ${r.cmd}\n${(r.output ?? "").slice(-600)}`)
-              .join("\n---\n"),
-          );
+          failNotes.push(formatCheckFailuresFull(acceptance.results.filter((r) => !r.ok)));
         }
         if (integrityIssues.length) {
           failNotes.push(`Integrity violation: ${integrityIssues.join("; ")}`);
@@ -280,8 +285,12 @@ export async function runGoal(opts: LoopOptions): Promise<RunState> {
           });
         }
         if (failNotes.length) {
-          ctx.last_failure = failNotes.join("\n").slice(-1500);
-          task.last_failure = ctx.last_failure;
+          const fullFail = failNotes.join("\n");
+          const failArtifact = await writeTurnFailureArtifact(root, task.id, run.global_turns, fullFail);
+          ctx.last_failure = fullFail;
+          ctx.last_failure_artifact = failArtifact;
+          task.last_failure = fullFail;
+          task.last_failure_artifact = failArtifact;
         }
 
         decision = decide(run, task, acceptance.results, verdict, progressed, oscillating, {
@@ -319,7 +328,7 @@ export async function runGoal(opts: LoopOptions): Promise<RunState> {
           break;
         case "switch_approach":
           delete run.session_map[task.id];
-          task.approach = (decision.instruction ?? "alternative approach").slice(0, 200);
+          task.approach = decision.instruction ?? "alternative approach";
           if (decision.instruction && !ctx.tried_approaches.includes(decision.instruction)) {
             ctx.tried_approaches.push(decision.instruction);
           }
@@ -360,33 +369,51 @@ export async function runGoal(opts: LoopOptions): Promise<RunState> {
         const goalIntegrity = checkIntegrity(root, listDiffFiles(root), run.goal_spec.scope);
         const checksOk = !goalAcceptance.objective || goalAcceptance.allPass;
         if (checksOk && goalIntegrity.length === 0) {
-          // ── excellence gate: adversarial review until satisfied or rounds exhausted ──
+          // ── excellence gate: review until satisfied or diminishing returns ──────────
+          // Stops on genuine satisfaction or when rounds stop reducing material findings
+          // (the agent can't resolve them) — not at an arbitrary count. review_rounds is a
+          // far-off safety cap only.
           if (run.budgets.review_rounds > 0 && run.review_rounds_done < run.budgets.review_rounds) {
             const { review, source } = await reviewGoal(run.goal_spec, root, call);
             run.review_rounds_done += 1;
             const material = source === "llm" && !review.satisfied ? materialFindings(review) : [];
             if (material.length) {
-              graph = appendReviewRemediation(graph, material);
-              run.active_task = null;
-              await saveGraph(root, graph);
+              const improving = run.review_rounds_done === 1 || material.length < run.review_prev_material;
+              run.review_stall = improving ? 0 : run.review_stall + 1;
+              run.review_prev_material = material.length;
+              if (run.review_stall < 2) {
+                graph = appendReviewRemediation(graph, material);
+                run.active_task = null;
+                await saveGraph(root, graph);
+                await appendJournal(root, {
+                  at: new Date().toISOString(),
+                  kind: "lifecycle",
+                  note: `review round ${run.review_rounds_done}: ${material.length} material finding(s) → remediation (${material
+                    .map((f) => `${f.severity}/${f.area}`)
+                    .join(", ")})`,
+                });
+                await saveRun(root, run);
+                continue; // drive the remediation tasks, then re-review
+              }
+              // not converging — ship, recording the residual findings honestly
+              run.residual_findings = material;
               await appendJournal(root, {
                 at: new Date().toISOString(),
                 kind: "lifecycle",
-                note: `review round ${run.review_rounds_done}: ${material.length} material finding(s) → remediation (${material
+                note: `review not converging after ${run.review_rounds_done} rounds; shipping with ${material.length} residual finding(s): ${material
                   .map((f) => `${f.severity}/${f.area}`)
-                  .join(", ")})`,
+                  .join(", ")}`,
               });
-              await saveRun(root, run);
-              continue; // drive the remediation tasks, then re-review
+            } else {
+              await appendJournal(root, {
+                at: new Date().toISOString(),
+                kind: "lifecycle",
+                note:
+                  source === "skip"
+                    ? "review skipped (reviewer unavailable)"
+                    : `review round ${run.review_rounds_done}: satisfied — shipping`,
+              });
             }
-            await appendJournal(root, {
-              at: new Date().toISOString(),
-              kind: "lifecycle",
-              note:
-                source === "skip"
-                  ? "review skipped (reviewer unavailable)"
-                  : `review round ${run.review_rounds_done}: satisfied — shipping`,
-            });
           }
           run.status = "done";
           run.active_task = null;

@@ -62,6 +62,31 @@ describe("safety-net hook", () => {
     expect(readFileSync(evidence, "utf8")).toMatch(/"tool_use_id":"u1"/);
   });
 
+  it("stores full tool output on disk and indexes a truncated tail", async () => {
+    const p = mkGitProject();
+    cleanups.push(p.cleanup);
+    const full = `HEAD\n${"line\n".repeat(200)}`;
+    await runHook(
+      {
+        hook_event_name: "postToolUse",
+        tool_name: "shell",
+        tool_use_id: "u-big",
+        cwd: p.root,
+        tool_output: full,
+        duration: 3,
+      },
+      { CURSOR_PROJECT_DIR: p.root },
+    );
+    const row = JSON.parse(
+      readFileSync(path.join(p.root, ".cursor/goal/driver/evidence/tool-runs.jsonl"), "utf8").trim().split("\n").at(-1)!,
+    );
+    expect(row.truncated).toBe(true);
+    expect(row.output_artifact).toMatch(/tool-outputs\/u-big\.txt$/);
+    expect(row.output_tail.length).toBeLessThan(full.length);
+    const artifact = path.join(p.root, row.output_artifact);
+    expect(readFileSync(artifact, "utf8")).toBe(full);
+  });
+
   it("stop hook with no governed run returns empty (lets the agent stop)", async () => {
     const p = mkGitProject();
     cleanups.push(p.cleanup);

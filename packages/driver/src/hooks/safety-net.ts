@@ -13,6 +13,12 @@ import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { matchDestructiveRule } from "../lib/shell-allow.js";
 import { evidenceDir, projectRoot } from "../lib/paths.js";
+import {
+  PREVIEW,
+  progressiveReveal,
+  toolOutputBasename,
+  writeTextArtifact,
+} from "../lib/progressive-reveal.js";
 import { computeNext } from "../bridge/hook-next.js";
 
 type HookPayload = {
@@ -68,13 +74,33 @@ async function handlePreToolUse(p: HookPayload): Promise<void> {
   emit({ permission: "allow" });
 }
 
+function normalizeToolOutput(output: unknown): string | undefined {
+  if (output == null) return undefined;
+  if (typeof output === "string") return output;
+  try {
+    return JSON.stringify(output, null, 2);
+  } catch {
+    return String(output);
+  }
+}
+
 async function handlePostToolUse(p: HookPayload): Promise<void> {
   try {
     const root = projectRoot();
     const file = path.join(evidenceDir(root), "tool-runs.jsonl");
     await mkdir(path.dirname(file), { recursive: true });
-    const outputTail =
-      typeof p.tool_output === "string" ? p.tool_output.slice(-500) : undefined;
+    const full = normalizeToolOutput(p.tool_output);
+    let outputArtifact: string | undefined;
+    let outputTail: string | undefined;
+    let truncated = false;
+    let outputBytes = 0;
+    if (full !== undefined) {
+      outputBytes = Buffer.byteLength(full, "utf8");
+      outputArtifact = await writeTextArtifact(root, "tool-outputs", toolOutputBasename(p.tool_use_id), full);
+      const revealed = progressiveReveal(full, { maxChars: PREVIEW.TOOL_OUTPUT_TAIL, tail: true });
+      outputTail = revealed.preview;
+      truncated = revealed.truncated;
+    }
     await appendFile(
       file,
       `${JSON.stringify({
@@ -83,6 +109,9 @@ async function handlePostToolUse(p: HookPayload): Promise<void> {
         tool_use_id: p.tool_use_id,
         cwd: p.cwd,
         duration: p.duration,
+        output_bytes: outputBytes || undefined,
+        truncated: truncated || undefined,
+        output_artifact: outputArtifact,
         output_tail: outputTail,
       })}\n`,
       "utf8",
