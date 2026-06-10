@@ -2,23 +2,22 @@
 
 ## Proof-first workflow
 
-1. Read [INVARIANTS.json](../INVARIANTS.json) and [AGENTS.md](../AGENTS.md).
-2. Add a **failing** test under `packages/cursor-goal-runtime/tests/invariants/`.
+1. Read [AGENTS.md](../AGENTS.md).
+2. Add a failing test under `packages/driver/test/`. The deterministic fake cursor-agent stub (`test/fake-agent/`, bound via `CURSOR_AGENT_BIN`) lets you exercise the full loop without an LLM.
 3. Implement the smallest change to pass.
-4. Register the invariant in `INVARIANTS.json`.
-5. Mark [CAPABILITY.md](../CAPABILITY.md) as `tested` only when CI passes.
+4. Run the checks:
+   ```bash
+   npm test       # builds the driver, runs the suite
+   npm run check  # tsc --noEmit
+   ```
+5. Keep `README.md` and `docs/ARCHITECTURE.md` honest about what exists.
 
-```bash
-npm run build
-npm test
-npm run check
-node scripts/verify-capability.mjs
-```
+## Tests
 
-## Publishing runtime (optional)
-
-The package `@cursor-goal/runtime` is private by default. To publish to npm, bump `packages/cursor-goal-runtime/package.json` version and run `npm publish` manually — no automatic publish in CI.
+- Unit (`test/unit.test.ts`): JSON extraction, shell policy, schema validation, oscillation.
+- Loop (`test/loop.test.ts`): happy path, agent-error → escalate, budget exhaustion, oscillation → switch, non-objective verdict, two-turn resume, malformed-verdict fallback.
+- Recovery (`test/recover.test.ts`), safety-net hook (`test/safety-net.test.ts`).
 
 ## Docs
 
-Update `docs/ARCHITECTURE.md` and `CAPABILITY.md` when behavior or proven claims change.
+Update `docs/ARCHITECTURE.md` and `docs/THREAT_MODEL.md` when behavior or controls change.

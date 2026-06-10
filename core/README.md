@@ -1,23 +1,23 @@
-# cursor-goal core (required layer)
+# cursor-goal core — safety-net hooks
 
-Self-contained hook pack for cursor-agent. **No npm install required** — `bash`, `jq`, and `git`.
+The thin hook layer for `agent-driver`. `bash`, `jq`, and `git`; no npm install for the per-repo hook itself.
 
 ## Install
 
 ```bash
-bash cursor-goal/core/install.sh [TARGET_REPO_ROOT] [--local-hooks]
+bash core/install.sh [TARGET_REPO_ROOT]
 ```
 
-## Without the runtime package
+Installs one shim, `.cursor/hooks/safety-net.sh`, and registers it for three events in `.cursor/hooks.json`, plus a `GOAL.md` template.
 
-- `stop` runs checks from `GOAL.md` ## Checks (I01, I07, I08)
-- `beforeSubmitPrompt` requires `GOAL.md`
-- `preToolUse` blocks Write/Edit in DISCOVERY (I02)
-- `subagentStop` never issues RELEASE (I06)
-- `postToolUse` records edit marker (I11)
+## What the hook does
 
-## With the runtime package
+One script, branching on `hook_event_name`:
 
-Same hooks dispatch to the TypeScript verifier pipeline.
+- `preToolUse` — deny destructive shell commands (`rm -rf`, `git push --force`, `drop database`). Fires headless and interactive.
+- `postToolUse` — append a ground-truth evidence row under `.cursor/goal/driver/evidence/`.
+- `stop` — in an interactive session, call `agent-driver next` and return its `followup_message` to continue toward the goal. No-op headless.
 
-See [`../CAPABILITY.md`](../CAPABILITY.md) for tested invariants.
+The shim resolves the driver from a global install (`~/.cursor/agent-driver`), local `node_modules`, or `packages/driver/dist`, and **fails open** (`{}`) if none is found — it never bricks a session.
+
+The heavy lifting lives in `agent-driver`; these hooks are a net, not a dependency.

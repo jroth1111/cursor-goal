@@ -1,0 +1,11 @@
+{
+  "mode": "runtime",
+  "loop_count": 0,
+  "loop_limit": 40,
+  "phase": "DISCOVERY",
+  "blocked": false,
+  "blockers": [],
+  "next_action": null,
+  "last_check_fail": null,
+  "updated_at": "2026-05-31T15:15:35.245Z"
+}

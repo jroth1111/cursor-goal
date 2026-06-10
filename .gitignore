@@ -1,8 +1,5 @@
 node_modules/
 dist/
-packages/cursor-goal-runtime/dist/
-packages/cursor-goal-runtime/.dist-build/
-packages/cursor-goal-runtime/node_modules/
 build/
 out/
 coverage/
@@ -32,7 +29,6 @@ artifacts/
 .claude/
 /.cursor/
 /.autoreview/
-packages/cursor-goal-runtime/.cursor/
 
 # Beads / Dolt files (added by bd init)
 .dolt/

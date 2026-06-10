@@ -1,20 +1,15 @@
 #!/usr/bin/env bash
-# Remove cursor-goal global install from ~/.cursor
+# Remove the agent-driver global install from ~/.cursor.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=lib/global-cli-flags.sh
 source "$SCRIPT_DIR/lib/global-cli-flags.sh"
 
-PURGE_RUNTIME=0
-
-usage() {
-  echo "Usage: bash scripts/uninstall-global.sh [--purge-runtime]"
-}
+usage() { echo "Usage: bash scripts/uninstall-global.sh"; }
 
 for arg in "$@"; do
   case "$arg" in
-    --purge-runtime) PURGE_RUNTIME=1 ;;
     --help|-h) cgr_show_help usage ;;
     --*) cgr_unknown_option "$arg" usage ;;
     *) cgr_unexpected_argument "$arg" usage ;;
@@ -22,16 +17,10 @@ for arg in "$@"; do
 done
 
 CURSOR_HOME="${CURSOR_HOME:-$HOME/.cursor}"
-LOCAL_BIN="${HOME}/.local/bin"
 
-echo "Uninstalling cursor-goal global hooks from $CURSOR_HOME"
+echo "Uninstalling agent-driver from $CURSOR_HOME"
 
-if [[ -d "$CURSOR_HOME/hooks" ]]; then
-  find "$CURSOR_HOME/hooks" -maxdepth 1 \( -type f -o -type l \) \
-    \( -name 'goal-*.sh' -o -name '_cgr-lib.sh' -o -name 'handlers-minimal.sh' -o -name 'verify-minimal.sh' -o -name 'destructive-shell-policy.sh' \) \
-    -delete
-fi
-
+# Drop our safety-net entries (and any legacy goal-* entries) from hooks.json.
 if [[ -f "$CURSOR_HOME/hooks.json" ]] && command -v jq >/dev/null 2>&1; then
   tmp="$(mktemp)"
   jq '
@@ -44,7 +33,7 @@ if [[ -f "$CURSOR_HOME/hooks.json" ]] && command -v jq >/dev/null 2>&1; then
         if (.value | type) == "array" then
           .value = [
             .value[]?
-            | select(((.command // "") | test("(^|/)goal-[^/]*$")) | not)
+            | select(((.command // "") | test("(safety-net\\.js|(^|/)goal-[^/]*$)")) | not)
           ]
           | select((.value | length) > 0)
         else
@@ -53,17 +42,11 @@ if [[ -f "$CURSOR_HOME/hooks.json" ]] && command -v jq >/dev/null 2>&1; then
       )
     )
   ' "$CURSOR_HOME/hooks.json" > "$tmp" && mv "$tmp" "$CURSOR_HOME/hooks.json"
-  echo "Removed goal-* entries from hooks.json"
+  echo "Removed agent-driver entries from hooks.json"
 fi
 
-rm -f "$LOCAL_BIN/cursor-goal" "$LOCAL_BIN/cursor-agent-goal"
+rm -f "$CURSOR_HOME/bin/agent-driver"
+rm -rf "$CURSOR_HOME/agent-driver"
 rm -f "$CURSOR_HOME/cursor-goal.env"
-rm -f "$CURSOR_HOME/cursor-goal/install-manifest.json"
-
-if [[ "$PURGE_RUNTIME" -eq 1 ]]; then
-  rm -rf "$CURSOR_HOME/cursor-goal-runtime"
-  rm -rf "$CURSOR_HOME/goal/schemas" "$CURSOR_HOME/goal/templates"
-  echo "Purged runtime and schemas"
-fi
 
 echo "Done. Restart Cursor to unload user hooks."

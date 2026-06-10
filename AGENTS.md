@@ -1,35 +1,32 @@
 # cursor-goal — agent operating rules
 
-Governed work on this tree **must** follow proof-first order. Do not scaffold and claim done.
+This repo builds `agent-driver`, a long-horizon driver for `cursor-agent`. Work proof-first: a behavior change is done when it has a test and the checks are green.
 
 ## Mandatory workflow
 
-1. Read [`INVARIANTS.json`](INVARIANTS.json).
-2. Add or update the **failing test** for the invariant you are implementing (under `packages/cursor-goal-runtime/tests/invariants/`).
-3. Implement the **smallest** gate change to make that test pass.
-4. Run from the cursor-goal root:
+1. Add or update a test under `packages/driver/test/` for the behavior you are changing.
+2. Implement the smallest change to make it pass.
+3. From the repo root:
    ```bash
-   npm test
-   npm run check
+   npm test       # builds the driver, runs the deterministic suite (fake cursor-agent stub)
+   npm run check  # tsc --noEmit
    ```
-5. Update [`CAPABILITY.md`](CAPABILITY.md) — only mark `tested` when the linked invariant test passes in CI.
-6. Root **`npm run check`** runs the full test suite before capability verification (I203). See [`docs/BRANCH_REVIEW.md`](docs/BRANCH_REVIEW.md) for branch review and multi-agent guidance.
+4. Keep `README.md` and `docs/ARCHITECTURE.md` honest about what exists.
+
+## Design invariants (do not regress)
+
+- **The driver owns continuation.** Never depend on a stop-hook `followup_message` to keep a headless run going — it does not fire in `--print`. Re-invoke `cursor-agent --resume <session_id>`.
+- **Checks beat self-claims.** An agent turn that ends in `error`/`aborted`, or whose acceptance checks fail, is never marked done — regardless of what the model says.
+- **Objective when possible.** When a task has runnable acceptance checks and they pass, skip the LLM verdict.
+- **State on disk is authoritative.** Persist atomically each turn so a crash resumes from `.cursor/goal/driver/`.
+- **Hooks are a net, not a dependency.** The driver must function (own loop + own checks) even if hooks never fire.
 
 ## Forbidden patterns
 
-- Creating hooks, packages, or README tables without a passing invariant test.
-- Claiming "L0–L8 complete" or "full verifier" unless CAPABILITY.md shows each level tested.
-- Bulk "fix all" without red tests first.
-- Treating file layout as governance.
-
-Multi-phase orchestrator runs: `cursor-goal orchestrator start` + `.cursor/goal/orchestrator.json` (see [`RUNBOOK.md`](RUNBOOK.md)).
-
-## Release authority
-
-- **Core:** bash hooks + minimal safety/diagnostic fallback; no RELEASE authority.
-- **Runtime:** TypeScript L-pipeline.
-- **Supervisor:** wall-clock wrapper only; never loaded by hooks.
+- Adding driver behavior with no test.
+- Trusting `--resume` to have retained context without re-injecting acceptance + last failure.
+- Editing a user's global `~/.cursor` except via `scripts/install-global.sh` / `uninstall-global.sh`.
 
 ## Success = tests, not narrative
 
-A change is done when `INVARIANTS.json` entries have green tests and CAPABILITY.md matches reality.
+`npm test` green and the docs match reality.
