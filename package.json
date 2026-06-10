@@ -2,7 +2,7 @@
   "name": "cursor-goal",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/cursor-goal-runtime"],
+  "workspaces": ["packages/cursor-goal-runtime", "packages/driver"],
   "scripts": {
     "build": "npm run build -w @cursor-goal/runtime",
     "test": "npm test -w @cursor-goal/runtime",
