@@ -63,9 +63,24 @@ export function decide(
   verdict: Verdict,
   progressed: boolean,
   oscillating: boolean,
+  integrity: { ok: boolean; issues: string[] } = { ok: true, issues: [] },
 ): Decision {
   const hasObjective = checks.length > 0;
   const objectivePass = hasObjective && allPass(checks);
+
+  // Integrity gate: checks passing while verification was weakened or scope was
+  // breached is the reward-hack / scope-creep signature. Never accept it; send the
+  // agent back to undo it. This overrides an otherwise-passing turn.
+  if (!integrity.ok) {
+    if (task.attempts >= run.budgets.task_attempts) {
+      return { kind: "escalate", reason: `integrity violation on ${task.id} unresolved: ${integrity.issues.join("; ")}` };
+    }
+    return {
+      kind: "switch_approach",
+      instruction: `Integrity violation — undo this and satisfy the task honestly: ${integrity.issues.join("; ")}. Do not weaken, skip, or delete verification, and stay within scope.`,
+      reason: `integrity violation on ${task.id}: ${integrity.issues.join("; ")}`,
+    };
+  }
 
   // Objective completion: acceptance passed and work actually changed the tree.
   if (objectivePass && (progressed || task.attempts <= 1)) {

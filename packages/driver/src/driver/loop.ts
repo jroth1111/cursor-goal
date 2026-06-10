@@ -25,6 +25,7 @@ import { buildInstruction, summarizeInstruction } from "./instruct.js";
 import { getVerdict } from "./verdict.js";
 import { replanTask } from "./replan.js";
 import { isOscillating, pushFingerprint } from "./progress.js";
+import { checkIntegrity } from "./integrity.js";
 import { checkBudgets, decide, onAgentFailure, type Decision } from "./strategy.js";
 
 export type LoopOptions = {
@@ -59,19 +60,23 @@ async function escalate(root: string, run: RunState, reason: string): Promise<Ru
   return run;
 }
 
-function appendRemediationTasks(graph: TaskGraph, failingChecks: string[]): TaskGraph {
+function appendRemediationTasks(
+  graph: TaskGraph,
+  failingChecks: string[],
+  prose = "",
+): TaskGraph {
   const id = `remediate.${graph.tasks.length + 1}`;
   const task: Task = {
     id,
-    title: "Fix failing goal-level acceptance checks",
+    title: prose ? "Fix goal-level integrity / acceptance" : "Fix failing goal-level acceptance checks",
     kind: "remediate",
     deps: [],
     acceptance_checks: failingChecks,
-    acceptance_prose: "",
+    acceptance_prose: prose,
     status: "pending",
     attempts: 0,
     approach: "default",
-    last_failure: null,
+    last_failure: prose || null,
     evidence: { proof_ptrs: [], tree: null },
   };
   return { tasks: [...graph.tasks, task] };
@@ -200,12 +205,15 @@ export async function runGoal(opts: LoopOptions): Promise<RunState> {
         const oscillating = isOscillating(run, postTree);
         pushFingerprint(run, postTree);
         checkFails = acceptance.results.filter((r) => !r.ok).map((r) => r.cmd);
+        const diffFiles = listDiffFiles(root);
+
+        // Reward-hacking / scope-creep guard: blocks completion even if checks pass.
+        const integrityIssues = checkIntegrity(root, diffFiles, run.goal_spec.scope);
 
         let verdict: Verdict;
         if (acceptance.objective && acceptance.allPass) {
           verdict = SYNTHETIC_COMPLETE; // skip the LLM when checks decide it (cost guard)
         } else {
-          const diffFiles = listDiffFiles(root);
           const vr = await getVerdict(
             task,
             ctx,
@@ -219,15 +227,34 @@ export async function runGoal(opts: LoopOptions): Promise<RunState> {
           verdict = vr.verdict;
         }
 
+        const failNotes: string[] = [];
         if (acceptance.results.some((r) => !r.ok)) {
-          ctx.last_failure = acceptance.results
-            .filter((r) => !r.ok)
-            .map((r) => `$ ${r.cmd}\n${(r.output ?? "").slice(-600)}`)
-            .join("\n---\n")
-            .slice(-1500);
+          failNotes.push(
+            acceptance.results
+              .filter((r) => !r.ok)
+              .map((r) => `$ ${r.cmd}\n${(r.output ?? "").slice(-600)}`)
+              .join("\n---\n"),
+          );
+        }
+        if (integrityIssues.length) {
+          failNotes.push(`Integrity violation: ${integrityIssues.join("; ")}`);
+          checkFails.push(...integrityIssues);
+          await appendJournal(root, {
+            at: new Date().toISOString(),
+            kind: "lifecycle",
+            task_id: task.id,
+            note: `integrity blocked completion: ${integrityIssues.join("; ")}`,
+          });
+        }
+        if (failNotes.length) {
+          ctx.last_failure = failNotes.join("\n").slice(-1500);
           task.last_failure = ctx.last_failure;
         }
-        decision = decide(run, task, acceptance.results, verdict, progressed, oscillating);
+
+        decision = decide(run, task, acceptance.results, verdict, progressed, oscillating, {
+          ok: integrityIssues.length === 0,
+          issues: integrityIssues,
+        });
       }
 
       recordAttempt(ctx, {
@@ -297,7 +324,9 @@ export async function runGoal(opts: LoopOptions): Promise<RunState> {
       // ── goal-level stop gate ──────────────────────────────────────────────────
       if (allTasksDone(graph)) {
         const goalAcceptance = await runGoalAcceptance(root, run.goal_spec);
-        if (!goalAcceptance.objective || goalAcceptance.allPass) {
+        const goalIntegrity = checkIntegrity(root, listDiffFiles(root), run.goal_spec.scope);
+        const checksOk = !goalAcceptance.objective || goalAcceptance.allPass;
+        if (checksOk && goalIntegrity.length === 0) {
           run.status = "done";
           run.active_task = null;
           await appendJournal(root, {
@@ -310,12 +339,17 @@ export async function runGoal(opts: LoopOptions): Promise<RunState> {
           return run;
         }
         const failing = goalAcceptance.results.filter((r) => !r.ok).map((r) => r.cmd);
-        graph = appendRemediationTasks(graph, failing);
+        const prose = goalIntegrity.length
+          ? `Undo the integrity violation while keeping checks green: ${goalIntegrity.join("; ")}`
+          : "";
+        graph = appendRemediationTasks(graph, failing, prose);
         await saveGraph(root, graph);
         await appendJournal(root, {
           at: new Date().toISOString(),
           kind: "lifecycle",
-          note: `goal checks failing (${failing.join(", ")}); added remediation task`,
+          note: goalIntegrity.length
+            ? `goal-level integrity violation (${goalIntegrity.join("; ")}); added remediation task`
+            : `goal checks failing (${failing.join(", ")}); added remediation task`,
         });
       }
     }

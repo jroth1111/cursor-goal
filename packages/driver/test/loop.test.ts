@@ -99,6 +99,38 @@ describe("driver outer loop", () => {
     expect(result.status).toBe("done");
   });
 
+  it("reward-hack: passing the check by deleting a test is caught, never marked done", async () => {
+    const p = project(["test -f impl.txt"], { "tests/foo.test.ts": "it('x', () => {});\n" });
+    const scenario: Scenario = {
+      plan: { tasks: [task("t1", ["test -f impl.txt"])] },
+      verdicts: [{ task_complete: true, confidence: 0.9, blockers: [], next_action: { kind: "none", instruction: "" } }],
+      turns: [{ mutate: [{ file: "impl.txt", content: "x" }, { rm: "tests/foo.test.ts" }], delta: "done (and deleted the test)" }],
+    };
+    const result = await run(p.root, scenario, { task_attempts: 2, global_turns: 6 });
+    // the acceptance check passes, but the integrity guard refuses to accept it
+    expect(existsSync(path.join(p.root, "impl.txt"))).toBe(true);
+    expect(result.status).toBe("escalated");
+    expect(result.escalation_reason).toMatch(/integrity/);
+    const journal = await readJournalTail(p.root, 60);
+    expect(journal.some((e) => /integrity blocked completion/.test(e.note ?? ""))).toBe(true);
+  });
+
+  it("scope creep: editing outside declared scope blocks completion", async () => {
+    const goalMd = "# Goal\n\n## Goal\nScoped change\n\n## Scope\n\n- `src/`\n\n## Checks\n\n- `test -f src/done.txt`\n";
+    const p = mkGitProject({ "GOAL.md": goalMd });
+    cleanups.push(p.cleanup);
+    const scenario: Scenario = {
+      plan: { tasks: [task("t1", ["test -f src/done.txt"])] },
+      verdicts: [{ task_complete: false, confidence: 0.3, blockers: [], next_action: { kind: "continue", instruction: "stay in scope" } }],
+      turns: [{ mutate: [{ file: "src/done.txt", content: "ok" }, { file: "elsewhere/leak.txt", content: "out of scope" }] }],
+    };
+    const result = await withEnv(scenarioEnv(p.root, scenario, "sc"), () =>
+      runGoal({ root: p.root, budgets: { task_attempts: 2, global_turns: 6 } }),
+    );
+    expect(result.status).toBe("escalated");
+    expect(result.escalation_reason).toMatch(/integrity|out-of-scope/);
+  });
+
   it("two-turn task: continue on the same session then complete", async () => {
     const p = project(["test -f final.txt"]);
     const scenario: Scenario = {
