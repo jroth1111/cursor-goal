@@ -112,7 +112,7 @@ export async function decompose(
         // exploration and returns no JSON, which silently forced the single-task fallback.
         mode: "ask",
         root,
-        timeoutMs: 5 * 60 * 1000,
+        timeoutMs: 10 * 60 * 1000,
       });
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);

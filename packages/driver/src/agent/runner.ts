@@ -50,7 +50,9 @@ export function buildAgentArgs(opts: RunTurnOptions): string[] {
   return args;
 }
 
-const DEFAULT_TURN_TIMEOUT_MS = 30 * 60 * 1000;
+// A per-turn timeout exists only to kill a genuinely hung cursor-agent (no output),
+// not to bound legitimate long work — set high. Override per call via opts.timeoutMs.
+const DEFAULT_TURN_TIMEOUT_MS = 2 * 60 * 60 * 1000;
 
 /** Spawn one cursor-agent turn, stream-parse stdout, return a structured result. */
 export function runTurn(opts: RunTurnOptions): Promise<TurnResult> {

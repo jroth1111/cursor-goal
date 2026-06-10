@@ -15,7 +15,9 @@ import {
 
 export type CheckResult = { cmd: string; ok: boolean; tree: string; output?: string };
 
-export const DEFAULT_CHECK_TIMEOUT_MS = 10 * 60 * 1000;
+// Catches a hung/infinite-looping check, not a slow-but-legitimate suite. Override via
+// CURSOR_GOAL_CHECK_TIMEOUT_MS (0 = no limit).
+export const DEFAULT_CHECK_TIMEOUT_MS = 30 * 60 * 1000;
 const PROOF_CACHE_TTL_MS = 15 * 60 * 1000;
 
 function captureExecError(err: unknown): string {

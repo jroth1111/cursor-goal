@@ -50,7 +50,7 @@ export async function replanTask(
       // ask mode reliably returns JSON; plan mode narrates instead (see decompose.ts).
       mode: "ask",
       root,
-      timeoutMs: 5 * 60 * 1000,
+      timeoutMs: 10 * 60 * 1000,
     });
   } catch {
     return null;
