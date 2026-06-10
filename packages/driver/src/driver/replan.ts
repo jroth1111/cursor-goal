@@ -41,7 +41,8 @@ export async function replanTask(
   try {
     result = await call({
       instruction: replanPrompt(spec, task, reason),
-      mode: "plan",
+      // ask mode reliably returns JSON; plan mode narrates instead (see decompose.ts).
+      mode: "ask",
       root,
       timeoutMs: 5 * 60 * 1000,
     });

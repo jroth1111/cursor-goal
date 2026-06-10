@@ -93,7 +93,9 @@ export async function decompose(
     try {
       result = await call({
         instruction: decomposePrompt(spec) + note,
-        mode: "plan",
+        // ask mode (read-only Q&A) obeys "return ONLY JSON"; plan mode narrates an
+        // exploration and returns no JSON, which silently forced the single-task fallback.
+        mode: "ask",
         root,
         timeoutMs: 5 * 60 * 1000,
       });

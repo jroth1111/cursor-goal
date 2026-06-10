@@ -60,19 +60,24 @@ function emitResult(text, { sessionId, exitCode = 0, isError = false } = {}) {
 
 const state = loadState();
 
-// ── plan-mode: return the canned task graph ───────────────────────────────────
-if (mode === "plan") {
-  // replan prompts ask for subtasks; serve scenario.replan if present, else plan.
-  const isReplan = /stuck|subtask/i.test(prompt);
-  const payload = isReplan ? scenario.replan ?? null : scenario.plan ?? null;
-  state.plan = (state.plan ?? 0) + 1;
-  saveState(state);
-  if (!payload) emitResult("no plan", { sessionId: "plan-sess", exitCode: 0 });
-  emitResult(JSON.stringify(payload), { sessionId: "plan-sess" });
-}
-
-// ── ask-mode: return the next canned verdict ──────────────────────────────────
-if (mode === "ask") {
+// ── read-only modes (decompose, replan, verdict all use --mode ask) ───────────
+// Route by prompt content, not mode: decompose and verdict both run in ask mode.
+if (mode === "ask" || mode === "plan") {
+  const isDecompose = /Decompose the GOAL|ordered task graph/i.test(prompt);
+  const isReplan = /STUCK TASK|broken into smaller subtasks|stuck|subtask/i.test(prompt);
+  if (isReplan && scenario.replan !== undefined) {
+    state.plan = (state.plan ?? 0) + 1;
+    saveState(state);
+    emitResult(JSON.stringify(scenario.replan), { sessionId: "plan-sess" });
+  }
+  if (isDecompose || isReplan) {
+    const payload = isReplan ? scenario.replan ?? null : scenario.plan ?? null;
+    state.plan = (state.plan ?? 0) + 1;
+    saveState(state);
+    if (!payload) emitResult("no plan", { sessionId: "plan-sess", exitCode: 0 });
+    emitResult(JSON.stringify(payload), { sessionId: "plan-sess" });
+  }
+  // otherwise it's a verdict request
   const verdicts = scenario.verdicts ?? [];
   const v = verdicts[Math.min(state.verdict, verdicts.length - 1)] ?? {
     task_complete: false,
