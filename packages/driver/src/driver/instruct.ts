@@ -60,9 +60,11 @@ export function buildInstruction(
   }
   lines.push(
     "",
-    "Aim for production quality, not the minimum that passes a check: handle edge cases and",
-    "errors, write meaningful tests, and keep the code clear. Stay within the goal's scope.",
-    "Do not commit. When you believe the task is complete, stop and say so.",
+    "Aim for production quality, not the minimum that passes a check: handle edge and failure",
+    "cases (empty/boundary/malformed/oversized input, clear error paths), and write tests that",
+    "exercise the real entry point (CLI/API/real I/O) and assert user-visible behavior — not",
+    "mocks of your own code or internal details. Keep the code clear. Stay within the goal's",
+    "scope. Do not commit. When you believe the task is complete, stop and say so.",
   );
   return lines.join("\n");
 }

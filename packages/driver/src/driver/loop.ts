@@ -100,7 +100,14 @@ function appendReviewRemediation(graph: TaskGraph, findings: ReviewFinding[]): T
         status: "pending",
         attempts: 0,
         approach: "default",
-        last_failure: `${f.issue} — fix: ${f.fix}`,
+        last_failure: [
+          `Issue: ${f.issue}`,
+          f.evidence ? `Where: ${f.evidence}` : "",
+          f.impact ? `Why it matters: ${f.impact}` : "",
+          `Fix: ${f.fix}`,
+        ]
+          .filter(Boolean)
+          .join("\n"),
         evidence: { proof_ptrs: [], tree: null },
       },
     ];

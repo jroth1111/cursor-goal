@@ -42,6 +42,10 @@ export type ReviewFinding = {
   area: string;
   issue: string;
   fix: string;
+  /** where it is (file:line / command) — keeps findings concrete, not speculative. */
+  evidence?: string;
+  /** why it matters to a user of the deliverable, not just a code observation. */
+  impact?: string;
   check?: string;
 };
 
@@ -165,6 +169,8 @@ const reviewSchema = {
           area: { type: "string", maxLength: 60 },
           issue: { type: "string", maxLength: 500 },
           fix: { type: "string", maxLength: 600 },
+          evidence: { type: "string", maxLength: 300 },
+          impact: { type: "string", maxLength: 300 },
           check: { type: "string", maxLength: 400 },
         },
       },
