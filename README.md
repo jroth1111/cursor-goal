@@ -64,4 +64,4 @@ npm run uninstall:global # remove from ~/.cursor
 | `core/` | per-repo safety-net hook shim + `GOAL.md` template |
 | `scripts/` | global install / uninstall |
 
-See [`AGENTS.md`](AGENTS.md) for operating rules and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the design.
+See [`AGENTS.md`](AGENTS.md) for operating rules, [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the design, and [`docs/FAILURE_MODES.md`](docs/FAILURE_MODES.md) for how the driver mitigates common agent failure modes.

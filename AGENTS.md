@@ -13,6 +13,8 @@ This repo builds `agent-driver`, a long-horizon driver for `cursor-agent`. Work 
    ```
 4. Keep `README.md` and `docs/ARCHITECTURE.md` honest about what exists.
 
+See [`docs/FAILURE_MODES.md`](docs/FAILURE_MODES.md) for the agent-failure-mode coverage matrix.
+
 ## Design invariants (do not regress)
 
 - **The driver owns continuation.** Never depend on a stop-hook `followup_message` to keep a headless run going — it does not fire in `--print`. Re-invoke `cursor-agent --resume <session_id>`.
