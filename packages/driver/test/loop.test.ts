@@ -218,7 +218,7 @@ describe("verdict robustness", () => {
     const p = mkGitProject();
     cleanups.push(p.cleanup);
     const scenario: Scenario = { verdicts: [{ not: "a-valid-verdict" } as unknown as Record<string, unknown>] };
-    const t = { ...task("t1", []), status: "in_progress" as const, attempts: 1, approach: "default", last_failure: null, last_failure_artifact: null, evidence: { proof_ptrs: [], tree: null } };
+    const t = { ...task("t1", []), scope: [], status: "in_progress" as const, attempts: 1, approach: "default", last_failure: null, last_failure_artifact: null, evidence: { proof_ptrs: [], tree: null } };
     const vr = await withEnv(scenarioEnv(p.root, scenario, "v"), () =>
       getVerdict(t, emptyContext("t1"), [], "agent said done", [], p.root, true, 0),
     );

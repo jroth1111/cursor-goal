@@ -28,6 +28,20 @@ Replace `true` with checks for your stack, e.g.:
 - `uv run pytest`
 -->
 
+## Driver
+
+Optional per-goal run configuration (`- key: value`; flags override these):
+
+<!--
+- `model: sonnet-4`
+- `max_turns: 60`
+- `review_rounds: 6`
+- `task_attempts: 10`
+- `brain_model: gpt-cheap`
+- `notify_cmd: curl -s -X POST https://example.test/hook`
+- `evidence_cap_mb: 500`
+-->
+
 ## Forbidden proxies
 
 Do not treat these as done without the checks above:

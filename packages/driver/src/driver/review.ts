@@ -1,6 +1,6 @@
 import { extractJsonObject } from "../lib/json-extract.js";
 import { listDiffFiles } from "../lib/git.js";
-import { runTurn, type TurnResult } from "../agent/runner.js";
+import { retryTranscriptPath, runTurn, usageTokens, type TurnResult } from "../agent/runner.js";
 import { ajvErrorText, validateReview, type GoalSpec, type ReviewResult } from "../state/schema.js";
 import type { AgentCall } from "./decompose.js";
 import { formatChangedFilesForPrompt } from "../lib/progressive-reveal.js";
@@ -53,7 +53,7 @@ function reviewPrompt(spec: GoalSpec, changedFiles: string[]): string {
     .join("\n");
 }
 
-export type ReviewOutcome = { review: ReviewResult; source: "llm" | "skip"; error?: string };
+export type ReviewOutcome = { review: ReviewResult; source: "llm" | "skip"; error?: string; tokens: number };
 
 export const MATERIAL: ReadonlyArray<string> = ["critical", "high", "medium"];
 
@@ -62,9 +62,11 @@ export async function reviewGoal(
   spec: GoalSpec,
   root: string,
   call: AgentCall = runTurn,
+  transcriptPath?: string,
 ): Promise<ReviewOutcome> {
   const changed = listDiffFiles(root);
   let lastErr = "";
+  let tokens = 0;
   for (let attempt = 0; attempt < 4; attempt++) {
     const note = attempt === 0 ? "" : "\n\nYour previous response was not valid JSON. Return ONLY the JSON object.";
     let result: TurnResult;
@@ -74,11 +76,13 @@ export async function reviewGoal(
         mode: "ask",
         root,
         timeoutMs: 10 * 60 * 1000,
+        transcriptPath: retryTranscriptPath(transcriptPath, attempt),
       });
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
       continue;
     }
+    tokens += usageTokens(result.usage);
     const obj = extractJsonObject(result.finalText);
     if (!obj) {
       lastErr = "no JSON object found";
@@ -88,10 +92,10 @@ export async function reviewGoal(
       lastErr = ajvErrorText(validateReview);
       continue;
     }
-    return { review: obj as ReviewResult, source: "llm" };
+    return { review: obj as ReviewResult, source: "llm", tokens };
   }
   // If the reviewer can't produce structured output, do not block shipping on it.
-  return { review: { satisfied: true, findings: [] }, source: "skip", error: lastErr };
+  return { review: { satisfied: true, findings: [] }, source: "skip", error: lastErr, tokens };
 }
 
 export function materialFindings(review: ReviewResult): ReviewResult["findings"] {

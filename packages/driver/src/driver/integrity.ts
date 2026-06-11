@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { isGoalArtifactPath } from "../lib/git.js";
+import { normalizeScopeEntry, scopeEntryWithin } from "../state/schema.js";
 
 /**
  * Integrity guards against the two failure modes a checks-pass gate can't catch on
@@ -95,9 +96,7 @@ export function detectTamper(root: string): string[] {
 }
 
 function normalizeScope(scope: string[]): string[] {
-  return scope
-    .map((s) => s.replace(/^\.\//, "").replace(/\/+$/, "").trim())
-    .filter((s) => s && s !== "." && s !== "**");
+  return scope.map(normalizeScopeEntry).filter((s) => s && s !== "." && s !== "**");
 }
 
 /** Product files edited outside the declared scope (empty scope = no restriction). */
@@ -106,13 +105,27 @@ export function outOfScopeEdits(diffFiles: string[], scope: string[]): string[] 
   if (!norm.length) return [];
   return diffFiles.filter((f) => {
     if (isGoalArtifactPath(f) || f === "GOAL.md") return false;
-    return !norm.some((s) => f === s || f.startsWith(`${s}/`));
+    return !scopeEntryWithin(f, norm); // same containment rule validation uses
   });
 }
 
-/** All integrity issues for a turn; non-empty blocks task completion. */
-export function checkIntegrity(root: string, diffFiles: string[], scope: string[]): string[] {
+/**
+ * All integrity issues for a turn; non-empty blocks task completion. A non-empty
+ * `taskScope` (planner-proposed, already validated to only narrow the goal scope)
+ * replaces the goal scope as the fence and is named in the violation so the agent
+ * knows which boundary it crossed.
+ */
+export function checkIntegrity(
+  root: string,
+  diffFiles: string[],
+  scope: string[],
+  taskScope: string[] = [],
+): string[] {
   const tamper = detectTamper(root);
-  const scopeViol = outOfScopeEdits(diffFiles, scope).map((f) => `edited out-of-scope file: ${f}`);
+  const fence = taskScope.length ? taskScope : scope;
+  const label = taskScope.length
+    ? `edited file outside this task's scope (${taskScope.join(", ")})`
+    : "edited out-of-scope file";
+  const scopeViol = outOfScopeEdits(diffFiles, fence).map((f) => `${label}: ${f}`);
   return [...tamper, ...scopeViol];
 }

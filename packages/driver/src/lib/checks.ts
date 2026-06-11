@@ -13,7 +13,15 @@ import {
   withArtifactRef,
 } from "./progressive-reveal.js";
 
-export type CheckResult = { cmd: string; ok: boolean; tree: string; output?: string };
+export type CheckResult = {
+  cmd: string;
+  ok: boolean;
+  tree: string;
+  output?: string;
+  /** shell exit code; 127 = command not found. null when unknown (signal kill,
+   *  policy denial, or a cached result recorded before this field existed). */
+  exitCode?: number | null;
+};
 
 // Catches a hung/infinite-looping check, not a slow-but-legitimate suite. Override via
 // CURSOR_GOAL_CHECK_TIMEOUT_MS (0 = no limit).
@@ -102,6 +110,7 @@ export async function runChecks(
 
     let ok = false;
     let output = "";
+    let exitCode: number | null = null;
     const denied = matchDestructiveRule(cmd);
     if (denied) {
       output = `Destructive command blocked by policy rule: ${denied}.`;
@@ -115,10 +124,14 @@ export async function runChecks(
           ...(timeoutMs > 0 ? { timeout: timeoutMs, killSignal: "SIGKILL" } : {}),
         });
         ok = true;
+        exitCode = 0;
       } catch (err) {
         ok = false;
         output = captureExecError(err);
-        const e = err as { code?: string; signal?: string; killed?: boolean };
+        const e = err as { code?: string; signal?: string; killed?: boolean; status?: number | null };
+        // the shell's exit code (127 = command not found) — consumers classify
+        // "unrunnable" structurally instead of regexing localized stderr text
+        exitCode = typeof e?.status === "number" ? e.status : null;
         if (
           timeoutMs > 0 &&
           (e?.code === "ETIMEDOUT" || e?.signal === "SIGKILL" || e?.signal === "SIGTERM" || e?.killed)
@@ -127,7 +140,7 @@ export async function runChecks(
         }
       }
     }
-    const row: CheckResult = { cmd, ok, tree, ...(output ? { output } : {}) };
+    const row: CheckResult = { cmd, ok, tree, exitCode, ...(output ? { output } : {}) };
     results.push(row);
     await appendFile(
       proofRunsPath,

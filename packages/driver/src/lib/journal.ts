@@ -15,6 +15,8 @@ export type JournalEntry = {
   progressed?: boolean;
   note?: string;
   tokens?: number;
+  /** repo-relative path to the turn's full NDJSON transcript under evidence/turns/. */
+  transcript?: string;
 };
 
 export async function appendJournal(root: string, entry: JournalEntry): Promise<void> {

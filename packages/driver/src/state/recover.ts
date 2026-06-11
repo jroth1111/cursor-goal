@@ -1,5 +1,6 @@
 import { workingTreeFingerprint } from "../lib/git.js";
 import { appendJournal } from "../lib/journal.js";
+import { loadContext, saveContext } from "../driver/context-window.js";
 import { loadGraph, loadRun, saveGraph, saveRun } from "./store.js";
 import type { RunState, TaskGraph } from "./schema.js";
 
@@ -9,12 +10,22 @@ export type Recovered = { run: RunState; graph: TaskGraph | null; resumed: boole
  * Reconstruct a run from disk after a crash or between sessions. The on-disk
  * run.json + task-graph.json are authoritative; conversation memory is not.
  * If the active task's last recorded tree no longer matches the real tree, the
- * task is reopened for re-verification rather than trusted as done.
+ * task is reopened for re-verification: its stale next_step is cleared so the
+ * next instruction re-establishes ground truth instead of continuing a plan
+ * step computed against a tree that no longer exists.
+ *
+ * This is THE recovery path — runGoal calls it whenever a run already exists
+ * on disk (FAILURE_MODES.md row 12).
  */
 export async function recover(root: string): Promise<Recovered | null> {
   const run = await loadRun(root);
   if (!run) return null;
   const graph = await loadGraph(root);
+
+  // A terminal run is not a recovery: report it untouched, journal nothing.
+  if (run.status === "done" || run.status === "escalated") {
+    return { run, graph, resumed: false };
+  }
 
   run.driver_pid = process.pid;
 
@@ -23,6 +34,11 @@ export async function recover(root: string): Promise<Recovered | null> {
     if (active && active.status === "in_progress") {
       const currentTree = workingTreeFingerprint(root);
       if (active.evidence.tree && active.evidence.tree !== currentTree) {
+        const ctx = await loadContext(root, active.id);
+        if (ctx.next_step) {
+          ctx.next_step = "";
+          await saveContext(root, ctx);
+        }
         await appendJournal(root, {
           at: new Date().toISOString(),
           kind: "lifecycle",

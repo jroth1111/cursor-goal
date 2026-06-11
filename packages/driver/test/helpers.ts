@@ -6,6 +6,25 @@ import { fileURLToPath } from "node:url";
 
 const FAKE_AGENT = fileURLToPath(new URL("./fake-agent/fake-agent.mjs", import.meta.url));
 
+/**
+ * Chaos directives make the stub speak pathological dialects (see fake-agent.mjs
+ * header for each mode's exact emission). `bad-schema` is not a mode: put a
+ * valid-JSON-wrong-schema object straight into verdicts/reviews/plan instead.
+ */
+export type ChaosDirective = {
+  mode:
+    | "crash-mid-stream"
+    | "garbage-lines"
+    | "no-session-id"
+    | "no-result-event"
+    | "hang"
+    | "slow-drip";
+  /** crash-mid-stream: NDJSON lines to emit before exiting 1 (default 2). */
+  afterLines?: number;
+  /** slow-drip: delay between lines in ms (default 30). */
+  lineDelayMs?: number;
+};
+
 export type Scenario = {
   plan?: unknown;
   replan?: unknown;
@@ -17,6 +36,7 @@ export type Scenario = {
     result?: "error" | "aborted";
     exitCode?: number;
     session?: string;
+    chaos?: ChaosDirective;
   }>;
 };
 

@@ -62,6 +62,22 @@ export function evidenceDir(root = projectRoot()): string {
   return path.join(driverDir(root), "evidence");
 }
 
+/** Archived prior runs (written by `agent-driver reset`). */
+export function runsDir(root = projectRoot()): string {
+  return path.join(driverDir(root), "runs");
+}
+
+/** Per-call NDJSON transcripts (turn/decompose/verdict/review/replan streams). */
+export function transcriptsDir(root = projectRoot()): string {
+  return path.join(evidenceDir(root), "turns");
+}
+
+/** The pre-run untracked-file list saved beside baseline/dirty.patch at intake —
+ *  written by state/store.ts (captureBaseline), read by driver/diff.ts. */
+export function baselineUntrackedPath(root = projectRoot()): string {
+  return path.join(evidenceDir(root), "baseline", "untracked.txt");
+}
+
 export function goalMdPath(root = projectRoot()): string {
   return path.join(root, "GOAL.md");
 }

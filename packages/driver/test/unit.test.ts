@@ -90,6 +90,7 @@ describe("progressive reveal", () => {
       deps: [],
       acceptance_checks: ["npm test"],
       acceptance_prose: "",
+      scope: [],
       status: "ready" as const,
       attempts: 1,
       approach: "default",
@@ -105,6 +106,7 @@ describe("progressive reveal", () => {
       last_failure: fullFail,
       last_failure_artifact: task.last_failure_artifact!,
       next_step: "fix the test failure exactly",
+      operator_guidance: [],
     }, "fix the test failure exactly", false);
     expect(instruction).toContain("`npm test`");
     expect(instruction).toContain("fix the test failure exactly");
@@ -182,6 +184,7 @@ function emptyContext(taskId: string) {
     last_failure: "",
     last_failure_artifact: "",
     next_step: "",
+    operator_guidance: [],
   };
 }
 
@@ -240,14 +243,14 @@ describe("schema validation", () => {
 });
 
 describe("oscillation detection", () => {
-  it("flags A -> B -> A", () => {
-    const run = initRun({ goal_text: "g", source: "prompt", acceptance_checks: [], non_goals: [], scope: [] });
+  it("flags A -> B -> A", async () => {
+    const run = await initRun({ goal_text: "g", source: "prompt", acceptance_checks: [], non_goals: [], scope: [] }, os.tmpdir());
     pushFingerprint(run, "A");
     pushFingerprint(run, "B");
     expect(isOscillating(run, "A")).toBe(true);
   });
-  it("does not flag steady progress", () => {
-    const run = initRun({ goal_text: "g", source: "prompt", acceptance_checks: [], non_goals: [], scope: [] });
+  it("does not flag steady progress", async () => {
+    const run = await initRun({ goal_text: "g", source: "prompt", acceptance_checks: [], non_goals: [], scope: [] }, os.tmpdir());
     pushFingerprint(run, "A");
     pushFingerprint(run, "B");
     expect(isOscillating(run, "C")).toBe(false);

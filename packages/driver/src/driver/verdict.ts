@@ -1,5 +1,5 @@
 import { extractJsonObject } from "../lib/json-extract.js";
-import { runTurn, type TurnResult } from "../agent/runner.js";
+import { retryTranscriptPath, runTurn, usageTokens, type TurnResult } from "../agent/runner.js";
 import { ajvErrorText, validateVerdict, type Task, type Verdict } from "../state/schema.js";
 import type { CheckResult } from "../lib/checks.js";
 import { PREVIEW, PROOF_RUNS_ARTIFACT, revealForPrompt } from "../lib/progressive-reveal.js";
@@ -62,7 +62,7 @@ function coerceVerdict(value: unknown): Verdict | null {
   return value as Verdict;
 }
 
-export type VerdictResult = { verdict: Verdict; source: "llm" | "fallback"; error?: string };
+export type VerdictResult = { verdict: Verdict; source: "llm" | "fallback"; error?: string; tokens: number };
 
 /** Conservative verdict used when the LLM can't return valid JSON twice. */
 export function fallbackVerdict(checks: CheckResult[], progressed: boolean): Verdict {
@@ -100,9 +100,11 @@ export async function getVerdict(
   progressed: boolean,
   turnStartedAtMs: number,
   call: AgentCall = runTurn,
+  transcriptPath?: string,
 ): Promise<VerdictResult> {
   const toolRuns = await readToolRunsSince(root, turnStartedAtMs);
   let lastErr = "";
+  let tokens = 0;
   for (let attempt = 0; attempt < 4; attempt++) {
     const note =
       attempt === 0 ? "" : "\n\nYour previous response was not valid JSON. Return ONLY the JSON object.";
@@ -113,11 +115,13 @@ export async function getVerdict(
         mode: "ask",
         root,
         timeoutMs: 3 * 60 * 1000,
+        transcriptPath: retryTranscriptPath(transcriptPath, attempt),
       });
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
       continue;
     }
+    tokens += usageTokens(result.usage);
     const obj = extractJsonObject(result.finalText);
     if (!obj) {
       lastErr = "no JSON object found";
@@ -128,7 +132,7 @@ export async function getVerdict(
       lastErr = ajvErrorText(validateVerdict);
       continue;
     }
-    return { verdict, source: "llm" };
+    return { verdict, source: "llm", tokens };
   }
-  return { verdict: fallbackVerdict(checks, progressed), source: "fallback", error: lastErr };
+  return { verdict: fallbackVerdict(checks, progressed), source: "fallback", error: lastErr, tokens };
 }

@@ -15,6 +15,10 @@ export type ContextWindow = {
   last_failure_artifact: string;
   /** steering instruction for the next turn, set by the prior turn's decision. */
   next_step: string;
+  /** Notes injected by the human via `agent-driver steer` (most recent last).
+   *  Rendered above model steering in the instruction — the human outranks the
+   *  model — and survives switch_approach because context outlives sessions. */
+  operator_guidance: Array<{ at: string; text: string }>;
 };
 
 export type AttemptRecord = {
@@ -34,12 +38,14 @@ export function emptyContext(taskId: string): ContextWindow {
     last_failure: "",
     last_failure_artifact: "",
     next_step: "",
+    operator_guidance: [],
   };
 }
 
 export async function loadContext(root: string, taskId: string): Promise<ContextWindow> {
   const ctx = (await readJson<ContextWindow>(contextPath(root, taskId))) ?? emptyContext(taskId);
   ctx.last_failure_artifact ??= "";
+  ctx.operator_guidance ??= []; // context files written before steer existed
   return ctx;
 }
 

@@ -59,6 +59,17 @@ export function buildInstruction(
   if (task.approach && task.approach !== "default") {
     lines.push(`Use this approach: ${task.approach}`);
   }
+  // The human outranks the model: operator guidance sits above the verdict-derived
+  // steering (next_step / history), below acceptance — the contract still leads.
+  if (ctx.operator_guidance?.length) {
+    const latest = ctx.operator_guidance[ctx.operator_guidance.length - 1];
+    lines.push("", "OPERATOR GUIDANCE (from the human supervising this run — follow it):", `  ${latest.text}`);
+    if (ctx.operator_guidance.length > 1) {
+      lines.push(
+        `  (+${ctx.operator_guidance.length - 1} earlier note(s) in .cursor/goal/driver/context/${task.id}.json)`,
+      );
+    }
+  }
   const history = historyBlock(ctx);
   if (history) lines.push(history);
   if (nextStep) {

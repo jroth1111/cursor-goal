@@ -70,6 +70,16 @@ async function removeStaleLockIfNeeded(dir: string): Promise<void> {
 }
 
 /**
+ * Pid of a LIVE process currently holding the driver lock, or null (no lock,
+ * stale lock, dead holder). Read-only — used by verbs like `reset` that must
+ * refuse to touch state while a driver is running.
+ */
+export async function liveLockPid(root: string): Promise<number | null> {
+  const owner = await readOwner(lockPath(root));
+  return pidIsAlive(owner?.pid) ? Number(owner?.pid) : null;
+}
+
+/**
  * Exclusive driver-dir lock via atomic mkdir (POSIX). Guarantees a background
  * `agent-driver run` and an interactive `driver next` hook never race the same state.
  */

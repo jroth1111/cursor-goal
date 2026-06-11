@@ -1,7 +1,8 @@
 import { extractJsonObject } from "../lib/json-extract.js";
-import { runTurn, type RunTurnOptions, type TurnResult } from "../agent/runner.js";
+import { retryTranscriptPath, runTurn, usageTokens, type RunTurnOptions, type TurnResult } from "../agent/runner.js";
 import {
   ajvErrorText,
+  scopeEntryWithin,
   validateGraphSemantics,
   validateTaskGraph,
   type GoalSpec,
@@ -13,7 +14,8 @@ export type AgentCall = (opts: RunTurnOptions) => Promise<TurnResult>;
 function decomposePrompt(spec: GoalSpec): string {
   const checks = spec.acceptance_checks.length
     ? spec.acceptance_checks.map((c) => `  - \`${c}\``).join("\n")
-    : "  (none provided — propose concrete, runnable acceptance per task)";
+    : "  (none provided — propose concrete, runnable acceptance per task, AND propose goal_checks:\n" +
+      "   the shell commands that would prove the WHOLE GOAL is done, not just each task)";
   const scope = spec.scope.length ? spec.scope.join(", ") : "(unspecified)";
   const nonGoals = spec.non_goals.length ? spec.non_goals.join("; ") : "(none)";
   return [
@@ -47,13 +49,17 @@ function decomposePrompt(spec: GoalSpec): string {
     "- Every non-verify task needs acceptance: prefer acceptance_checks (runnable shell commands);",
     "  use acceptance_prose only when no command can decide it.",
     "- ids are short slugs matching ^[A-Za-z0-9_.-]+$.",
+    "- Optionally give each task a 'scope': the paths (files/dirs) that task should touch.",
+    "  Task scopes must stay within the goal scope; omit when the whole goal scope applies.",
     "",
     "Respond with ONLY this JSON object, no prose, no code fence:",
-    '{"tasks":[{"id":"t1","title":"...","kind":"implement","deps":[],"acceptance_checks":["..."],"acceptance_prose":"..."}]}',
+    spec.acceptance_checks.length
+      ? '{"tasks":[{"id":"t1","title":"...","kind":"implement","deps":[],"acceptance_checks":["..."],"acceptance_prose":"...","scope":["src/feature"]}]}'
+      : '{"goal_checks":["..."],"tasks":[{"id":"t1","title":"...","kind":"implement","deps":[],"acceptance_checks":["..."],"acceptance_prose":"...","scope":["src/feature"]}]}',
   ].join("\n");
 }
 
-function coerceGraph(value: unknown): TaskGraph | null {
+function coerceGraph(value: unknown, goalScope: string[]): TaskGraph | null {
   if (!validateTaskGraph(value)) return null;
   const graph = value as TaskGraph;
   // normalize optional fields the schema allows to be omitted
@@ -61,8 +67,18 @@ function coerceGraph(value: unknown): TaskGraph | null {
     t.deps = t.deps ?? [];
     t.acceptance_checks = t.acceptance_checks ?? [];
     t.acceptance_prose = t.acceptance_prose ?? "";
+    // Planner scope is advisory-quality: a proposal escaping the goal scope is
+    // dropped to inherit (same leniency as replan's subScope) rather than
+    // failing the whole graph — a systematically-wrong planner would otherwise
+    // burn every retry and collapse a good decomposition to the single-task
+    // fallback over a field that only narrows an already-enforced fence.
+    const proposed = t.scope ?? [];
+    t.scope =
+      goalScope.length && proposed.length && !proposed.every((s) => scopeEntryWithin(s, goalScope))
+        ? []
+        : proposed;
   }
-  if (validateGraphSemantics(graph)) return null;
+  if (validateGraphSemantics(graph, goalScope)) return null;
   return graph;
 }
 
@@ -79,6 +95,7 @@ export function fallbackGraph(spec: GoalSpec): TaskGraph {
         acceptance_prose: spec.acceptance_checks.length
           ? ""
           : "Goal is satisfied per the GOAL description.",
+        scope: [],
         status: "pending",
         attempts: 0,
         approach: "default",
@@ -90,15 +107,27 @@ export function fallbackGraph(spec: GoalSpec): TaskGraph {
   };
 }
 
-export type DecomposeResult = { graph: TaskGraph; source: "planner" | "fallback"; error?: string };
+export type DecomposeResult = {
+  graph: TaskGraph;
+  source: "planner" | "fallback";
+  error?: string;
+  /** Planner-proposed goal-level checks; adopted only when the human gave none.
+   *  Deduped against task checks (a goal check identical to a task check adds
+   *  nothing at the gate). */
+  goalChecks?: string[];
+  /** tokens spent across all attempts (the loop accounts them per category). */
+  tokens: number;
+};
 
 /** Ask a plan-mode cursor-agent to produce a validated task graph; fall back on failure. */
 export async function decompose(
   spec: GoalSpec,
   root: string,
   call: AgentCall = runTurn,
+  transcriptPath?: string,
 ): Promise<DecomposeResult> {
   let lastErr = "";
+  let tokens = 0;
   for (let attempt = 0; attempt < 4; attempt++) {
     const note =
       attempt === 0
@@ -113,24 +142,34 @@ export async function decompose(
         mode: "ask",
         root,
         timeoutMs: 10 * 60 * 1000,
+        // retries get their own transcript — the failed attempts ARE the evidence
+        transcriptPath: retryTranscriptPath(transcriptPath, attempt),
       });
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);
       continue;
     }
+    tokens += usageTokens(result.usage);
     const obj = extractJsonObject(result.finalText);
     if (!obj) {
       lastErr = "no JSON object found in response";
       continue;
     }
-    const graph = coerceGraph(obj);
+    const graph = coerceGraph(obj, spec.scope);
     if (!graph) {
       lastErr = validateTaskGraph(obj)
-        ? validateGraphSemantics(obj as TaskGraph) ?? "semantic check failed"
+        ? validateGraphSemantics(obj as TaskGraph, spec.scope) ?? "semantic check failed"
         : ajvErrorText(validateTaskGraph);
       continue;
     }
-    return { graph, source: "planner" };
+    const rawGoalChecks = (obj as { goal_checks?: unknown }).goal_checks;
+    const taskChecks = new Set(graph.tasks.flatMap((t) => t.acceptance_checks));
+    const goalChecks = Array.isArray(rawGoalChecks)
+      ? [...new Set(rawGoalChecks.filter((c): c is string => typeof c === "string" && !!c.trim()))].filter(
+          (c) => !taskChecks.has(c),
+        )
+      : [];
+    return { graph, source: "planner", goalChecks, tokens };
   }
-  return { graph: fallbackGraph(spec), source: "fallback", error: lastErr };
+  return { graph: fallbackGraph(spec), source: "fallback", error: lastErr, tokens };
 }
